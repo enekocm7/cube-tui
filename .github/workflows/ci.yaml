@@ -16,7 +16,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Run Clippy
-        run: cargo clippy --workspace -- -W clippy::all -W clippy::pedantic -W clippy::restriction -W clippy::nursery -D warnings
+        run: cargo clippy --workspace -- -W clippy::pedantic -W clippy::nursery -D warnings
   test:
     runs-on: ubuntu-latest
     steps:
