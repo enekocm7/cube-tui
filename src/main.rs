@@ -7,6 +7,10 @@ use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
+use ratatui::crossterm::{
+    event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
+    execute,
+};
 
 mod model;
 mod scramble;
@@ -20,6 +24,13 @@ fn main() {
 }
 
 fn run(terminal: &mut DefaultTerminal) {
+    let mut stdout = std::io::stdout();
+    execute!(
+        stdout,
+        PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::REPORT_EVENT_TYPES)
+    )
+    .ok();
+
     let mut model = Model::new();
     let tick_rate = Duration::from_millis(30);
     let mut last_tick = Instant::now();
@@ -35,6 +46,7 @@ fn run(terminal: &mut DefaultTerminal) {
             && let Some(msg) = map_key_to_msg(key.code, key.kind)
         {
             if matches!(msg, Msg::Quit) {
+                execute!(stdout, PopKeyboardEnhancementFlags).ok();
                 return;
             }
             update(&mut model, msg);
@@ -86,10 +98,7 @@ fn update(model: &mut Model, msg: Msg) {
             }
         },
         Msg::Release => {
-            if let TimerState::Inspection(
-                InspectionState::Pulsed(_) | InspectionState::Running(_),
-            ) = model.timer_state
-            {
+            if let TimerState::Inspection(InspectionState::Pulsed(_)) = model.timer_state {
                 model.start_timer();
             }
         }
