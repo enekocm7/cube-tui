@@ -1,4 +1,5 @@
-use rand::prelude::{Rng, SliceRandom};
+use rand::prelude::IndexedRandom;
+use rand::RngExt;
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -289,7 +290,7 @@ fn pyraminx_modifiers() -> Vec<Modifier> {
 }
 
 fn cube_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> String {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut last_move: Option<Move> = None;
     let mut last_axis: Option<u8> = None;
     let mut parts = Vec::with_capacity(length);
@@ -312,7 +313,7 @@ fn cube_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> Strin
 }
 
 fn megaminx_scramble(length: usize) -> String {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let moves = [
         Move::RDoublePlus,
         Move::RDoubleMinus,
@@ -330,7 +331,7 @@ fn megaminx_scramble(length: usize) -> String {
 }
 
 fn simple_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> String {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut parts = Vec::with_capacity(length);
 
     for _ in 0..length {
@@ -345,7 +346,7 @@ fn simple_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> Str
 }
 
 fn pyraminx_scramble(length: usize) -> String {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let moves = [Move::R, Move::L, Move::U, Move::B];
     let modifiers = pyraminx_modifiers();
 
@@ -354,7 +355,7 @@ fn pyraminx_scramble(length: usize) -> String {
     let tips = [Move::SmallR, Move::SmallL, Move::SmallU, Move::SmallB];
     let mut tip_parts = Vec::new();
     for tip in tips {
-        if rng.gen_bool(0.5) {
+        if rng.random_bool(0.5) {
             let modifier = modifiers.choose(&mut rng).unwrap_or(&Modifier::None);
             tip_parts.push(format!("{tip}{modifier}"));
         }
@@ -374,12 +375,12 @@ fn skewb_scramble(length: usize) -> String {
 }
 
 fn square1_scramble(length: usize) -> String {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut parts = Vec::with_capacity(length * 2);
     for _ in 0..length {
         let (a, b) = loop {
-            let a = rng.gen_range(-5..=6);
-            let b = rng.gen_range(-5..=6);
+            let a = rng.random_range(-5..=6);
+            let b = rng.random_range(-5..=6);
             if a != 0 || b != 0 {
                 break (a, b);
             }
@@ -391,14 +392,14 @@ fn square1_scramble(length: usize) -> String {
 }
 
 fn clock_scramble(length: usize) -> String {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let positions = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"];
     let mut parts = Vec::with_capacity(length + 2);
     for _ in 0..length {
         let pos = positions
             .choose(&mut rng)
             .expect("positions list should not be empty");
-        let amount: i8 = rng.gen_range(-5..=6);
+        let amount: i8 = rng.random_range(-5..=6);
         parts.push(format!("{pos}{amount:+}"));
     }
     parts.push("y2".to_string());
@@ -407,7 +408,7 @@ fn clock_scramble(length: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Modifier, Move, Scramble, WcaEvent, generate_scramble};
+    use super::{generate_scramble, Modifier, Move, Scramble, WcaEvent};
 
     #[test]
     fn scrambles_are_non_empty() {
