@@ -17,6 +17,7 @@ mod scramble;
 mod widgets;
 
 use crate::model::{InspectionState, Model, TimerState};
+use crate::scramble::WcaEvent;
 use crate::widgets::scramble::ScrambleWidget;
 
 fn main() {
@@ -127,16 +128,23 @@ fn update(model: &mut Model, msg: Msg) {
 }
 
 fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
+    let constraints = match model.event {
+        WcaEvent::Cube2x2
+        | WcaEvent::Pyraminx
+        | WcaEvent::Skewb
+        | WcaEvent::Clock
+        | WcaEvent::Cube3x3 => (Constraint::Percentage(12), Constraint::Percentage(88)),
+        WcaEvent::Cube4x4 | WcaEvent::Square1 | WcaEvent::Cube5x5 => {
+            (Constraint::Percentage(16), Constraint::Percentage(84))
+        }
+        WcaEvent::Cube6x6 | WcaEvent::Megaminx => (Constraint::Percentage(20), Constraint::Percentage(80)),
+        WcaEvent::Cube7x7 => {
+            (Constraint::Percentage(25), Constraint::Percentage(75))
+        }
+    };
     let outer_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints(
-            [
-                Constraint::Length(3),
-                Constraint::Min(5),
-                Constraint::Length(1),
-            ]
-            .as_ref(),
-        )
+        .constraints([constraints.0, constraints.1, Constraint::Length(1)].as_ref())
         .margin(1)
         .split(area);
 
