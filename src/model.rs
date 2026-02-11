@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use crate::scramble;
+use crate::scramble::{self, Scramble, WcaEvent};
 use crate::widgets::history::History;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -19,19 +19,21 @@ pub enum InspectionState {
 pub struct Model {
     pub timer_state: TimerState,
     pub history: History,
-    pub scramble: &'static str,
+    pub scramble: Scramble,
     pub last_time_ms: u64,
-    scramble_index: usize,
+    pub event: WcaEvent,
 }
 
 impl Model {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
+        let event = WcaEvent::Cube3x3;
+        let scramble = scramble::generate_scramble(event);
         Self {
             timer_state: TimerState::Idle,
             history: History::new(),
-            scramble: scramble::generate_scramble(0),
+            scramble,
             last_time_ms: 0,
-            scramble_index: 0,
+            event,
         }
     }
 
@@ -70,8 +72,18 @@ impl Model {
         }
     }
 
-    pub const fn next_scramble(&mut self) {
-        self.scramble_index = self.scramble_index.wrapping_add(1);
-        self.scramble = scramble::generate_scramble(self.scramble_index);
+    pub fn next_scramble(&mut self) {
+        self.scramble = scramble::generate_scramble(self.event);
+    }
+
+    pub fn next_event(&mut self) {
+        self.event = self.event.next();
+        self.next_scramble();
+    }
+
+    pub fn prev_event(&mut self) {
+        self.event = self.event.prev();
+        self.next_scramble();
     }
 }
+

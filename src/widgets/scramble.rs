@@ -5,22 +5,28 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
-pub struct Scramble<'a> {
+pub struct ScrambleWidget<'a> {
     text: &'a str,
+    title: String,
 }
 
-impl<'a> Scramble<'a> {
-    pub const fn new(text: &'a str) -> Self {
-        Self { text }
+impl<'a> ScrambleWidget<'a> {
+    pub fn new(text: &'a str, event_name: &str) -> Self {
+        Self {
+            text,
+            title: format!("Scramble ({event_name})"),
+        }
     }
 }
 
-impl Widget for Scramble<'_> {
+impl Widget for ScrambleWidget<'_> {
     fn render(self, area: Rect, buf: &mut Buffer)
     where
         Self: Sized,
     {
-        let block = Block::default().title("Scramble").borders(Borders::ALL);
+        let block = Block::default()
+            .title(self.title.as_str())
+            .borders(Borders::ALL);
         let line = Line::from(Span::styled(
             self.text,
             Style::default()

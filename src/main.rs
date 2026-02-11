@@ -3,21 +3,21 @@ use std::time::{Duration, Instant};
 use ratatui::DefaultTerminal;
 use ratatui::crossterm::event;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEventKind};
-use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
-use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 use ratatui::crossterm::{
     event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
     execute,
 };
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
 mod model;
 mod scramble;
 mod widgets;
 
 use crate::model::{InspectionState, Model, TimerState};
-use crate::widgets::scramble::Scramble;
+use crate::widgets::scramble::ScrambleWidget;
 
 fn main() {
     ratatui::run(run);
@@ -67,6 +67,8 @@ enum Msg {
     SelectUp,
     SelectDown,
     Quit,
+    NextEvent,
+    PrevEvent,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -77,6 +79,8 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char(' '), KeyEventKind::Release) => Some(Msg::Release),
         (KeyCode::Up, KeyEventKind::Press) => Some(Msg::SelectUp),
         (KeyCode::Down, KeyEventKind::Press) => Some(Msg::SelectDown),
+        (KeyCode::Char('e'), KeyEventKind::Press) => Some(Msg::NextEvent),
+        (KeyCode::Char('E'), KeyEventKind::Press) => Some(Msg::PrevEvent),
         _ => None,
     }
 }
@@ -116,6 +120,8 @@ fn update(model: &mut Model, msg: Msg) {
         }
         Msg::SelectUp => model.history.select_previous(),
         Msg::SelectDown => model.history.select_next(),
+        Msg::NextEvent => model.next_event(),
+        Msg::PrevEvent => model.prev_event(),
         Msg::Quit => {}
     }
 }
@@ -139,7 +145,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         .constraints([Constraint::Length(24), Constraint::Min(10)].as_ref())
         .split(outer_layout[1]);
 
-    Scramble::new(model.scramble).render(outer_layout[0], buf);
+    ScrambleWidget::new(model.scramble.as_str(), model.event.name()).render(outer_layout[0], buf);
 
     let history_block = Block::default().title("History").borders(Borders::ALL);
     history_block.render(main_layout[0], buf);
@@ -158,6 +164,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         Span::raw("Space: hold/release  "),
         Span::raw("r: reset  "),
         Span::raw("q: quit  "),
+        Span::raw("e/E: event  "),
         Span::raw("Up/Down: select"),
     ]);
     Paragraph::new(help_text)
