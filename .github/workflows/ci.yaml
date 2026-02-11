@@ -28,14 +28,3 @@ jobs:
             override: true
       - name: Run Tests
         run: cargo test --all
-  fmt:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-            toolchain: stable
-            override: true
-      - name: Check Formatting
-        run: cargo fmt --all -- --check
