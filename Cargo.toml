@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 ratatui = "0.30.0"
-rand = "0.8"
+rand = "0.10.0"
