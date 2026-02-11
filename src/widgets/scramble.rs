@@ -3,7 +3,7 @@ use ratatui::layout::Alignment;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
+use ratatui::widgets::{Block, Borders, Padding, Paragraph, Widget, Wrap};
 
 pub struct ScrambleWidget<'a> {
     text: &'a str,
@@ -26,7 +26,8 @@ impl Widget for ScrambleWidget<'_> {
     {
         let block = Block::default()
             .title(self.title.as_str())
-            .borders(Borders::ALL);
+            .borders(Borders::ALL)
+            .padding(Padding::new(5, 5, 0, 0));
         let line = Line::from(Span::styled(
             self.text,
             Style::default()
