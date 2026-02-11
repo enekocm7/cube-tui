@@ -221,23 +221,58 @@ fn cube_3x3_moves() -> Vec<Move> {
 
 fn cube_4x4_moves() -> Vec<Move> {
     vec![
-        Move::R, Move::L, Move::U, Move::D, Move::F, Move::B,
-        Move::Rw, Move::Lw, Move::Uw, Move::Dw, Move::Fw, Move::Bw,
+        Move::R,
+        Move::L,
+        Move::U,
+        Move::D,
+        Move::F,
+        Move::B,
+        Move::Rw,
+        Move::Lw,
+        Move::Uw,
+        Move::Dw,
+        Move::Fw,
+        Move::Bw,
     ]
 }
 
 fn cube_5x5_moves() -> Vec<Move> {
     vec![
-        Move::R, Move::L, Move::U, Move::D, Move::F, Move::B,
-        Move::Rw, Move::Lw, Move::Uw, Move::Dw, Move::Fw, Move::Bw,
+        Move::R,
+        Move::L,
+        Move::U,
+        Move::D,
+        Move::F,
+        Move::B,
+        Move::Rw,
+        Move::Lw,
+        Move::Uw,
+        Move::Dw,
+        Move::Fw,
+        Move::Bw,
     ]
 }
 
 fn cube_6x6_moves() -> Vec<Move> {
     vec![
-        Move::R, Move::L, Move::U, Move::D, Move::F, Move::B,
-        Move::Rw, Move::Lw, Move::Uw, Move::Dw, Move::Fw, Move::Bw,
-        Move::ThreeRw, Move::ThreeLw, Move::ThreeUw, Move::ThreeDw, Move::ThreeFw, Move::ThreeBw,
+        Move::R,
+        Move::L,
+        Move::U,
+        Move::D,
+        Move::F,
+        Move::B,
+        Move::Rw,
+        Move::Lw,
+        Move::Uw,
+        Move::Dw,
+        Move::Fw,
+        Move::Bw,
+        Move::ThreeRw,
+        Move::ThreeLw,
+        Move::ThreeUw,
+        Move::ThreeDw,
+        Move::ThreeFw,
+        Move::ThreeBw,
     ]
 }
 
@@ -260,7 +295,9 @@ fn cube_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> Strin
     let mut parts = Vec::with_capacity(length);
 
     while parts.len() < length {
-        let mv = *moves.choose(&mut rng).expect("moves list should not be empty");
+        let mv = *moves
+            .choose(&mut rng)
+            .expect("moves list should not be empty");
         if Some(mv) == last_move || Some(mv.axis()) == last_axis {
             continue;
         }
@@ -276,10 +313,17 @@ fn cube_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> Strin
 
 fn megaminx_scramble(length: usize) -> String {
     let mut rng = rand::thread_rng();
-    let moves = [Move::RDoublePlus, Move::RDoubleMinus, Move::DDoublePlus, Move::DDoubleMinus];
+    let moves = [
+        Move::RDoublePlus,
+        Move::RDoubleMinus,
+        Move::DDoublePlus,
+        Move::DDoubleMinus,
+    ];
     let mut parts = Vec::with_capacity(length);
     for _ in 0..length {
-        let mv = moves.choose(&mut rng).expect("moves list should not be empty");
+        let mv = moves
+            .choose(&mut rng)
+            .expect("moves list should not be empty");
         parts.push(mv.to_string());
     }
     parts.join(" ")
@@ -290,7 +334,9 @@ fn simple_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> Str
     let mut parts = Vec::with_capacity(length);
 
     for _ in 0..length {
-        let mv = moves.choose(&mut rng).expect("moves list should not be empty");
+        let mv = moves
+            .choose(&mut rng)
+            .expect("moves list should not be empty");
         let modifier = modifiers.choose(&mut rng).unwrap_or(&Modifier::None);
         parts.push(format!("{mv}{modifier}"));
     }
@@ -349,7 +395,9 @@ fn clock_scramble(length: usize) -> String {
     let positions = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"];
     let mut parts = Vec::with_capacity(length + 2);
     for _ in 0..length {
-        let pos = positions.choose(&mut rng).expect("positions list should not be empty");
+        let pos = positions
+            .choose(&mut rng)
+            .expect("positions list should not be empty");
         let amount: i8 = rng.gen_range(-5..=6);
         parts.push(format!("{pos}{amount:+}"));
     }
@@ -359,7 +407,7 @@ fn clock_scramble(length: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Move, Modifier, Scramble, WcaEvent, generate_scramble};
+    use super::{Modifier, Move, Scramble, WcaEvent, generate_scramble};
 
     #[test]
     fn scrambles_are_non_empty() {
@@ -379,7 +427,10 @@ mod tests {
 
         for event in events {
             let scramble = generate_scramble(event);
-            assert!(!scramble.as_str().is_empty(), "{event:?} scramble was empty");
+            assert!(
+                !scramble.as_str().is_empty(),
+                "{event:?} scramble was empty"
+            );
         }
     }
 
@@ -393,12 +444,36 @@ mod tests {
             let s6 = generate_scramble(WcaEvent::Cube6x6);
             let s7 = generate_scramble(WcaEvent::Cube7x7);
 
-            assert_eq!(s2.as_str().split_whitespace().count(), 11, "2x2 should have 11 moves");
-            assert_eq!(s3.as_str().split_whitespace().count(), 20, "3x3 should have 20 moves");
-            assert_eq!(s4.as_str().split_whitespace().count(), 40, "4x4 should have 40 moves");
-            assert_eq!(s5.as_str().split_whitespace().count(), 60, "5x5 should have 60 moves");
-            assert_eq!(s6.as_str().split_whitespace().count(), 80, "6x6 should have 80 moves");
-            assert_eq!(s7.as_str().split_whitespace().count(), 100, "7x7 should have 100 moves");
+            assert_eq!(
+                s2.as_str().split_whitespace().count(),
+                11,
+                "2x2 should have 11 moves"
+            );
+            assert_eq!(
+                s3.as_str().split_whitespace().count(),
+                20,
+                "3x3 should have 20 moves"
+            );
+            assert_eq!(
+                s4.as_str().split_whitespace().count(),
+                40,
+                "4x4 should have 40 moves"
+            );
+            assert_eq!(
+                s5.as_str().split_whitespace().count(),
+                60,
+                "5x5 should have 60 moves"
+            );
+            assert_eq!(
+                s6.as_str().split_whitespace().count(),
+                80,
+                "6x6 should have 80 moves"
+            );
+            assert_eq!(
+                s7.as_str().split_whitespace().count(),
+                100,
+                "7x7 should have 100 moves"
+            );
         }
     }
 
@@ -414,7 +489,10 @@ mod tests {
                 let modifier = &token[base.len()..];
 
                 assert!(valid_bases.contains(&base), "Invalid move base: {base}");
-                assert!(valid_modifiers.contains(&modifier), "Invalid modifier: {modifier}");
+                assert!(
+                    valid_modifiers.contains(&modifier),
+                    "Invalid modifier: {modifier}"
+                );
             }
         }
     }
@@ -437,7 +515,10 @@ mod tests {
             }
         }
 
-        assert!(found_3_wide, "6x6 scrambles should include 3-layer wide moves");
+        assert!(
+            found_3_wide,
+            "6x6 scrambles should include 3-layer wide moves"
+        );
     }
 
     #[test]
@@ -447,7 +528,10 @@ mod tests {
         for _ in 0..10 {
             let scramble = generate_scramble(WcaEvent::Megaminx);
             for token in scramble.as_str().split_whitespace() {
-                assert!(valid_moves.contains(&token), "Invalid megaminx move: {token}");
+                assert!(
+                    valid_moves.contains(&token),
+                    "Invalid megaminx move: {token}"
+                );
             }
         }
     }
@@ -457,7 +541,10 @@ mod tests {
         for _ in 0..10 {
             let scramble = generate_scramble(WcaEvent::Pyraminx);
             let count = scramble.as_str().split_whitespace().count();
-            assert!(count >= 11, "Pyraminx should have at least 11 moves, got {count}");
+            assert!(
+                count >= 11,
+                "Pyraminx should have at least 11 moves, got {count}"
+            );
         }
     }
 
@@ -482,7 +569,10 @@ mod tests {
 
             // Count slashes - should be 15
             let slash_count = text.matches('/').count();
-            assert_eq!(slash_count, 15, "Square-1 should have 15 slashes, got {slash_count}");
+            assert_eq!(
+                slash_count, 15,
+                "Square-1 should have 15 slashes, got {slash_count}"
+            );
         }
     }
 
@@ -496,7 +586,10 @@ mod tests {
             assert!(text.ends_with("y2"), "Clock should end with y2");
 
             // Should contain + or - for amounts
-            assert!(text.contains('+') || text.contains('-'), "Clock should have +/- amounts");
+            assert!(
+                text.contains('+') || text.contains('-'),
+                "Clock should have +/- amounts"
+            );
         }
     }
 
@@ -566,14 +659,19 @@ mod tests {
                 let modifier = &token[base.len()..];
 
                 assert!(valid_bases.contains(&base), "Invalid 2x2 move base: {base}");
-                assert!(valid_modifiers.contains(&modifier), "Invalid modifier: {modifier}");
+                assert!(
+                    valid_modifiers.contains(&modifier),
+                    "Invalid modifier: {modifier}"
+                );
             }
         }
     }
 
     #[test]
     fn cube_4x4_uses_valid_moves() {
-        let valid_bases = ["R", "L", "U", "D", "F", "B", "Rw", "Lw", "Uw", "Dw", "Fw", "Bw"];
+        let valid_bases = [
+            "R", "L", "U", "D", "F", "B", "Rw", "Lw", "Uw", "Dw", "Fw", "Bw",
+        ];
         let valid_modifiers = ["", "'", "2"];
 
         for _ in 0..10 {
@@ -583,7 +681,10 @@ mod tests {
                 let modifier = &token[base.len()..];
 
                 assert!(valid_bases.contains(&base), "Invalid 4x4 move base: {base}");
-                assert!(valid_modifiers.contains(&modifier), "Invalid modifier: {modifier}");
+                assert!(
+                    valid_modifiers.contains(&modifier),
+                    "Invalid modifier: {modifier}"
+                );
             }
         }
     }
@@ -591,9 +692,8 @@ mod tests {
     #[test]
     fn cube_7x7_uses_valid_moves() {
         let valid_bases = [
-            "R", "L", "U", "D", "F", "B",
-            "Rw", "Lw", "Uw", "Dw", "Fw", "Bw",
-            "3Rw", "3Lw", "3Uw", "3Dw", "3Fw", "3Bw",
+            "R", "L", "U", "D", "F", "B", "Rw", "Lw", "Uw", "Dw", "Fw", "Bw", "3Rw", "3Lw", "3Uw",
+            "3Dw", "3Fw", "3Bw",
         ];
         let valid_modifiers = ["", "'", "2"];
 
@@ -604,7 +704,10 @@ mod tests {
                 let modifier = &token[base.len()..];
 
                 assert!(valid_bases.contains(&base), "Invalid 7x7 move base: {base}");
-                assert!(valid_modifiers.contains(&modifier), "Invalid modifier: {modifier}");
+                assert!(
+                    valid_modifiers.contains(&modifier),
+                    "Invalid modifier: {modifier}"
+                );
             }
         }
     }
@@ -621,7 +724,10 @@ mod tests {
                 let modifier = &token[base.len()..];
 
                 assert!(valid_bases.contains(&base), "Invalid pyraminx move: {base}");
-                assert!(valid_modifiers.contains(&modifier), "Invalid pyraminx modifier: {modifier}");
+                assert!(
+                    valid_modifiers.contains(&modifier),
+                    "Invalid pyraminx modifier: {modifier}"
+                );
             }
         }
     }
@@ -638,7 +744,10 @@ mod tests {
                 let modifier = &token[base.len()..];
 
                 assert!(valid_bases.contains(&base), "Invalid skewb move: {base}");
-                assert!(valid_modifiers.contains(&modifier), "Invalid skewb modifier: {modifier}");
+                assert!(
+                    valid_modifiers.contains(&modifier),
+                    "Invalid skewb modifier: {modifier}"
+                );
             }
         }
     }
@@ -674,9 +783,12 @@ mod tests {
                     let curr_axis = parse_axis(tokens[i]);
 
                     assert_ne!(
-                        prev_axis, curr_axis,
+                        prev_axis,
+                        curr_axis,
                         "{:?}: consecutive same-axis moves {} and {}",
-                        event, tokens[i - 1], tokens[i]
+                        event,
+                        tokens[i - 1],
+                        tokens[i]
                     );
                 }
             }
@@ -704,7 +816,11 @@ mod tests {
         unique_names.sort_unstable();
         unique_names.dedup();
 
-        assert_eq!(names.len(), unique_names.len(), "Event names should be unique");
+        assert_eq!(
+            names.len(),
+            unique_names.len(),
+            "Event names should be unique"
+        );
     }
 
     #[test]
@@ -764,7 +880,10 @@ mod tests {
                 let pos_end = token.find(|c: char| c == '+' || c == '-' || c.is_ascii_digit());
                 if let Some(idx) = pos_end {
                     let pos = &token[..idx];
-                    assert!(valid_positions.contains(&pos), "Invalid clock position: {pos}");
+                    assert!(
+                        valid_positions.contains(&pos),
+                        "Invalid clock position: {pos}"
+                    );
                 }
             }
 
