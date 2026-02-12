@@ -146,7 +146,7 @@ fn update(model: &mut Model, msg: Msg) {
 
 fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
     if model.show_help() {
-        HelpWidget::render(area, buf);
+        HelpWidget.render(area, buf);
         return;
     }
 
