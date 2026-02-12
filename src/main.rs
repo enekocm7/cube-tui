@@ -70,6 +70,9 @@ enum Msg {
     Quit,
     NextEvent,
     PrevEvent,
+    NextSession,
+    PrevSession,
+    NewSession,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -82,6 +85,9 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Down, KeyEventKind::Press) => Some(Msg::SelectDown),
         (KeyCode::Char('e'), KeyEventKind::Press) => Some(Msg::NextEvent),
         (KeyCode::Char('E'), KeyEventKind::Press) => Some(Msg::PrevEvent),
+        (KeyCode::Char(']'), KeyEventKind::Press) => Some(Msg::NextSession),
+        (KeyCode::Char('['), KeyEventKind::Press) => Some(Msg::PrevSession),
+        (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NewSession),
         _ => None,
     }
 }
@@ -90,20 +96,20 @@ fn update(model: &mut Model, msg: Msg) {
     const INSPECTION_LIMIT_MS: u64 = 15_000;
 
     match msg {
-        Msg::Press => match model.timer_state {
+        Msg::Press => match model.timer_state() {
             TimerState::Idle => model.start_inspection(),
             TimerState::Inspection(InspectionState::Running(_)) => model.pulse_timer(),
             TimerState::Inspection(InspectionState::Pulsed(_)) => {}
             TimerState::Running(start) => {
                 let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
-                model.last_time_ms = elapsed_ms;
-                model.history.add_ms(elapsed_ms);
+                model.set_last_time_ms(elapsed_ms);
+                model.history_mut().add_ms(elapsed_ms);
                 model.stop_timer();
                 model.next_scramble();
             }
         },
         Msg::Release => {
-            if let TimerState::Inspection(InspectionState::Pulsed(_)) = model.timer_state {
+            if let TimerState::Inspection(InspectionState::Pulsed(_)) = model.timer_state() {
                 model.start_timer();
             }
         }
@@ -111,24 +117,29 @@ fn update(model: &mut Model, msg: Msg) {
             model.reset_timer();
         }
         Msg::Tick => {
-            if let TimerState::Inspection(InspectionState::Running(start)) = model.timer_state {
+            if let TimerState::Inspection(InspectionState::Running(start)) = model.timer_state() {
                 let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
                 if elapsed_ms >= INSPECTION_LIMIT_MS {
-                    model.last_time_ms = INSPECTION_LIMIT_MS;
-                    model.timer_state = TimerState::Inspection(InspectionState::Pulsed(start));
+                    model.set_last_time_ms(INSPECTION_LIMIT_MS);
+                    model.set_timer_state(TimerState::Inspection(InspectionState::Pulsed(start)));
                 }
             }
         }
-        Msg::SelectUp => model.history.select_previous(),
-        Msg::SelectDown => model.history.select_next(),
+        Msg::SelectUp => model.history_mut().select_previous(),
+        Msg::SelectDown => model.history_mut().select_next(),
         Msg::NextEvent => model.next_event(),
         Msg::PrevEvent => model.prev_event(),
+        Msg::NextSession => model.next_session(),
+        Msg::PrevSession => model.prev_session(),
+        Msg::NewSession => {
+            model.add_session();
+        }
         Msg::Quit => {}
     }
 }
 
 fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
-    let constraints = match model.event {
+    let constraints = match model.event() {
         WcaEvent::Cube2x2
         | WcaEvent::Pyraminx
         | WcaEvent::Skewb
@@ -137,14 +148,15 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         WcaEvent::Cube4x4 | WcaEvent::Square1 | WcaEvent::Cube5x5 => {
             (Constraint::Percentage(16), Constraint::Percentage(84))
         }
-        WcaEvent::Cube6x6 | WcaEvent::Megaminx => (Constraint::Percentage(20), Constraint::Percentage(80)),
-        WcaEvent::Cube7x7 => {
-            (Constraint::Percentage(25), Constraint::Percentage(75))
+        WcaEvent::Cube6x6 | WcaEvent::Megaminx => {
+            (Constraint::Percentage(20), Constraint::Percentage(80))
         }
+        WcaEvent::Cube7x7 => (Constraint::Percentage(25), Constraint::Percentage(75)),
     };
+
     let outer_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([constraints.0, constraints.1, Constraint::Length(1)].as_ref())
+        .constraints([constraints.0, constraints.1, Constraint::Length(1)])
         .margin(1)
         .split(area);
 
@@ -153,12 +165,23 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         .constraints([Constraint::Length(24), Constraint::Min(10)].as_ref())
         .split(outer_layout[1]);
 
-    ScrambleWidget::new(model.scramble.as_str(), model.event.name()).render(outer_layout[0], buf);
+    ScrambleWidget::new(model.scramble().as_str(), model.event().name())
+        .render(outer_layout[0], buf);
 
-    let history_block = Block::default().title("History").borders(Borders::ALL);
+    let history_title = format!(
+        "Session: {:02}/{:02}{}",
+        model.current_session_index() + 1,
+        model.session_count(),
+        if model.is_at_max_sessions() {
+            " (max 99)"
+        } else {
+            ""
+        }
+    );
+    let history_block = Block::default().title(history_title).borders(Borders::ALL);
     history_block.render(main_layout[0], buf);
     let history_area = inner_area(main_layout[0]);
-    model.history.clone().render(history_area, buf);
+    model.history().clone().render(history_area, buf);
 
     let timer_block = Block::default().title("Timer").borders(Borders::ALL);
     let (timer_text, timer_style) = timer_display(model);
@@ -173,6 +196,8 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         Span::raw("r: reset  "),
         Span::raw("q: quit  "),
         Span::raw("e/E: event  "),
+        Span::raw("n: new session  "),
+        Span::raw("[/]: prev/next session  "),
         Span::raw("Up/Down: select"),
     ]);
     Paragraph::new(help_text)
@@ -198,7 +223,7 @@ fn format_elapsed(ms: u64) -> String {
 }
 
 fn timer_display(model: &Model) -> (String, Style) {
-    let style = match model.timer_state {
+    let style = match model.timer_state() {
         TimerState::Idle => Style::default().fg(Color::White),
         TimerState::Running(_) => Style::default()
             .fg(Color::Green)
@@ -211,7 +236,7 @@ fn timer_display(model: &Model) -> (String, Style) {
         }
     };
 
-    let text = match model.timer_state {
+    let text = match model.timer_state() {
         TimerState::Inspection(_) => {
             let elapsed_ms = model.elapsed_ms();
             let remaining_ms = 15_000_u64.saturating_sub(elapsed_ms);

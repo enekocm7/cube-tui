@@ -3,6 +3,8 @@ use std::time::Instant;
 use crate::scramble::{self, Scramble, WcaEvent};
 use crate::widgets::history::History;
 
+pub const MAX_SESSIONS: usize = 99;
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TimerState {
     Idle,
@@ -16,7 +18,7 @@ pub enum InspectionState {
     Running(Instant),
 }
 
-pub struct Model {
+pub struct Session {
     pub timer_state: TimerState,
     pub history: History,
     pub scramble: Scramble,
@@ -24,7 +26,7 @@ pub struct Model {
     pub event: WcaEvent,
 }
 
-impl Model {
+impl Session {
     pub fn new() -> Self {
         let event = WcaEvent::Cube3x3;
         let scramble = scramble::generate_scramble(event);
@@ -87,3 +89,131 @@ impl Model {
     }
 }
 
+pub struct Model {
+    sessions: Vec<Session>,
+    current_session_index: usize,
+}
+
+impl Model {
+    pub fn new() -> Self {
+        Self {
+            sessions: vec![Session::new()],
+            current_session_index: 0,
+        }
+    }
+
+    pub fn current_session_index(&self) -> usize {
+        self.current_session_index
+    }
+
+    pub fn session_count(&self) -> usize {
+        self.sessions.len()
+    }
+
+    pub fn is_at_max_sessions(&self) -> bool {
+        self.sessions.len() >= MAX_SESSIONS
+    }
+
+    pub fn get_current_session(&self) -> &Session {
+        &self.sessions[self.current_session_index]
+    }
+
+    pub fn get_current_session_mut(&mut self) -> &mut Session {
+        &mut self.sessions[self.current_session_index]
+    }
+
+    pub fn add_session(&mut self) -> bool {
+        if self.is_at_max_sessions() {
+            return false;
+        }
+        self.sessions.push(Session::new());
+        self.current_session_index = self.sessions.len() - 1;
+        true
+    }
+
+    pub fn next_session(&mut self) {
+        if self.sessions.is_empty() {
+            return;
+        }
+        self.current_session_index = (self.current_session_index + 1) % self.sessions.len();
+    }
+
+    pub fn prev_session(&mut self) {
+        if self.sessions.is_empty() {
+            return;
+        }
+        if self.current_session_index == 0 {
+            self.current_session_index = self.sessions.len() - 1;
+        } else {
+            self.current_session_index -= 1;
+        }
+    }
+
+    pub fn reset_timer(&mut self) {
+        self.get_current_session_mut().reset_timer();
+    }
+
+    pub fn start_inspection(&mut self) {
+        self.get_current_session_mut().start_inspection();
+    }
+
+    pub fn start_timer(&mut self) {
+        self.get_current_session_mut().start_timer();
+    }
+
+    pub fn stop_timer(&mut self) {
+        self.get_current_session_mut().stop_timer();
+    }
+
+    pub fn pulse_timer(&mut self) {
+        self.get_current_session_mut().pulse_timer();
+    }
+
+    pub fn elapsed_ms(&self) -> u64 {
+        self.get_current_session().elapsed_ms()
+    }
+
+    pub fn next_scramble(&mut self) {
+        self.get_current_session_mut().next_scramble();
+    }
+
+    pub fn next_event(&mut self) {
+        self.get_current_session_mut().next_event();
+    }
+
+    pub fn prev_event(&mut self) {
+        self.get_current_session_mut().prev_event();
+    }
+
+    pub fn timer_state(&self) -> TimerState {
+        self.get_current_session().timer_state
+    }
+
+    pub fn set_timer_state(&mut self, timer_state: TimerState) {
+        self.get_current_session_mut().timer_state = timer_state;
+    }
+
+    pub fn last_time_ms(&self) -> u64 {
+        self.get_current_session().last_time_ms
+    }
+
+    pub fn set_last_time_ms(&mut self, ms: u64) {
+        self.get_current_session_mut().last_time_ms = ms;
+    }
+
+    pub fn scramble(&self) -> &Scramble {
+        &self.get_current_session().scramble
+    }
+
+    pub fn event(&self) -> WcaEvent {
+        self.get_current_session().event
+    }
+
+    pub fn history(&self) -> &History {
+        &self.get_current_session().history
+    }
+
+    pub fn history_mut(&mut self) -> &mut History {
+        &mut self.get_current_session_mut().history
+    }
+}
