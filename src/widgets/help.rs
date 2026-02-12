@@ -59,7 +59,6 @@ impl Widget for HelpWidget {
                     .add_modifier(Modifier::BOLD),
             )]),
             Line::from("?                  Show / Hide this help screen"),
-            Line::from("Esc                Close help screen"),
             Line::from("q                  Quit application"),
             Line::from(""),
         ];

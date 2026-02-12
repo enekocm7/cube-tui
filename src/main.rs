@@ -90,7 +90,7 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char(']'), KeyEventKind::Press) => Some(Msg::NextSession),
         (KeyCode::Char('['), KeyEventKind::Press) => Some(Msg::PrevSession),
         (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NewSession),
-        (KeyCode::Char('?') | KeyCode::Esc, KeyEventKind::Press) => Some(Msg::Help),
+        (KeyCode::Char('?'), KeyEventKind::Press) => Some(Msg::Help),
         _ => None,
     }
 }
