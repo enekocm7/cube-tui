@@ -92,6 +92,7 @@ impl Session {
 pub struct Model {
     sessions: Vec<Session>,
     current_session_index: usize,
+    show_help: bool,
 }
 
 impl Model {
@@ -99,6 +100,7 @@ impl Model {
         Self {
             sessions: vec![Session::new()],
             current_session_index: 0,
+            show_help: false,
         }
     }
 
@@ -211,5 +213,13 @@ impl Model {
 
     pub fn history_mut(&mut self) -> &mut History {
         &mut self.get_current_session_mut().history
+    }
+
+    pub const fn show_help(&self) -> bool {
+        self.show_help
+    }
+
+    pub const fn toggle_help(&mut self) {
+        self.show_help = !self.show_help;
     }
 }

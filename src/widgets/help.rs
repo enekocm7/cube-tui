@@ -1,0 +1,54 @@
+use ratatui::layout::Rect;
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
+
+pub struct HelpWidget;
+
+impl HelpWidget {
+    pub fn render(area: Rect, buf: &mut ratatui::buffer::Buffer) {
+        let block = Block::default()
+            .title("Commands Help")
+            .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded);
+
+        let help_text = vec![
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("TIMER CONTROLS", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  Space              Hold and release to start/stop timer"),
+            Line::from("  r                  Reset timer"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("EVENT NAVIGATION", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  e / E              Next / Previous event"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("SESSION MANAGEMENT", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  [ / ]              Previous / Next session"),
+            Line::from("  n                  Create new session"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("HISTORY NAVIGATION", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  Up / Down          Select previous / next time in history"),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("INTERFACE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from("  ?                  Show / Hide this help screen"),
+            Line::from("  Esc                Close help screen"),
+            Line::from("  q                  Quit application"),
+            Line::from(""),
+        ];
+
+        Paragraph::new(help_text)
+            .block(block)
+            .wrap(Wrap { trim: true })
+            .render(area, buf);
+    }
+}
+

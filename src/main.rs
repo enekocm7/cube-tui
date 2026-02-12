@@ -18,6 +18,7 @@ mod widgets;
 
 use crate::model::{InspectionState, Model, TimerState};
 use crate::scramble::WcaEvent;
+use crate::widgets::help::HelpWidget;
 use crate::widgets::scramble::ScrambleWidget;
 
 fn main() {
@@ -68,6 +69,7 @@ enum Msg {
     SelectUp,
     SelectDown,
     Quit,
+    Help,
     NextEvent,
     PrevEvent,
     NextSession,
@@ -88,6 +90,7 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char(']'), KeyEventKind::Press) => Some(Msg::NextSession),
         (KeyCode::Char('['), KeyEventKind::Press) => Some(Msg::PrevSession),
         (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NewSession),
+        (KeyCode::Char('?') | KeyCode::Esc, KeyEventKind::Press) => Some(Msg::Help),
         _ => None,
     }
 }
@@ -134,11 +137,19 @@ fn update(model: &mut Model, msg: Msg) {
         Msg::NewSession => {
             model.add_session();
         }
+        Msg::Help => {
+            model.toggle_help();
+        }
         Msg::Quit => {}
     }
 }
 
 fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
+    if model.show_help() {
+        HelpWidget::render(area, buf);
+        return;
+    }
+
     let constraints = match model.event() {
         WcaEvent::Cube2x2
         | WcaEvent::Pyraminx
@@ -195,10 +206,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         Span::raw("Space: hold/release  "),
         Span::raw("r: reset  "),
         Span::raw("q: quit  "),
-        Span::raw("e/E: event  "),
-        Span::raw("n: new session  "),
-        Span::raw("[/]: prev/next session  "),
-        Span::raw("Up/Down: move history selection"),
+        Span::raw("?: help"),
     ]);
     Paragraph::new(help_text)
         .alignment(Alignment::Center)
