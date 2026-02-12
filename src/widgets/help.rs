@@ -17,31 +17,31 @@ impl HelpWidget {
             Line::from(vec![
                 Span::styled("TIMER CONTROLS", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  Space              Hold and release to start/stop timer"),
-            Line::from("  r                  Reset timer"),
+            Line::from("Space              Hold and release to start/stop timer"),
+            Line::from("r                  Reset timer"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("EVENT NAVIGATION", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  e / E              Next / Previous event"),
+            Line::from("e / E              Next / Previous event"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("SESSION MANAGEMENT", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  [ / ]              Previous / Next session"),
-            Line::from("  n                  Create new session"),
+            Line::from("[ / ]              Previous / Next session"),
+            Line::from("n                  Create new session"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("HISTORY NAVIGATION", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  Up / Down          Select previous / next time in history"),
+            Line::from("Up / Down          Select previous / next time in history"),
             Line::from(""),
             Line::from(vec![
                 Span::styled("INTERFACE", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
             ]),
-            Line::from("  ?                  Show / Hide this help screen"),
-            Line::from("  Esc                Close help screen"),
-            Line::from("  q                  Quit application"),
+            Line::from("?                  Show / Hide this help screen"),
+            Line::from("Esc                Close help screen"),
+            Line::from("q                  Quit application"),
             Line::from(""),
         ];
 
