@@ -102,15 +102,15 @@ impl Model {
         }
     }
 
-    pub fn current_session_index(&self) -> usize {
+    pub const fn current_session_index(&self) -> usize {
         self.current_session_index
     }
 
-    pub fn session_count(&self) -> usize {
+    pub const fn session_count(&self) -> usize {
         self.sessions.len()
     }
 
-    pub fn is_at_max_sessions(&self) -> bool {
+    pub const fn is_at_max_sessions(&self) -> bool {
         self.sessions.len() >= MAX_SESSIONS
     }
 
@@ -131,14 +131,14 @@ impl Model {
         true
     }
 
-    pub fn next_session(&mut self) {
+    pub const fn next_session(&mut self) {
         if self.sessions.is_empty() {
             return;
         }
         self.current_session_index = (self.current_session_index + 1) % self.sessions.len();
     }
 
-    pub fn prev_session(&mut self) {
+    pub const fn prev_session(&mut self) {
         if self.sessions.is_empty() {
             return;
         }
@@ -191,10 +191,6 @@ impl Model {
 
     pub fn set_timer_state(&mut self, timer_state: TimerState) {
         self.get_current_session_mut().timer_state = timer_state;
-    }
-
-    pub fn last_time_ms(&self) -> u64 {
-        self.get_current_session().last_time_ms
     }
 
     pub fn set_last_time_ms(&mut self, ms: u64) {

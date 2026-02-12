@@ -198,7 +198,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         Span::raw("e/E: event  "),
         Span::raw("n: new session  "),
         Span::raw("[/]: prev/next session  "),
-        Span::raw("Up/Down: select"),
+        Span::raw("Up/Down: move history selection"),
     ]);
     Paragraph::new(help_text)
         .alignment(Alignment::Center)
