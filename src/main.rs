@@ -75,6 +75,7 @@ enum Msg {
     NextSession,
     PrevSession,
     NewSession,
+    NextScramble,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -90,6 +91,7 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char(']'), KeyEventKind::Press) => Some(Msg::NextSession),
         (KeyCode::Char('['), KeyEventKind::Press) => Some(Msg::PrevSession),
         (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NewSession),
+        (KeyCode::Char('s'), KeyEventKind::Press) => Some(Msg::NextScramble),
         (KeyCode::Char('?'), KeyEventKind::Press) => Some(Msg::Help),
         _ => None,
     }
@@ -130,12 +132,35 @@ fn update(model: &mut Model, msg: Msg) {
         }
         Msg::SelectUp => model.history_mut().select_previous(),
         Msg::SelectDown => model.history_mut().select_next(),
-        Msg::NextEvent => model.next_event(),
-        Msg::PrevEvent => model.prev_event(),
-        Msg::NextSession => model.next_session(),
-        Msg::PrevSession => model.prev_session(),
+        Msg::NextEvent => {
+            if model.timer_state() == TimerState::Idle {
+                model.next_event();
+            }
+        }
+        Msg::PrevEvent => {
+            if model.timer_state() == TimerState::Idle {
+                model.prev_event();
+            }
+        }
+        Msg::NextSession => {
+            if model.timer_state() == TimerState::Idle {
+                model.next_session();
+            }
+        }
+        Msg::PrevSession => {
+            if model.timer_state() == TimerState::Idle {
+                model.prev_session();
+            }
+        }
         Msg::NewSession => {
-            model.add_session();
+            if model.timer_state() == TimerState::Idle {
+                model.add_session();
+            }
+        }
+        Msg::NextScramble => {
+            if model.timer_state() == TimerState::Idle {
+                model.next_scramble();
+            }
         }
         Msg::Help => {
             model.toggle_help();
@@ -158,9 +183,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         | WcaEvent::Cube4x4
         | WcaEvent::Square1
         | WcaEvent::Cube3x3 => 1,
-        | WcaEvent::Cube5x5
-        | WcaEvent::Cube6x6
-        | WcaEvent::Megaminx => 2,
+        WcaEvent::Cube5x5 | WcaEvent::Cube6x6 | WcaEvent::Megaminx => 2,
         WcaEvent::Cube7x7 => 3,
     };
 
