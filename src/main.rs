@@ -150,20 +150,22 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         return;
     }
 
-    let constraints = match model.event() {
+    let scramble_lines: u16 = match model.event() {
         WcaEvent::Cube2x2
         | WcaEvent::Pyraminx
         | WcaEvent::Skewb
         | WcaEvent::Clock
-        | WcaEvent::Cube3x3 => (Constraint::Percentage(12), Constraint::Percentage(88)),
-        WcaEvent::Cube4x4 | WcaEvent::Square1 | WcaEvent::Cube5x5 => {
-            (Constraint::Percentage(16), Constraint::Percentage(84))
-        }
-        WcaEvent::Cube6x6 | WcaEvent::Megaminx => {
-            (Constraint::Percentage(20), Constraint::Percentage(80))
-        }
-        WcaEvent::Cube7x7 => (Constraint::Percentage(25), Constraint::Percentage(75)),
+        | WcaEvent::Cube4x4
+        | WcaEvent::Square1
+        | WcaEvent::Cube3x3 => 1,
+        | WcaEvent::Cube5x5
+        | WcaEvent::Cube6x6
+        | WcaEvent::Megaminx => 2,
+        WcaEvent::Cube7x7 => 3,
     };
+
+    let scramble_height = (scramble_lines + 2).min(area.height.saturating_sub(1));
+    let constraints = (Constraint::Length(scramble_height), Constraint::Fill(1));
 
     let outer_layout = Layout::default()
         .direction(Direction::Vertical)
