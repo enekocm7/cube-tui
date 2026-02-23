@@ -116,138 +116,174 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
     }
 }
 
+const INSPECTION_LIMIT_MS: u64 = 15_000;
+
 fn update(model: &mut Model, msg: Msg) {
-    const INSPECTION_LIMIT_MS: u64 = 15_000;
-
     match msg {
-        Msg::Press => {
-            if model.show_details() {
-                if model.timer_state() == TimerState::Idle {
-                    let modifier = model.selected_details_modifier();
-                    model.history_mut().set_modifier(modifier);
-                    persistence::save(model);
-                }
-                return;
-            }
-
-            match model.timer_state() {
-            TimerState::Idle => {
-                if model.inspection_enabled() {
-                    model.start_inspection();
-                } else {
-                    model.set_timer_state(TimerState::Pulsed);
-                }
-            }
-            TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_)) => {}
-            TimerState::Inspection(InspectionState::Running(_)) => model.pulse_timer(),
-            TimerState::Running(start) => {
-                let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
-                model.set_last_time_ms(elapsed_ms);
-                let event = model.event();
-                let scramble = model.scramble().as_str().to_string();
-                model.history_mut().add_ms(elapsed_ms, event, scramble);
-                model.stop_timer();
-                model.next_scramble();
-                persistence::save(model);
-            }
-            }
-        }
-        Msg::Release => {
-            if model.show_details() {
-                return;
-            }
-            if matches!(
-                model.timer_state(),
-                TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_))
-            ) {
-                model.start_timer();
-            }
-        }
-        Msg::Reset => {
-            model.reset_timer();
-        }
-        Msg::Tick => {
-            if let TimerState::Inspection(InspectionState::Running(start)) = model.timer_state() {
-                let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
-                if elapsed_ms >= INSPECTION_LIMIT_MS {
-                    model.set_last_time_ms(INSPECTION_LIMIT_MS);
-                    model.set_timer_state(TimerState::Inspection(InspectionState::Pulsed(start)));
-                }
-            }
-        }
-        Msg::SelectUp => {
-            if model.show_details() {
-                model.prev_details_modifier();
-            } else {
-                model.history_mut().select_previous();
-            }
-        }
-        Msg::SelectDown => {
-            if model.show_details() {
-                model.next_details_modifier();
-            } else {
-                model.history_mut().select_next();
-            }
-        }
-        Msg::NextEvent => {
-            if model.timer_state() == TimerState::Idle {
-                model.next_event();
-            }
-        }
-        Msg::PrevEvent => {
-            if model.timer_state() == TimerState::Idle {
-                model.prev_event();
-            }
-        }
-        Msg::NextSession => {
-            if model.timer_state() == TimerState::Idle {
-                model.next_session();
-            }
-        }
-        Msg::PrevSession => {
-            if model.timer_state() == TimerState::Idle {
-                model.prev_session();
-            }
-        }
-        Msg::NewSession => {
-            if model.timer_state() == TimerState::Idle {
-                model.add_session();
-            }
-        }
-        Msg::NextScramble => {
-            if model.timer_state() == TimerState::Idle {
-                model.next_scramble();
-            }
-        }
-        Msg::Help => {
-            model.toggle_help();
-        }
+        Msg::Press => handle_press(model),
+        Msg::Release => handle_release(model),
+        Msg::Reset => handle_reset(model),
+        Msg::Tick => handle_tick(model),
+        Msg::SelectUp => handle_select_up(model),
+        Msg::SelectDown => handle_select_down(model),
+        Msg::NextEvent => handle_next_event(model),
+        Msg::PrevEvent => handle_prev_event(model),
+        Msg::NextSession => handle_next_session(model),
+        Msg::PrevSession => handle_prev_session(model),
+        Msg::NewSession => handle_new_session(model),
+        Msg::NextScramble => handle_next_scramble(model),
+        Msg::Help => handle_help(model),
+        Msg::ToggleInspection => handle_toggle_inspection(model),
+        Msg::TogglePlusTwo => handle_toggle_plus_two(model),
+        Msg::ToggleDNF => handle_toggle_dnf(model),
+        Msg::OpenDetails => handle_open_details(model),
+        Msg::CloseDetails => handle_close_details(model),
         Msg::Quit => {}
-        Msg::ToggleInspection => {
-            model.toggle_inspection();
-            persistence::save_settings(*model.settings());
+    }
+}
+
+fn handle_press(model: &mut Model) {
+    if model.show_details() {
+        if model.timer_state() == TimerState::Idle {
+            let modifier = model.selected_details_modifier();
+            model.history_mut().set_modifier(modifier);
+            persistence::save(model);
         }
-        Msg::TogglePlusTwo => {
-            if model.timer_state() == TimerState::Idle {
-                model.history_mut().set_modifier(HistoryModifier::PlusTwo);
-                persistence::save(model);
+        return;
+    }
+
+    match model.timer_state() {
+        TimerState::Idle => {
+            if model.inspection_enabled() {
+                model.start_inspection();
+            } else {
+                model.set_timer_state(TimerState::Pulsed);
             }
         }
-        Msg::ToggleDNF => {
-            if model.timer_state() == TimerState::Idle {
-                model.history_mut().set_modifier(HistoryModifier::DNF);
-                persistence::save(model);
-            }
-        }
-        Msg::OpenDetails => {
-            if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
-                model.open_details();
-            }
-        }
-        Msg::CloseDetails => {
-            model.close_details();
+        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_)) => {}
+        TimerState::Inspection(InspectionState::Running(_)) => model.pulse_timer(),
+        TimerState::Running(start) => {
+            let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
+            model.set_last_time_ms(elapsed_ms);
+            let event = model.event();
+            let scramble = model.scramble().as_str().to_string();
+            model.history_mut().add_ms(elapsed_ms, event, scramble);
+            model.stop_timer();
+            model.next_scramble();
+            persistence::save(model);
         }
     }
+}
+
+fn handle_release(model: &mut Model) {
+    if model.show_details() {
+        return;
+    }
+    if matches!(
+        model.timer_state(),
+        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_))
+    ) {
+        model.start_timer();
+    }
+}
+
+fn handle_reset(model: &mut Model) {
+    model.reset_timer();
+}
+
+fn handle_tick(model: &mut Model) {
+    if let TimerState::Inspection(InspectionState::Running(start)) = model.timer_state() {
+        let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
+        if elapsed_ms >= INSPECTION_LIMIT_MS {
+            model.set_last_time_ms(INSPECTION_LIMIT_MS);
+            model.set_timer_state(TimerState::Inspection(InspectionState::Pulsed(start)));
+        }
+    }
+}
+
+fn handle_select_up(model: &mut Model) {
+    if model.show_details() {
+        model.prev_details_modifier();
+    } else {
+        model.history_mut().select_previous();
+    }
+}
+
+fn handle_select_down(model: &mut Model) {
+    if model.show_details() {
+        model.next_details_modifier();
+    } else {
+        model.history_mut().select_next();
+    }
+}
+
+fn handle_next_event(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle {
+        model.next_event();
+    }
+}
+
+fn handle_prev_event(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle {
+        model.prev_event();
+    }
+}
+
+fn handle_next_session(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle {
+        model.next_session();
+    }
+}
+
+fn handle_prev_session(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle {
+        model.prev_session();
+    }
+}
+
+fn handle_new_session(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle {
+        model.add_session();
+    }
+}
+
+fn handle_next_scramble(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle {
+        model.next_scramble();
+    }
+}
+
+const fn handle_help(model: &mut Model) {
+    model.toggle_help();
+}
+
+fn handle_toggle_inspection(model: &mut Model) {
+    model.toggle_inspection();
+    persistence::save_settings(*model.settings());
+}
+
+fn handle_toggle_plus_two(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle {
+        model.history_mut().set_modifier(HistoryModifier::PlusTwo);
+        persistence::save(model);
+    }
+}
+
+fn handle_toggle_dnf(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle {
+        model.history_mut().set_modifier(HistoryModifier::DNF);
+        persistence::save(model);
+    }
+}
+
+fn handle_open_details(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
+        model.open_details();
+    }
+}
+
+const fn handle_close_details(model: &mut Model) {
+    model.close_details();
 }
 
 fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {

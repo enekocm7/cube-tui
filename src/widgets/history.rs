@@ -64,10 +64,11 @@ impl Time {
 }
 
 fn current_unix_ms() -> u64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(duration) => duration.as_millis() as u64,
-        Err(_) => 0,
-    }
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| {
+            u64::try_from(duration.as_millis()).expect("Failed to parse the SystemTime")
+        })
 }
 
 fn format_millis(ms: u64) -> String {

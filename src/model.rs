@@ -3,7 +3,7 @@ use std::time::Instant;
 use serde::{Deserialize, Serialize};
 
 use crate::scramble::{self, Scramble, WcaEvent};
-use crate::widgets::history::{History, Modifier};
+use crate::widgets::history::{History, Modifier, Time};
 
 pub const MAX_SESSIONS: usize = 99;
 
@@ -267,7 +267,7 @@ impl Model {
 
     pub fn open_details(&mut self) {
         self.show_details = true;
-        self.details_modifier_index = match self.history().selected_time().map(|t| t.modifier()) {
+        self.details_modifier_index = match self.history().selected_time().map(Time::modifier) {
             Some(Modifier::DNF) => 1,
             _ => 0,
         };
@@ -281,7 +281,7 @@ impl Model {
         self.details_modifier_index = (self.details_modifier_index + 1).min(1);
     }
 
-    pub fn prev_details_modifier(&mut self) {
+    pub const fn prev_details_modifier(&mut self) {
         self.details_modifier_index = self.details_modifier_index.saturating_sub(1);
     }
 

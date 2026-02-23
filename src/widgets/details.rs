@@ -28,30 +28,31 @@ impl Widget for DetailsWidget<'_> {
     {
         let block = Block::default().title("Time Details").borders(Borders::ALL);
 
-        let lines = if let Some(time) = self.time {
-            let plus_two_checked = matches!(time.modifier(), Modifier::PlusTwo);
-            let dnf_checked = matches!(time.modifier(), Modifier::DNF);
+        let lines = self.time.map_or_else(
+            || vec![Line::from("No time selected."), Line::from("Esc: close")],
+            |time| {
+                let plus_two_checked = matches!(time.modifier(), Modifier::PlusTwo);
+                let dnf_checked = matches!(time.modifier(), Modifier::DNF);
 
-            vec![
-                Line::from(format!("Time: {time}")),
-                Line::from(format!(
-                    "Datetime: {}",
-                    format_datetime(time.solved_at_unix_ms())
-                )),
-                Line::from(""),
-                Line::from(format!("Event: {}", time.event().name())),
-                Line::from(""),
-                Line::from(format!("Scramble: {}", time.scramble())),
-                Line::from(""),
-                Line::from("Modifiers:"),
-                checkbox_line("+2", plus_two_checked, self.selected_modifier_index == 0),
-                checkbox_line("DNF", dnf_checked, self.selected_modifier_index == 1),
-                Line::from(""),
-                Line::from("Space: toggle selected modifier  Esc: close"),
-            ]
-        } else {
-            vec![Line::from("No time selected."), Line::from("Esc: close")]
-        };
+                vec![
+                    Line::from(format!("Time: {time}")),
+                    Line::from(format!(
+                        "Datetime: {}",
+                        format_datetime(time.solved_at_unix_ms())
+                    )),
+                    Line::from(""),
+                    Line::from(format!("Event: {}", time.event().name())),
+                    Line::from(""),
+                    Line::from(format!("Scramble: {}", time.scramble())),
+                    Line::from(""),
+                    Line::from("Modifiers:"),
+                    checkbox_line("+2", plus_two_checked, self.selected_modifier_index == 0),
+                    checkbox_line("DNF", dnf_checked, self.selected_modifier_index == 1),
+                    Line::from(""),
+                    Line::from("Space: toggle selected modifier  Esc: close"),
+                ]
+            },
+        );
 
         Paragraph::new(lines)
             .block(block)
@@ -69,7 +70,7 @@ fn checkbox_line(label: &str, checked: bool, selected: bool) -> Line<'_> {
     } else {
         Style::default()
     };
-    Line::from(Span::styled(format!("[{}] {label}", check), style))
+    Line::from(Span::styled(format!("[{check}] {label}"), style))
 }
 
 fn format_datetime(unix_ms: u64) -> String {
@@ -77,8 +78,11 @@ fn format_datetime(unix_ms: u64) -> String {
         return "-".to_string();
     }
 
-    match Local.timestamp_millis_opt(unix_ms as i64).single() {
-        Some(dt) => dt.format("%Y-%m-%d %H:%M:%S").to_string(),
-        None => "-".to_string(),
-    }
+    Local
+        .timestamp_millis_opt(i64::try_from(unix_ms).expect("Failed to parse time"))
+        .single()
+        .map_or_else(
+            || "-".to_string(),
+            |dt| dt.format("%Y-%m-%d %H:%M:%S").to_string(),
+        )
 }
