@@ -197,13 +197,17 @@ fn update(model: &mut Model, msg: Msg) {
         }
         Msg::TogglePlusTwo => {
             if model.timer_state() == TimerState::Idle {
-                model.history_mut().set_modifier(widgets::history::Modifier::PlusTwo);
+                model
+                    .history_mut()
+                    .set_modifier(widgets::history::Modifier::PlusTwo);
                 persistence::save(model);
             }
         }
         Msg::ToggleDNF => {
             if model.timer_state() == TimerState::Idle {
-                model.history_mut().set_modifier(widgets::history::Modifier::DNF);
+                model
+                    .history_mut()
+                    .set_modifier(widgets::history::Modifier::DNF);
                 persistence::save(model);
             }
         }
