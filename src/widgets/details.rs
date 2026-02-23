@@ -39,6 +39,9 @@ impl Widget for DetailsWidget<'_> {
                     format_datetime(time.solved_at_unix_ms())
                 )),
                 Line::from(""),
+                Line::from("Event:"),
+                Line::from(time.event().name()),
+                Line::from(""),
                 Line::from("Scramble:"),
                 Line::from(time.scramble().to_string()),
                 Line::from(""),
@@ -49,10 +52,7 @@ impl Widget for DetailsWidget<'_> {
                 Line::from("Space: toggle selected modifier  Esc: close"),
             ]
         } else {
-            vec![
-                Line::from("No time selected."),
-                Line::from("Esc: close"),
-            ]
+            vec![Line::from("No time selected."), Line::from("Esc: close")]
         };
 
         Paragraph::new(lines)
