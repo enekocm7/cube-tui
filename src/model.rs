@@ -8,6 +8,7 @@ pub const MAX_SESSIONS: usize = 99;
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TimerState {
     Idle,
+    Pulsed,
     Inspection(InspectionState),
     Running(Instant),
 }
@@ -70,7 +71,7 @@ impl Session {
                 }
             },
             TimerState::Running(start) => u64::try_from(start.elapsed().as_millis()).unwrap(),
-            TimerState::Idle => self.last_time_ms,
+            TimerState::Idle | TimerState::Pulsed => self.last_time_ms,
         }
     }
 
@@ -91,6 +92,7 @@ impl Session {
 
 pub struct Model {
     sessions: Vec<Session>,
+    inspection: bool,
     current_session_index: usize,
     show_help: bool,
 }
@@ -99,6 +101,7 @@ impl Model {
     pub fn new() -> Self {
         Self {
             sessions: vec![Session::new()],
+            inspection: true,
             current_session_index: 0,
             show_help: false,
         }
@@ -171,6 +174,10 @@ impl Model {
         self.get_current_session_mut().pulse_timer();
     }
 
+    pub const fn toggle_inspection(&mut self) {
+        self.inspection = !self.inspection;
+    }
+
     pub fn elapsed_ms(&self) -> u64 {
         self.get_current_session().elapsed_ms()
     }
@@ -221,5 +228,9 @@ impl Model {
 
     pub const fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
+    }
+
+    pub const fn inspection_enabled(&self) -> bool {
+        self.inspection
     }
 }

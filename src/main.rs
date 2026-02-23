@@ -75,6 +75,7 @@ enum Msg {
     NextSession,
     PrevSession,
     NewSession,
+    ToggleInspection,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -91,6 +92,7 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char('['), KeyEventKind::Press) => Some(Msg::PrevSession),
         (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NewSession),
         (KeyCode::Char('?'), KeyEventKind::Press) => Some(Msg::Help),
+        (KeyCode::Char('i'), KeyEventKind::Press) => Some(Msg::ToggleInspection),
         _ => None,
     }
 }
@@ -100,9 +102,15 @@ fn update(model: &mut Model, msg: Msg) {
 
     match msg {
         Msg::Press => match model.timer_state() {
-            TimerState::Idle => model.start_inspection(),
+            TimerState::Idle => {
+                if model.inspection_enabled() {
+                    model.start_inspection();
+                } else {
+                    model.set_timer_state(TimerState::Pulsed);
+                }
+            }
+            TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_)) => {}
             TimerState::Inspection(InspectionState::Running(_)) => model.pulse_timer(),
-            TimerState::Inspection(InspectionState::Pulsed(_)) => {}
             TimerState::Running(start) => {
                 let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
                 model.set_last_time_ms(elapsed_ms);
@@ -112,7 +120,10 @@ fn update(model: &mut Model, msg: Msg) {
             }
         },
         Msg::Release => {
-            if let TimerState::Inspection(InspectionState::Pulsed(_)) = model.timer_state() {
+            if matches!(
+                model.timer_state(),
+                TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_))
+            ) {
                 model.start_timer();
             }
         }
@@ -141,6 +152,7 @@ fn update(model: &mut Model, msg: Msg) {
             model.toggle_help();
         }
         Msg::Quit => {}
+        Msg::ToggleInspection => model.toggle_inspection(),
     }
 }
 
@@ -196,7 +208,8 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
     let history_area = inner_area(main_layout[0]);
     model.history().clone().render(history_area, buf);
 
-    let timer_block = Block::default().title("Timer").borders(Borders::ALL);
+    let timer_title = format!("Timer - Inspection: {}", if model.inspection_enabled() { "On" } else { "Off" });
+    let timer_block = Block::default().title(timer_title).borders(Borders::ALL);
     let (timer_text, timer_style) = timer_display(model);
     Paragraph::new(Line::from(Span::styled(timer_text, timer_style)))
         .block(timer_block)
@@ -235,18 +248,19 @@ fn format_elapsed(ms: u64) -> String {
 fn timer_display(model: &Model) -> (String, Style) {
     let style = match model.timer_state() {
         TimerState::Idle => Style::default().fg(Color::White),
+        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_)) => {
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+        }
         TimerState::Running(_) => Style::default()
             .fg(Color::Green)
             .add_modifier(Modifier::BOLD),
         TimerState::Inspection(InspectionState::Running(_)) => Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD),
-        TimerState::Inspection(InspectionState::Pulsed(_)) => {
-            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
-        }
     };
 
     let text = match model.timer_state() {
+        TimerState::Pulsed => format_elapsed(0),
         TimerState::Inspection(_) => {
             let elapsed_ms = model.elapsed_ms();
             let remaining_ms = 15_000_u64.saturating_sub(elapsed_ms);

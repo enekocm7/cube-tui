@@ -45,6 +45,14 @@ impl Widget for HelpWidget {
             Line::from("n                  Create new session"),
             Line::from(""),
             Line::from(vec![Span::styled(
+                "INSPECTION",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from("i                  Toggle disable/enable inspection"),
+            Line::from(""),
+            Line::from(vec![Span::styled(
                 "HISTORY NAVIGATION",
                 Style::default()
                     .fg(Color::Cyan)
