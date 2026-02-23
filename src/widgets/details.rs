@@ -39,11 +39,9 @@ impl Widget for DetailsWidget<'_> {
                     format_datetime(time.solved_at_unix_ms())
                 )),
                 Line::from(""),
-                Line::from("Event:"),
-                Line::from(time.event().name()),
+                Line::from(format!("Event: {}", time.event().name())),
                 Line::from(""),
-                Line::from("Scramble:"),
-                Line::from(time.scramble().to_string()),
+                Line::from(format!("Scramble: {}", time.scramble())),
                 Line::from(""),
                 Line::from("Modifiers:"),
                 checkbox_line("+2", plus_two_checked, self.selected_modifier_index == 0),
