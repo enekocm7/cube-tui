@@ -38,6 +38,9 @@ fn run(terminal: &mut DefaultTerminal) {
     if let Some(data) = persistence::load() {
         model.restore_from_history(data);
     }
+    if let Some(settings) = persistence::load_settings() {
+        model.set_settings(settings);
+    }
     let tick_rate = Duration::from_millis(30);
     let mut last_tick = Instant::now();
 
@@ -184,7 +187,10 @@ fn update(model: &mut Model, msg: Msg) {
             model.toggle_help();
         }
         Msg::Quit => {}
-        Msg::ToggleInspection => model.toggle_inspection(),
+        Msg::ToggleInspection => {
+            model.toggle_inspection();
+            persistence::save_settings(*model.settings());
+        }
     }
 }
 
@@ -238,7 +244,14 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
     let history_area = inner_area(main_layout[0]);
     model.history().clone().render(history_area, buf);
 
-    let timer_title = format!("Timer - Inspection: {}", if model.inspection_enabled() { "On" } else { "Off" });
+    let timer_title = format!(
+        "Timer - Inspection: {}",
+        if model.inspection_enabled() {
+            "On"
+        } else {
+            "Off"
+        }
+    );
     let timer_block = Block::default().title(timer_title).borders(Borders::ALL);
     let (timer_text, timer_style) = timer_display(model);
     Paragraph::new(Line::from(Span::styled(timer_text, timer_style)))

@@ -1,5 +1,7 @@
 use std::time::Instant;
 
+use serde::{Deserialize, Serialize};
+
 use crate::scramble::{self, Scramble, WcaEvent};
 use crate::widgets::history::History;
 
@@ -90,9 +92,26 @@ impl Session {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct Settings {
+    inspection: bool,
+}
+
+impl Settings {
+    pub const fn set_inspection(&mut self, inspection: bool) {
+        self.inspection = inspection;
+    }
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self { inspection: true }
+    }
+}
+
 pub struct Model {
     sessions: Vec<Session>,
-    inspection: bool,
+    settings: Settings,
     current_session_index: usize,
     show_help: bool,
 }
@@ -101,10 +120,18 @@ impl Model {
     pub fn new() -> Self {
         Self {
             sessions: vec![Session::new()],
-            inspection: true,
+            settings: Settings::default(),
             current_session_index: 0,
             show_help: false,
         }
+    }
+
+    pub const fn settings(&self) -> &Settings {
+        &self.settings
+    }
+
+    pub const fn set_settings(&mut self, settings: Settings) {
+        self.settings = settings;
     }
 
     pub const fn current_session_index(&self) -> usize {
@@ -175,7 +202,7 @@ impl Model {
     }
 
     pub const fn toggle_inspection(&mut self) {
-        self.inspection = !self.inspection;
+        self.settings.set_inspection(!self.settings.inspection);
     }
 
     pub fn elapsed_ms(&self) -> u64 {
@@ -231,7 +258,7 @@ impl Model {
     }
 
     pub const fn inspection_enabled(&self) -> bool {
-        self.inspection
+        self.settings.inspection
     }
 
     pub fn all_sessions_history(&self) -> Vec<History> {
