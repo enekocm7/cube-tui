@@ -1,11 +1,12 @@
-use std::fmt::{Display, Formatter};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::prelude::Widget;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 use crate::scramble::WcaEvent;
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Modifier {
     #[default]
@@ -140,12 +141,7 @@ impl Widget for History {
             } else {
                 ratatui::style::Style::default()
             };
-            buf.set_string(
-                area.x,
-                row,
-                format!("{}: {item}", i + 1),
-                style,
-            );
+            buf.set_string(area.x, row, format!("{}: {item}", i + 1), style);
         }
     }
 }
