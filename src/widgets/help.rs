@@ -26,7 +26,7 @@ impl Widget for HelpWidget {
             )]),
             Line::from("Space              Hold and release to start/stop timer"),
             Line::from("r                  Reset timer"),
-            Line::from("s                  Next scramble"),
+            Line::from("n                  Next scramble"),
             Line::from(""),
             Line::from(vec![Span::styled(
                 "EVENT NAVIGATION",
@@ -43,7 +43,7 @@ impl Widget for HelpWidget {
                     .add_modifier(Modifier::BOLD),
             )]),
             Line::from("[ / ]              Previous / Next session"),
-            Line::from("n                  Create new session"),
+            Line::from("s                  Create new session"),
             Line::from(""),
             Line::from(vec![Span::styled(
                 "INSPECTION",
