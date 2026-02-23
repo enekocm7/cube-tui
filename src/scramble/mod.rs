@@ -1,8 +1,9 @@
 use rand::prelude::IndexedRandom;
 use rand::RngExt;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WcaEvent {
     Cube2x2,
     Cube3x3,

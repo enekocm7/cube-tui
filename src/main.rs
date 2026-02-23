@@ -13,6 +13,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
 mod model;
+mod persistence;
 mod scramble;
 mod widgets;
 
@@ -34,6 +35,9 @@ fn run(terminal: &mut DefaultTerminal) {
     .ok();
 
     let mut model = Model::new();
+    if let Some(data) = persistence::load() {
+        model.restore_from_history(data);
+    }
     let tick_rate = Duration::from_millis(30);
     let mut last_tick = Instant::now();
 
@@ -76,6 +80,7 @@ enum Msg {
     PrevSession,
     NewSession,
     ToggleInspection,
+    NextScramble,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -91,6 +96,7 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char(']'), KeyEventKind::Press) => Some(Msg::NextSession),
         (KeyCode::Char('['), KeyEventKind::Press) => Some(Msg::PrevSession),
         (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NewSession),
+        (KeyCode::Char('s'), KeyEventKind::Press) => Some(Msg::NextScramble),
         (KeyCode::Char('?'), KeyEventKind::Press) => Some(Msg::Help),
         (KeyCode::Char('i'), KeyEventKind::Press) => Some(Msg::ToggleInspection),
         _ => None,
@@ -114,9 +120,12 @@ fn update(model: &mut Model, msg: Msg) {
             TimerState::Running(start) => {
                 let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
                 model.set_last_time_ms(elapsed_ms);
-                model.history_mut().add_ms(elapsed_ms);
+                let event = model.event();
+                let scramble = model.scramble().as_str().to_string();
+                model.history_mut().add_ms(elapsed_ms, event, scramble);
                 model.stop_timer();
                 model.next_scramble();
+                persistence::save(model);
             }
         },
         Msg::Release => {
@@ -141,12 +150,35 @@ fn update(model: &mut Model, msg: Msg) {
         }
         Msg::SelectUp => model.history_mut().select_previous(),
         Msg::SelectDown => model.history_mut().select_next(),
-        Msg::NextEvent => model.next_event(),
-        Msg::PrevEvent => model.prev_event(),
-        Msg::NextSession => model.next_session(),
-        Msg::PrevSession => model.prev_session(),
+        Msg::NextEvent => {
+            if model.timer_state() == TimerState::Idle {
+                model.next_event();
+            }
+        }
+        Msg::PrevEvent => {
+            if model.timer_state() == TimerState::Idle {
+                model.prev_event();
+            }
+        }
+        Msg::NextSession => {
+            if model.timer_state() == TimerState::Idle {
+                model.next_session();
+            }
+        }
+        Msg::PrevSession => {
+            if model.timer_state() == TimerState::Idle {
+                model.prev_session();
+            }
+        }
         Msg::NewSession => {
-            model.add_session();
+            if model.timer_state() == TimerState::Idle {
+                model.add_session();
+            }
+        }
+        Msg::NextScramble => {
+            if model.timer_state() == TimerState::Idle {
+                model.next_scramble();
+            }
         }
         Msg::Help => {
             model.toggle_help();
@@ -170,9 +202,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         | WcaEvent::Cube4x4
         | WcaEvent::Square1
         | WcaEvent::Cube3x3 => 1,
-        | WcaEvent::Cube5x5
-        | WcaEvent::Cube6x6
-        | WcaEvent::Megaminx => 2,
+        WcaEvent::Cube5x5 | WcaEvent::Cube6x6 | WcaEvent::Megaminx => 2,
         WcaEvent::Cube7x7 => 3,
     };
 

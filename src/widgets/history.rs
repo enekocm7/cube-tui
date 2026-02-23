@@ -2,17 +2,28 @@ use std::fmt::{Display, Formatter};
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::prelude::Widget;
+use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Debug)]
+use crate::scramble::WcaEvent;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Time {
     timestamp_in_millis: u64,
+    event: WcaEvent,
+    scramble: String,
 }
 
 impl Time {
-    pub const fn new(timestamp_in_millis: u64) -> Self {
+    pub const fn new(timestamp_in_millis: u64, event: WcaEvent, scramble: String) -> Self {
         Self {
             timestamp_in_millis,
+            event,
+            scramble,
         }
+    }
+
+    pub const fn event(&self) -> WcaEvent {
+        self.event
     }
 }
 
@@ -26,9 +37,10 @@ impl Display for Time {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct History {
     history: Vec<Time>,
+    #[serde(skip)]
     pub selected: usize,
 }
 
@@ -40,8 +52,8 @@ impl History {
         }
     }
 
-    pub fn add_ms(&mut self, timestamp_in_millis: u64) {
-        self.add(Time::new(timestamp_in_millis));
+    pub fn add_ms(&mut self, timestamp_in_millis: u64, event: WcaEvent, scramble: String) {
+        self.add(Time::new(timestamp_in_millis, event, scramble));
     }
 
     pub fn add(&mut self, item: Time) {
@@ -51,6 +63,10 @@ impl History {
 
     pub const fn is_empty(&self) -> bool {
         self.history.is_empty()
+    }
+
+    pub fn last(&self) -> Option<&Time> {
+        self.history.last()
     }
 
     pub fn select_next(&mut self) {

@@ -233,4 +233,25 @@ impl Model {
     pub const fn inspection_enabled(&self) -> bool {
         self.inspection
     }
+
+    pub fn all_sessions_history(&self) -> Vec<History> {
+        self.sessions.iter().map(|s| s.history.clone()).collect()
+    }
+
+    pub fn restore_from_history(&mut self, data: Vec<History>) {
+        self.sessions.clear();
+        for history in data {
+            let mut session = Session::new();
+            if let Some(last_time) = history.last() {
+                session.event = last_time.event();
+                session.scramble = scramble::generate_scramble(session.event);
+            }
+            session.history = history;
+            self.sessions.push(session);
+        }
+        if self.sessions.is_empty() {
+            self.sessions.push(Session::new());
+        }
+        self.current_session_index = 0;
+    }
 }
