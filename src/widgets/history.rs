@@ -3,6 +3,7 @@ use ratatui::layout::Rect;
 use ratatui::prelude::Widget;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::scramble::WcaEvent;
 
@@ -21,17 +22,32 @@ pub struct Time {
     event: WcaEvent,
     scramble: String,
     #[serde(default)]
+    solved_at_unix_ms: u64,
+    #[serde(default)]
     modifier: Modifier,
 }
 
 impl Time {
-    pub const fn new(timestamp_in_millis: u64, event: WcaEvent, scramble: String) -> Self {
+    pub fn new(timestamp_in_millis: u64, event: WcaEvent, scramble: String) -> Self {
         Self {
             timestamp_in_millis,
             event,
             scramble,
+            solved_at_unix_ms: current_unix_ms(),
             modifier: Modifier::None,
         }
+    }
+
+    pub fn scramble(&self) -> &str {
+        &self.scramble
+    }
+
+    pub const fn solved_at_unix_ms(&self) -> u64 {
+        self.solved_at_unix_ms
+    }
+
+    pub const fn modifier(&self) -> Modifier {
+        self.modifier
     }
 
     pub const fn event(&self) -> WcaEvent {
@@ -44,6 +60,13 @@ impl Time {
         } else {
             self.modifier = modifier;
         }
+    }
+}
+
+fn current_unix_ms() -> u64 {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => duration.as_millis() as u64,
+        Err(_) => 0,
     }
 }
 
@@ -120,6 +143,10 @@ impl History {
         if let Some(time) = self.history.get_mut(self.selected) {
             time.set_modifier(modifier);
         }
+    }
+
+    pub fn selected_time(&self) -> Option<&Time> {
+        self.history.get(self.selected)
     }
 }
 

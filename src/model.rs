@@ -3,7 +3,7 @@ use std::time::Instant;
 use serde::{Deserialize, Serialize};
 
 use crate::scramble::{self, Scramble, WcaEvent};
-use crate::widgets::history::History;
+use crate::widgets::history::{History, Modifier};
 
 pub const MAX_SESSIONS: usize = 99;
 
@@ -114,6 +114,8 @@ pub struct Model {
     settings: Settings,
     current_session_index: usize,
     show_help: bool,
+    show_details: bool,
+    details_modifier_index: usize,
 }
 
 impl Model {
@@ -123,6 +125,8 @@ impl Model {
             settings: Settings::default(),
             current_session_index: 0,
             show_help: false,
+            show_details: false,
+            details_modifier_index: 0,
         }
     }
 
@@ -257,6 +261,42 @@ impl Model {
         self.show_help = !self.show_help;
     }
 
+    pub const fn show_details(&self) -> bool {
+        self.show_details
+    }
+
+    pub fn open_details(&mut self) {
+        self.show_details = true;
+        self.details_modifier_index = match self.history().selected_time().map(|t| t.modifier()) {
+            Some(Modifier::DNF) => 1,
+            _ => 0,
+        };
+    }
+
+    pub const fn close_details(&mut self) {
+        self.show_details = false;
+    }
+
+    pub fn next_details_modifier(&mut self) {
+        self.details_modifier_index = (self.details_modifier_index + 1).min(1);
+    }
+
+    pub fn prev_details_modifier(&mut self) {
+        self.details_modifier_index = self.details_modifier_index.saturating_sub(1);
+    }
+
+    pub const fn selected_details_modifier_index(&self) -> usize {
+        self.details_modifier_index
+    }
+
+    pub const fn selected_details_modifier(&self) -> Modifier {
+        if self.details_modifier_index == 0 {
+            Modifier::PlusTwo
+        } else {
+            Modifier::DNF
+        }
+    }
+
     pub const fn inspection_enabled(&self) -> bool {
         self.settings.inspection
     }
@@ -280,5 +320,7 @@ impl Model {
             self.sessions.push(Session::new());
         }
         self.current_session_index = 0;
+        self.show_details = false;
+        self.details_modifier_index = 0;
     }
 }

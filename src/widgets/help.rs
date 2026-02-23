@@ -60,6 +60,8 @@ impl Widget for HelpWidget {
                     .add_modifier(Modifier::BOLD),
             )]),
             Line::from("Up / Down          Select previous / next time in history"),
+            Line::from("Enter              Open details screen for selected time"),
+            Line::from("Esc                Close details screen"),
             Line::from("2                  Toggle +2 penalty on selected time"),
             Line::from("d                  Toggle DNF on selected time"),
             Line::from(""),

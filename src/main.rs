@@ -19,7 +19,9 @@ mod widgets;
 
 use crate::model::{InspectionState, Model, TimerState};
 use crate::scramble::WcaEvent;
+use crate::widgets::details::DetailsWidget;
 use crate::widgets::help::HelpWidget;
+use crate::widgets::history::Modifier as HistoryModifier;
 use crate::widgets::scramble::ScrambleWidget;
 
 fn main() {
@@ -86,6 +88,8 @@ enum Msg {
     NextScramble,
     TogglePlusTwo,
     ToggleDNF,
+    OpenDetails,
+    CloseDetails,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -106,6 +110,8 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char('i'), KeyEventKind::Press) => Some(Msg::ToggleInspection),
         (KeyCode::Char('2'), KeyEventKind::Press) => Some(Msg::TogglePlusTwo),
         (KeyCode::Char('d'), KeyEventKind::Press) => Some(Msg::ToggleDNF),
+        (KeyCode::Enter, KeyEventKind::Press) => Some(Msg::OpenDetails),
+        (KeyCode::Esc, KeyEventKind::Press) => Some(Msg::CloseDetails),
         _ => None,
     }
 }
@@ -114,7 +120,17 @@ fn update(model: &mut Model, msg: Msg) {
     const INSPECTION_LIMIT_MS: u64 = 15_000;
 
     match msg {
-        Msg::Press => match model.timer_state() {
+        Msg::Press => {
+            if model.show_details() {
+                if model.timer_state() == TimerState::Idle {
+                    let modifier = model.selected_details_modifier();
+                    model.history_mut().set_modifier(modifier);
+                    persistence::save(model);
+                }
+                return;
+            }
+
+            match model.timer_state() {
             TimerState::Idle => {
                 if model.inspection_enabled() {
                     model.start_inspection();
@@ -134,8 +150,12 @@ fn update(model: &mut Model, msg: Msg) {
                 model.next_scramble();
                 persistence::save(model);
             }
-        },
+            }
+        }
         Msg::Release => {
+            if model.show_details() {
+                return;
+            }
             if matches!(
                 model.timer_state(),
                 TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_))
@@ -155,8 +175,20 @@ fn update(model: &mut Model, msg: Msg) {
                 }
             }
         }
-        Msg::SelectUp => model.history_mut().select_previous(),
-        Msg::SelectDown => model.history_mut().select_next(),
+        Msg::SelectUp => {
+            if model.show_details() {
+                model.prev_details_modifier();
+            } else {
+                model.history_mut().select_previous();
+            }
+        }
+        Msg::SelectDown => {
+            if model.show_details() {
+                model.next_details_modifier();
+            } else {
+                model.history_mut().select_next();
+            }
+        }
         Msg::NextEvent => {
             if model.timer_state() == TimerState::Idle {
                 model.next_event();
@@ -197,19 +229,23 @@ fn update(model: &mut Model, msg: Msg) {
         }
         Msg::TogglePlusTwo => {
             if model.timer_state() == TimerState::Idle {
-                model
-                    .history_mut()
-                    .set_modifier(widgets::history::Modifier::PlusTwo);
+                model.history_mut().set_modifier(HistoryModifier::PlusTwo);
                 persistence::save(model);
             }
         }
         Msg::ToggleDNF => {
             if model.timer_state() == TimerState::Idle {
-                model
-                    .history_mut()
-                    .set_modifier(widgets::history::Modifier::DNF);
+                model.history_mut().set_modifier(HistoryModifier::DNF);
                 persistence::save(model);
             }
+        }
+        Msg::OpenDetails => {
+            if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
+                model.open_details();
+            }
+        }
+        Msg::CloseDetails => {
+            model.close_details();
         }
     }
 }
@@ -217,6 +253,15 @@ fn update(model: &mut Model, msg: Msg) {
 fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
     if model.show_help() {
         HelpWidget.render(area, buf);
+        return;
+    }
+
+    if model.show_details() {
+        DetailsWidget::new(
+            model.history().selected_time(),
+            model.selected_details_modifier_index(),
+        )
+        .render(area, buf);
         return;
     }
 
@@ -282,6 +327,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
 
     let help_text = Line::from(vec![
         Span::raw("Space: hold/release  "),
+        Span::raw("Enter: details  Esc: close  "),
         Span::raw("r: reset  "),
         Span::raw("q: quit  "),
         Span::raw("?: help"),
