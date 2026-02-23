@@ -84,6 +84,8 @@ enum Msg {
     NewSession,
     ToggleInspection,
     NextScramble,
+    TogglePlusTwo,
+    ToggleDNF,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -102,6 +104,8 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char('s'), KeyEventKind::Press) => Some(Msg::NextScramble),
         (KeyCode::Char('?'), KeyEventKind::Press) => Some(Msg::Help),
         (KeyCode::Char('i'), KeyEventKind::Press) => Some(Msg::ToggleInspection),
+        (KeyCode::Char('2'), KeyEventKind::Press) => Some(Msg::TogglePlusTwo),
+        (KeyCode::Char('d'), KeyEventKind::Press) => Some(Msg::ToggleDNF),
         _ => None,
     }
 }
@@ -190,6 +194,18 @@ fn update(model: &mut Model, msg: Msg) {
         Msg::ToggleInspection => {
             model.toggle_inspection();
             persistence::save_settings(*model.settings());
+        }
+        Msg::TogglePlusTwo => {
+            if model.timer_state() == TimerState::Idle {
+                model.history_mut().set_modifier(widgets::history::Modifier::PlusTwo);
+                persistence::save(model);
+            }
+        }
+        Msg::ToggleDNF => {
+            if model.timer_state() == TimerState::Idle {
+                model.history_mut().set_modifier(widgets::history::Modifier::DNF);
+                persistence::save(model);
+            }
         }
     }
 }

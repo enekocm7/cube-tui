@@ -6,11 +6,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::scramble::WcaEvent;
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Modifier {
+    #[default]
+    None,
+    PlusTwo,
+    DNF,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Time {
     timestamp_in_millis: u64,
     event: WcaEvent,
     scramble: String,
+    #[serde(default)]
+    modifier: Modifier,
 }
 
 impl Time {
@@ -19,21 +29,43 @@ impl Time {
             timestamp_in_millis,
             event,
             scramble,
+            modifier: Modifier::None,
         }
     }
 
     pub const fn event(&self) -> WcaEvent {
         self.event
     }
+
+    pub fn set_modifier(&mut self, modifier: Modifier) {
+        if self.modifier == modifier {
+            self.modifier = Modifier::None;
+        } else {
+            self.modifier = modifier;
+        }
+    }
+}
+
+fn format_millis(ms: u64) -> String {
+    let total_seconds = ms / 1000;
+    let minutes = total_seconds / 60;
+    let seconds = total_seconds % 60;
+    let millis = ms % 1000;
+    format!("{minutes:02}:{seconds:02}.{millis:03}")
 }
 
 impl Display for Time {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let total_seconds = self.timestamp_in_millis / 1000;
-        let minutes = total_seconds / 60;
-        let seconds = total_seconds % 60;
-        let millis = self.timestamp_in_millis % 1000;
-        f.write_str(&format!("{minutes:02}:{seconds:02}.{millis:03}"))
+        match self.modifier {
+            Modifier::None => f.write_str(&format_millis(self.timestamp_in_millis)),
+            Modifier::PlusTwo => {
+                let adjusted = self.timestamp_in_millis + 2000;
+                write!(f, "{}+", format_millis(adjusted))
+            }
+            Modifier::DNF => {
+                write!(f, "DNF({})", format_millis(self.timestamp_in_millis))
+            }
+        }
     }
 }
 
@@ -81,6 +113,12 @@ impl History {
             return;
         }
         self.selected = self.selected.saturating_sub(1);
+    }
+
+    pub fn set_modifier(&mut self, modifier: Modifier) {
+        if let Some(time) = self.history.get_mut(self.selected) {
+            time.set_modifier(modifier);
+        }
     }
 }
 
