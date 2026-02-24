@@ -191,7 +191,9 @@ impl Widget for History {
                 break;
             };
             let style = if i == self.selected {
-                ratatui::style::Style::default().bg(ratatui::style::Color::Blue)
+                ratatui::style::Style::default()
+                    .bg(ratatui::style::Color::Blue)
+                    .fg(ratatui::style::Color::Black)
             } else {
                 ratatui::style::Style::default()
             };
