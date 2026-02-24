@@ -1,6 +1,7 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Alignment;
 use ratatui::layout::Rect;
+use ratatui::prelude::Text;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Padding, Paragraph, Widget, Wrap};
@@ -28,13 +29,15 @@ impl Widget for ScrambleWidget<'_> {
             .title(self.title.as_str())
             .borders(Borders::ALL)
             .padding(Padding::new(5, 5, 0, 0));
-        let line = Line::from(Span::styled(
-            self.text,
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD),
-        ));
-        Paragraph::new(line)
+        let style = Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD);
+        let text: Text = self
+            .text
+            .split('\n')
+            .map(|row| Line::from(Span::styled(row.to_string(), style)))
+            .collect();
+        Paragraph::new(text)
             .block(block)
             .alignment(Alignment::Center)
             .wrap(Wrap { trim: true })

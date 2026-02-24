@@ -1,5 +1,5 @@
-use rand::prelude::IndexedRandom;
 use rand::RngExt;
+use rand::prelude::IndexedRandom;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -197,13 +197,13 @@ impl fmt::Display for Scramble {
 
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
     let text = match event {
-        WcaEvent::Cube2x2 => cube_scramble(11, &cube_2x2_moves(), &cube_modifiers()),
+        WcaEvent::Cube2x2 => cube_scramble(10, &cube_2x2_moves(), &cube_modifiers()),
         WcaEvent::Cube3x3 => cube_scramble(20, &cube_3x3_moves(), &cube_modifiers()),
         WcaEvent::Cube4x4 => cube_scramble(40, &cube_4x4_moves(), &cube_modifiers()),
         WcaEvent::Cube5x5 => cube_scramble(60, &cube_5x5_moves(), &cube_modifiers()),
         WcaEvent::Cube6x6 => cube_scramble(80, &cube_6x6_moves(), &cube_modifiers()),
         WcaEvent::Cube7x7 => cube_scramble(100, &cube_7x7_moves(), &cube_modifiers()),
-        WcaEvent::Megaminx => megaminx_scramble(70),
+        WcaEvent::Megaminx => megaminx_scramble(),
         WcaEvent::Pyraminx => pyraminx_scramble(11),
         WcaEvent::Skewb => skewb_scramble(9),
         WcaEvent::Square1 => square1_scramble(15),
@@ -313,22 +313,26 @@ fn cube_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> Strin
     parts.join(" ")
 }
 
-fn megaminx_scramble(length: usize) -> String {
+fn megaminx_scramble() -> String {
     let mut rng = rand::rng();
-    let moves = [
-        Move::RDoublePlus,
-        Move::RDoubleMinus,
-        Move::DDoublePlus,
-        Move::DDoubleMinus,
-    ];
-    let mut parts = Vec::with_capacity(length);
-    for _ in 0..length {
-        let mv = moves
-            .choose(&mut rng)
-            .expect("moves list should not be empty");
-        parts.push(mv.to_string());
+    let r_moves = [Move::RDoublePlus, Move::RDoubleMinus];
+    let d_moves = [Move::DDoublePlus, Move::DDoubleMinus];
+    let u_modifiers = [Modifier::None, Modifier::Prime];
+
+    let mut rows = Vec::with_capacity(7);
+    for _ in 0..7 {
+        let mut parts = Vec::with_capacity(11);
+        for _ in 0..5 {
+            let r = r_moves.choose(&mut rng).unwrap_or(&Move::RDoublePlus);
+            let d = d_moves.choose(&mut rng).unwrap_or(&Move::DDoublePlus);
+            parts.push(r.to_string());
+            parts.push(d.to_string());
+        }
+        let u_mod = u_modifiers.choose(&mut rng).unwrap_or(&Modifier::None);
+        parts.push(format!("U{u_mod} "));
+        rows.push(parts.join(" "));
     }
-    parts.join(" ")
+    rows.join("\n")
 }
 
 fn simple_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> String {
@@ -409,7 +413,7 @@ fn clock_scramble(length: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{generate_scramble, Modifier, Move, Scramble, WcaEvent};
+    use super::{Modifier, Move, Scramble, WcaEvent, generate_scramble};
 
     #[test]
     fn scrambles_are_non_empty() {
@@ -844,7 +848,7 @@ mod tests {
         for _ in 0..10 {
             let scramble = generate_scramble(WcaEvent::Megaminx);
             let count = scramble.as_str().split_whitespace().count();
-            assert_eq!(count, 70, "Megaminx should have 70 moves, got {count}");
+            assert_eq!(count, 77, "Megaminx should have 77 moves (7 rows × 11), got {count}");
         }
     }
 

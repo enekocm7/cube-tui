@@ -348,8 +348,9 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         | WcaEvent::Cube4x4
         | WcaEvent::Square1
         | WcaEvent::Cube3x3 => 1,
-        WcaEvent::Cube5x5 | WcaEvent::Cube6x6 | WcaEvent::Megaminx => 2,
+        WcaEvent::Cube5x5 | WcaEvent::Cube6x6 => 2,
         WcaEvent::Cube7x7 => 3,
+        WcaEvent::Megaminx => 7,
     };
 
     let scramble_height = (scramble_lines + 2).min(area.height.saturating_sub(1));
