@@ -363,7 +363,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
 
     let help_text = Line::from(vec![
         Span::raw("Space: hold/release  "),
-        Span::raw("Enter: details  Esc: close  "),
+        Span::raw("Enter: details  "),
         Span::raw("r: reset  "),
         Span::raw("q: quit  "),
         Span::raw("?: help"),
