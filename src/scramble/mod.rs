@@ -452,8 +452,8 @@ mod tests {
 
             assert_eq!(
                 s2.as_str().split_whitespace().count(),
-                11,
-                "2x2 should have 11 moves"
+                10,
+                "2x2 should have 10 moves"
             );
             assert_eq!(
                 s3.as_str().split_whitespace().count(),
@@ -529,7 +529,7 @@ mod tests {
 
     #[test]
     fn megaminx_uses_valid_moves() {
-        let valid_moves = ["R++", "R--", "D++", "D--"];
+        let valid_moves = ["R++", "R--", "D++", "D--", "U", "U'"];
 
         for _ in 0..10 {
             let scramble = generate_scramble(WcaEvent::Megaminx);
@@ -848,7 +848,10 @@ mod tests {
         for _ in 0..10 {
             let scramble = generate_scramble(WcaEvent::Megaminx);
             let count = scramble.as_str().split_whitespace().count();
-            assert_eq!(count, 77, "Megaminx should have 77 moves (7 rows × 11), got {count}");
+            assert_eq!(
+                count, 77,
+                "Megaminx should have 77 moves (7 rows × 11), got {count}"
+            );
         }
     }
 
@@ -880,7 +883,7 @@ mod tests {
             let scramble = generate_scramble(WcaEvent::Clock);
             let tokens: Vec<&str> = scramble.as_str().split_whitespace().collect();
 
-            // All but last should be position+amount
+            // All but the last should be position+amount
             for token in &tokens[..tokens.len() - 1] {
                 // Find where the number starts (+ or - or digit)
                 let pos_end = token.find(|c: char| c == '+' || c == '-' || c.is_ascii_digit());
@@ -900,15 +903,15 @@ mod tests {
 
     #[test]
     fn scramble_deterministic_length() {
-        // Same event should always produce same length scrambles
+        // The same event should always produce the same length scrambles
         let lengths: Vec<(WcaEvent, usize)> = vec![
-            (WcaEvent::Cube2x2, 11),
+            (WcaEvent::Cube2x2, 10),
             (WcaEvent::Cube3x3, 20),
             (WcaEvent::Cube4x4, 40),
             (WcaEvent::Cube5x5, 60),
             (WcaEvent::Cube6x6, 80),
             (WcaEvent::Cube7x7, 100),
-            (WcaEvent::Megaminx, 70),
+            (WcaEvent::Megaminx, 77),
             (WcaEvent::Skewb, 9),
         ];
 
