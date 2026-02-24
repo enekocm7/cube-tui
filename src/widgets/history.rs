@@ -156,20 +156,46 @@ impl Widget for History {
     where
         Self: Sized,
     {
-        for (i, item) in self.history.iter().enumerate() {
-            let Ok(offset) = u16::try_from(i) else {
-                break;
-            };
-            let row = area.y + offset;
-            if row >= area.y + area.height {
+        let total = self.history.len();
+        let height = area.height as usize;
+
+        let scroll_full = self.selected.saturating_sub(height.saturating_sub(1));
+        let need_below = scroll_full + height < total;
+
+        let bot_rows = usize::from(need_below);
+        let items_height = height.saturating_sub(bot_rows);
+
+        let scroll_offset = self.selected.saturating_sub(items_height.saturating_sub(1));
+
+        for (i, item) in self.history.iter().enumerate().skip(scroll_offset) {
+            let display_row = i - scroll_offset;
+            if display_row >= items_height {
                 break;
             }
+            let Ok(row_offset) = u16::try_from(display_row) else {
+                break;
+            };
             let style = if i == self.selected {
                 ratatui::style::Style::default().bg(ratatui::style::Color::Blue)
             } else {
                 ratatui::style::Style::default()
             };
-            buf.set_string(area.x, row, format!("{}: {item}", i + 1), style);
+            buf.set_string(
+                area.x,
+                area.y + row_offset,
+                format!("{}: {item}", i + 1),
+                style,
+            );
+        }
+
+        if need_below {
+            let below_count = total.saturating_sub(scroll_offset + items_height);
+            buf.set_string(
+                area.x,
+                area.y + area.height - 1,
+                format!("↓ {below_count} more"),
+                ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray),
+            );
         }
     }
 }
