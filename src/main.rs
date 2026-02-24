@@ -86,6 +86,7 @@ enum Msg {
     NextSession,
     PrevSession,
     NewSession,
+    DeleteSession,
     ToggleInspection,
     NextScramble,
     OpenDetails,
@@ -110,6 +111,7 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char(']'), KeyEventKind::Press) => Some(Msg::NextSession),
         (KeyCode::Char('['), KeyEventKind::Press) => Some(Msg::PrevSession),
         (KeyCode::Char('s'), KeyEventKind::Press) => Some(Msg::NewSession),
+        (KeyCode::Char('S'), KeyEventKind::Press) => Some(Msg::DeleteSession),
         (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NextScramble),
         (KeyCode::Char('?'), KeyEventKind::Press) => Some(Msg::Help),
         (KeyCode::Char('i'), KeyEventKind::Press) => Some(Msg::ToggleInspection),
@@ -135,6 +137,7 @@ fn update(model: &mut Model, msg: Msg) {
         Msg::NextSession => handle_next_session(model),
         Msg::PrevSession => handle_prev_session(model),
         Msg::NewSession => handle_new_session(model),
+        Msg::DeleteSession => handle_delete_session(model),
         Msg::NextScramble => handle_next_scramble(model),
         Msg::Help => handle_help(model),
         Msg::ToggleInspection => handle_toggle_inspection(model),
@@ -249,6 +252,13 @@ fn handle_prev_session(model: &mut Model) {
 fn handle_new_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.add_session();
+        persistence::save(model);
+    }
+}
+
+fn handle_delete_session(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle && model.delete_current_session() {
+        persistence::save(model);
     }
 }
 

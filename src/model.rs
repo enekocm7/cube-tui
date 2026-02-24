@@ -167,6 +167,22 @@ impl Model {
         true
     }
 
+    pub fn delete_current_session(&mut self) -> bool {
+        if self.sessions.len() <= 1 {
+            return false;
+        }
+
+        self.sessions.remove(self.current_session_index);
+        if self.current_session_index >= self.sessions.len() {
+            self.current_session_index = self.sessions.len() - 1;
+        }
+
+        self.show_details = false;
+        self.details_modifier_index = 0;
+
+        true
+    }
+
     pub const fn next_session(&mut self) {
         if self.sessions.is_empty() {
             return;

@@ -44,6 +44,7 @@ impl Widget for HelpWidget {
             )]),
             Line::from("[ / ]              Previous / Next session"),
             Line::from("s                  Create new session"),
+            Line::from("S                  Delete current session"),
             Line::from(""),
             Line::from(vec![Span::styled(
                 "INSPECTION",
