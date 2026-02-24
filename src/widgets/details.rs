@@ -48,8 +48,6 @@ impl Widget for DetailsWidget<'_> {
                     Line::from("Modifiers:"),
                     checkbox_line("+2", plus_two_checked, self.selected_modifier_index == 0),
                     checkbox_line("DNF", dnf_checked, self.selected_modifier_index == 1),
-                    Line::from(""),
-                    Line::from("Space: toggle selected modifier  Esc: close"),
                 ]
             },
         );

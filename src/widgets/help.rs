@@ -61,9 +61,19 @@ impl Widget for HelpWidget {
             )]),
             Line::from("Up / Down          Select previous / next time in history"),
             Line::from("Enter              Open details screen for selected time"),
+            Line::from("d                  Delete selected time"),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "DETAILS SCREEN",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from("Left / Right       Navigate to previous / next time"),
+            Line::from("Up / Down          Select +2 / DNF modifier"),
+            Line::from("Space              Toggle selected modifier"),
+            Line::from("d                  Delete selected time"),
             Line::from("Esc                Close details screen"),
-            Line::from("2                  Toggle +2 penalty on selected time"),
-            Line::from("d                  Toggle DNF on selected time"),
             Line::from(""),
             Line::from(vec![Span::styled(
                 "INTERFACE",

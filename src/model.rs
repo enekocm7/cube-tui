@@ -297,6 +297,22 @@ impl Model {
         }
     }
 
+    pub fn details_nav_prev(&mut self) {
+        self.history_mut().select_previous();
+        self.details_modifier_index = match self.history().selected_time().map(Time::modifier) {
+            Some(Modifier::DNF) => 1,
+            _ => 0,
+        };
+    }
+
+    pub fn details_nav_next(&mut self) {
+        self.history_mut().select_next();
+        self.details_modifier_index = match self.history().selected_time().map(Time::modifier) {
+            Some(Modifier::DNF) => 1,
+            _ => 0,
+        };
+    }
+
     pub const fn inspection_enabled(&self) -> bool {
         self.settings.inspection
     }
@@ -314,6 +330,7 @@ impl Model {
                 session.scramble = scramble::generate_scramble(session.event);
             }
             session.history = history;
+            session.history.select_last();
             self.sessions.push(session);
         }
         if self.sessions.is_empty() {

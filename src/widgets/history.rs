@@ -126,6 +126,12 @@ impl History {
         self.history.last()
     }
 
+    pub const fn select_last(&mut self) {
+        if !self.is_empty() {
+            self.selected = self.history.len() - 1;
+        }
+    }
+
     pub fn select_next(&mut self) {
         if self.is_empty() {
             return;
@@ -148,6 +154,15 @@ impl History {
 
     pub fn selected_time(&self) -> Option<&Time> {
         self.history.get(self.selected)
+    }
+
+    pub fn delete_selected(&mut self) {
+        if !self.is_empty() {
+            self.history.remove(self.selected);
+            if self.selected >= self.history.len() && !self.is_empty() {
+                self.selected = self.history.len() - 1;
+            }
+        }
     }
 }
 

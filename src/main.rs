@@ -21,7 +21,6 @@ use crate::model::{InspectionState, Model, TimerState};
 use crate::scramble::WcaEvent;
 use crate::widgets::details::DetailsWidget;
 use crate::widgets::help::HelpWidget;
-use crate::widgets::history::Modifier as HistoryModifier;
 use crate::widgets::scramble::ScrambleWidget;
 
 fn main() {
@@ -54,13 +53,16 @@ fn run(terminal: &mut DefaultTerminal) {
 
         if event::poll(Duration::from_millis(10)).unwrap_or(false)
             && let Ok(Event::Key(key)) = event::read()
-            && let Some(msg) = map_key_to_msg(key.code, key.kind)
         {
-            if matches!(msg, Msg::Quit) {
-                execute!(stdout, PopKeyboardEnhancementFlags).ok();
-                return;
+            let msg = map_key_to_msg(key.code, key.kind);
+
+            if let Some(msg) = msg {
+                if matches!(msg, Msg::Quit) {
+                    execute!(stdout, PopKeyboardEnhancementFlags).ok();
+                    return;
+                }
+                update(&mut model, msg);
             }
-            update(&mut model, msg);
         }
 
         terminal
@@ -86,10 +88,11 @@ enum Msg {
     NewSession,
     ToggleInspection,
     NextScramble,
-    TogglePlusTwo,
-    ToggleDNF,
     OpenDetails,
     CloseDetails,
+    DeleteTime,
+    NavLeft,
+    NavRight,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -100,6 +103,8 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char(' '), KeyEventKind::Release) => Some(Msg::Release),
         (KeyCode::Up, KeyEventKind::Press) => Some(Msg::SelectUp),
         (KeyCode::Down, KeyEventKind::Press) => Some(Msg::SelectDown),
+        (KeyCode::Left, KeyEventKind::Press) => Some(Msg::NavLeft),
+        (KeyCode::Right, KeyEventKind::Press) => Some(Msg::NavRight),
         (KeyCode::Char('e'), KeyEventKind::Press) => Some(Msg::NextEvent),
         (KeyCode::Char('E'), KeyEventKind::Press) => Some(Msg::PrevEvent),
         (KeyCode::Char(']'), KeyEventKind::Press) => Some(Msg::NextSession),
@@ -108,8 +113,7 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NextScramble),
         (KeyCode::Char('?'), KeyEventKind::Press) => Some(Msg::Help),
         (KeyCode::Char('i'), KeyEventKind::Press) => Some(Msg::ToggleInspection),
-        (KeyCode::Char('2'), KeyEventKind::Press) => Some(Msg::TogglePlusTwo),
-        (KeyCode::Char('d'), KeyEventKind::Press) => Some(Msg::ToggleDNF),
+        (KeyCode::Char('d'), KeyEventKind::Press) => Some(Msg::DeleteTime),
         (KeyCode::Enter, KeyEventKind::Press) => Some(Msg::OpenDetails),
         (KeyCode::Esc, KeyEventKind::Press) => Some(Msg::CloseDetails),
         _ => None,
@@ -134,10 +138,11 @@ fn update(model: &mut Model, msg: Msg) {
         Msg::NextScramble => handle_next_scramble(model),
         Msg::Help => handle_help(model),
         Msg::ToggleInspection => handle_toggle_inspection(model),
-        Msg::TogglePlusTwo => handle_toggle_plus_two(model),
-        Msg::ToggleDNF => handle_toggle_dnf(model),
         Msg::OpenDetails => handle_open_details(model),
         Msg::CloseDetails => handle_close_details(model),
+        Msg::DeleteTime => handle_delete_time(model),
+        Msg::NavLeft => handle_nav_left(model),
+        Msg::NavRight => handle_nav_right(model),
         Msg::Quit => {}
     }
 }
@@ -262,20 +267,6 @@ fn handle_toggle_inspection(model: &mut Model) {
     persistence::save_settings(*model.settings());
 }
 
-fn handle_toggle_plus_two(model: &mut Model) {
-    if model.timer_state() == TimerState::Idle {
-        model.history_mut().set_modifier(HistoryModifier::PlusTwo);
-        persistence::save(model);
-    }
-}
-
-fn handle_toggle_dnf(model: &mut Model) {
-    if model.timer_state() == TimerState::Idle {
-        model.history_mut().set_modifier(HistoryModifier::DNF);
-        persistence::save(model);
-    }
-}
-
 fn handle_open_details(model: &mut Model) {
     if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
         model.open_details();
@@ -286,6 +277,28 @@ const fn handle_close_details(model: &mut Model) {
     model.close_details();
 }
 
+fn handle_delete_time(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
+        model.history_mut().delete_selected();
+        persistence::save(model);
+        if model.show_details() && model.history().is_empty() {
+            model.close_details();
+        }
+    }
+}
+
+fn handle_nav_left(model: &mut Model) {
+    if model.show_details() {
+        model.details_nav_prev();
+    }
+}
+
+fn handle_nav_right(model: &mut Model) {
+    if model.show_details() {
+        model.details_nav_next();
+    }
+}
+
 fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
     if model.show_help() {
         HelpWidget.render(area, buf);
@@ -293,11 +306,27 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
     }
 
     if model.show_details() {
+        let details_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Fill(1), Constraint::Length(1)])
+            .split(area);
+
         DetailsWidget::new(
             model.history().selected_time(),
             model.selected_details_modifier_index(),
         )
-        .render(area, buf);
+        .render(details_layout[0], buf);
+
+        let details_help = Line::from(vec![
+            Span::raw("Space: toggle modifier  "),
+            Span::raw("↑/↓: select modifier  "),
+            Span::raw("←/→: navigate times  "),
+            Span::raw("d: delete  "),
+            Span::raw("Esc: close"),
+        ]);
+        Paragraph::new(details_help)
+            .alignment(Alignment::Center)
+            .render(details_layout[1], buf);
         return;
     }
 
