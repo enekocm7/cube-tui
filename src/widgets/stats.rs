@@ -14,6 +14,18 @@ impl StatsWidget {
     pub const fn new(history: History) -> Self {
         Self { history }
     }
+
+    fn fixed_cell(value: String) -> String {
+        const CELL_WIDTH: usize = 10;
+
+        let normalized = if value.starts_with("DNF(") {
+            "DNF".to_string()
+        } else {
+            value
+        };
+
+        normalized.chars().take(CELL_WIDTH).collect()
+    }
 }
 
 impl Widget for StatsWidget {
@@ -48,6 +60,13 @@ impl Widget for StatsWidget {
             .history
             .get_latest_ao5()
             .unwrap_or_else(|| "-".to_string());
+
+        let best_time = Self::fixed_cell(best_time);
+        let current_time = Self::fixed_cell(current_time);
+        let best_mo3 = Self::fixed_cell(best_mo3);
+        let current_mo3 = Self::fixed_cell(current_mo3);
+        let best_ao5 = Self::fixed_cell(best_ao5);
+        let current_ao5 = Self::fixed_cell(current_ao5);
 
         let text = vec![
             Line::from(format!("{:8}{:>10}{:>10}", "", "current", "best")),
