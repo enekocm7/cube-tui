@@ -114,6 +114,8 @@ pub struct Model {
     settings: Settings,
     current_session_index: usize,
     show_help: bool,
+    help_scroll: u16,
+    help_max_scroll: u16,
     show_details: bool,
     details_modifier_index: usize,
 }
@@ -125,6 +127,8 @@ impl Model {
             settings: Settings::default(),
             current_session_index: 0,
             show_help: false,
+            help_scroll: 0,
+            help_max_scroll: 0,
             show_details: false,
             details_modifier_index: 0,
         }
@@ -275,6 +279,26 @@ impl Model {
 
     pub const fn toggle_help(&mut self) {
         self.show_help = !self.show_help;
+        if self.show_help {
+            self.help_scroll = 0;
+        }
+    }
+
+    pub const fn help_scroll(&self) -> u16 {
+        self.help_scroll
+    }
+
+    pub fn set_help_max_scroll(&mut self, max_scroll: u16) {
+        self.help_max_scroll = max_scroll;
+        self.help_scroll = self.help_scroll.min(self.help_max_scroll);
+    }
+
+    pub const fn scroll_help_up(&mut self) {
+        self.help_scroll = self.help_scroll.saturating_sub(1);
+    }
+
+    pub fn scroll_help_down(&mut self) {
+        self.help_scroll = self.help_scroll.saturating_add(1).min(self.help_max_scroll);
     }
 
     pub const fn show_details(&self) -> bool {
@@ -353,6 +377,9 @@ impl Model {
             self.sessions.push(Session::new());
         }
         self.current_session_index = 0;
+        self.show_help = false;
+        self.help_scroll = 0;
+        self.help_max_scroll = 0;
         self.show_details = false;
         self.details_modifier_index = 0;
     }

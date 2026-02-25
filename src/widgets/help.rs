@@ -4,20 +4,17 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
-pub struct HelpWidget;
+pub struct HelpWidget {
+    scroll: u16,
+}
 
-impl Widget for HelpWidget {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
-        let block = Block::default()
-            .title("Commands Help")
-            .borders(Borders::ALL)
-            .border_type(ratatui::widgets::BorderType::Rounded);
+impl HelpWidget {
+    pub const fn new(scroll: u16) -> Self {
+        Self { scroll }
+    }
 
-        let help_text = vec![
-            Line::from(""),
+    fn help_text() -> Vec<Line<'static>> {
+        vec![
             Line::from(vec![Span::styled(
                 "TIMER CONTROLS",
                 Style::default()
@@ -85,10 +82,44 @@ impl Widget for HelpWidget {
             Line::from("?                  Show / Hide this help screen"),
             Line::from("q                  Quit application"),
             Line::from(""),
-        ];
+        ]
+    }
+
+    pub fn max_scroll_for_height(height: u16) -> u16 {
+        let total_lines = u16::try_from(Self::help_text().len()).unwrap_or(u16::MAX);
+        let visible_lines = height.saturating_sub(2);
+        total_lines.saturating_sub(visible_lines)
+    }
+}
+
+impl Widget for HelpWidget {
+    fn render(self, area: Rect, buf: &mut Buffer)
+    where
+        Self: Sized,
+    {
+        let help_text = Self::help_text();
+
+        let max_scroll = Self::max_scroll_for_height(area.height);
+        let scroll = self.scroll.min(max_scroll);
+
+        let title = if scroll > 0 && scroll < max_scroll {
+            "Commands Help (↑ more, ↓ more)"
+        } else if scroll > 0 {
+            "Commands Help (↑ more)"
+        } else if scroll < max_scroll {
+            "Commands Help (↓ more)"
+        } else {
+            "Commands Help"
+        };
+
+        let block = Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_type(ratatui::widgets::BorderType::Rounded);
 
         Paragraph::new(help_text)
             .block(block)
+            .scroll((scroll, 0))
             .wrap(Wrap { trim: true })
             .render(area, buf);
     }

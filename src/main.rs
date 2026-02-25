@@ -67,7 +67,7 @@ fn run(terminal: &mut DefaultTerminal) {
         }
 
         terminal
-            .draw(|frame| view(frame.area(), frame.buffer_mut(), &model))
+            .draw(|frame| view(frame.area(), frame.buffer_mut(), &mut model))
             .ok();
     }
 }
@@ -211,7 +211,9 @@ fn handle_tick(model: &mut Model) {
 }
 
 fn handle_select_up(model: &mut Model) {
-    if model.show_details() {
+    if model.show_help() {
+        model.scroll_help_up();
+    } else if model.show_details() {
         model.prev_details_modifier();
     } else {
         model.history_mut().select_previous();
@@ -219,7 +221,9 @@ fn handle_select_up(model: &mut Model) {
 }
 
 fn handle_select_down(model: &mut Model) {
-    if model.show_details() {
+    if model.show_help() {
+        model.scroll_help_down();
+    } else if model.show_details() {
         model.next_details_modifier();
     } else {
         model.history_mut().select_next();
@@ -310,9 +314,10 @@ fn handle_nav_right(model: &mut Model) {
     }
 }
 
-fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
+fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     if model.show_help() {
-        HelpWidget.render(area, buf);
+        model.set_help_max_scroll(HelpWidget::max_scroll_for_height(area.height));
+        HelpWidget::new(model.help_scroll()).render(area, buf);
         return;
     }
 
