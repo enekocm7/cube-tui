@@ -22,6 +22,7 @@ use crate::scramble::WcaEvent;
 use crate::widgets::details::DetailsWidget;
 use crate::widgets::help::HelpWidget;
 use crate::widgets::scramble::ScrambleWidget;
+use crate::widgets::stats::StatsWidget;
 
 fn main() {
     ratatui::run(run);
@@ -364,7 +365,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
 
     let main_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Length(24), Constraint::Min(10)].as_ref())
+        .constraints([Constraint::Length(24), Constraint::Min(10), Constraint::Length(30)].as_ref())
         .split(outer_layout[1]);
 
     ScrambleWidget::new(model.scramble().as_str(), model.event().name())
@@ -400,6 +401,8 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &Model) {
         .alignment(Alignment::Center)
         .wrap(Wrap { trim: true })
         .render(main_layout[1], buf);
+
+    StatsWidget::new(model.history().clone()).render(main_layout[2], buf);
 
     let help_text = Line::from(vec![
         Span::raw("Space: hold/release  "),

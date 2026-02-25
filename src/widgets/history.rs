@@ -6,6 +6,7 @@ use std::fmt::{Display, Formatter};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::scramble::WcaEvent;
+use crate::scramble::WcaEvent::Cube3x3;
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,6 +64,12 @@ impl Time {
     }
 }
 
+impl Default for Time {
+    fn default() -> Self {
+        Self::new(0, Cube3x3, String::new())
+    }
+}
+
 fn current_unix_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -77,6 +84,12 @@ fn format_millis(ms: u64) -> String {
     let seconds = total_seconds % 60;
     let millis = ms % 1000;
     format!("{minutes:02}:{seconds:02}.{millis:03}")
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AverageValue {
+    Time(u64),
+    Dnf,
 }
 
 impl Display for Time {
@@ -162,6 +175,131 @@ impl History {
             if self.selected >= self.history.len() && !self.is_empty() {
                 self.selected = self.history.len() - 1;
             }
+        }
+    }
+
+    pub fn get_latest_time(&self) -> Option<&Time> {
+        self.history.last()
+    }
+
+    pub fn get_fastest_time(&self) -> Option<&Time> {
+        self.history
+            .iter()
+            .min_by_key(|time| time.timestamp_in_millis)
+    }
+
+    pub fn get_latest_mo3(&self) -> Option<String> {
+        self.get_mo3(self.history.len()).map(Self::format_average_value)
+    }
+
+    pub fn get_fastest_mo3(&self) -> Option<String> {
+        let mut fastest = u64::MAX;
+        let mut has_enough_solves_for_average = false;
+        for i in 3..=self.history.len() {
+            let Some(mo3) = self.get_mo3(i) else {
+                continue;
+            };
+            has_enough_solves_for_average = true;
+            if let AverageValue::Time(value) = mo3 {
+                fastest = fastest.min(value);
+            }
+        }
+
+        if fastest != u64::MAX {
+            return Some(format_millis(fastest));
+        }
+        if has_enough_solves_for_average {
+            return Some("DNF".to_string());
+        }
+        None
+    }
+
+    pub fn get_latest_ao5(&self) -> Option<String> {
+        self.get_ao5(self.history.len())
+            .map(Self::format_average_value)
+    }
+
+    pub fn get_fastest_ao5(&self) -> Option<String> {
+        let mut fastest = u64::MAX;
+        let mut has_enough_solves_for_average = false;
+        for i in 5..=self.history.len() {
+            let Some(ao5) = self.get_ao5(i) else {
+                continue;
+            };
+            has_enough_solves_for_average = true;
+            if let AverageValue::Time(value) = ao5 {
+                fastest = fastest.min(value);
+            }
+        }
+
+        if fastest != u64::MAX {
+            return Some(format_millis(fastest));
+        }
+        if has_enough_solves_for_average {
+            return Some("DNF".to_string());
+        }
+        None
+    }
+
+    fn get_mo3(&self, index: usize) -> Option<AverageValue> {
+        if index <= 2 {
+            return None;
+        }
+
+        let times = self.history.get(index.saturating_sub(3)..index)?;
+
+        let mut sum = 0;
+        for time in times {
+            let Some(value) = Self::effective_millis(time) else {
+                return Some(AverageValue::Dnf);
+            };
+            sum += value;
+        }
+
+        Some(AverageValue::Time(sum / 3))
+    }
+
+    fn get_ao5(&self, index: usize) -> Option<AverageValue> {
+        if index <= 4 {
+            return None;
+        }
+
+        let attempts: Vec<Option<u64>> = self
+            .history
+            .get(index.saturating_sub(5)..index)?
+            .iter()
+            .map(Self::effective_millis)
+            .collect();
+
+        let dnf_count = attempts.iter().filter(|attempt| attempt.is_none()).count();
+        if dnf_count >= 2 {
+            return Some(AverageValue::Dnf);
+        }
+
+        let mut valid: Vec<u64> = attempts.iter().flatten().copied().collect();
+        valid.sort_unstable();
+
+        if dnf_count == 1 {
+            let trimmed_sum: u64 = valid.iter().skip(1).sum();
+            return Some(AverageValue::Time(trimmed_sum / 3));
+        }
+
+        let trimmed_sum: u64 = valid[1..4].iter().sum();
+        Some(AverageValue::Time(trimmed_sum / 3))
+    }
+
+    const fn effective_millis(time: &Time) -> Option<u64> {
+        match time.modifier {
+            Modifier::None => Some(time.timestamp_in_millis),
+            Modifier::PlusTwo => Some(time.timestamp_in_millis + 2000),
+            Modifier::DNF => None,
+        }
+    }
+
+    fn format_average_value(value: AverageValue) -> String {
+        match value {
+            AverageValue::Time(ms) => format_millis(ms),
+            AverageValue::Dnf => "DNF".to_string(),
         }
     }
 }
