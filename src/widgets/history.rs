@@ -62,6 +62,14 @@ impl Time {
             self.modifier = modifier;
         }
     }
+
+    pub const fn effective_ms(&self) -> Option<u64> {
+        match self.modifier {
+            Modifier::None => Some(self.timestamp_in_millis),
+            Modifier::PlusTwo => Some(self.timestamp_in_millis + 2000),
+            Modifier::DNF => None,
+        }
+    }
 }
 
 impl Default for Time {
@@ -78,7 +86,7 @@ fn current_unix_ms() -> u64 {
         })
 }
 
-fn format_millis(ms: u64) -> String {
+pub fn format_millis(ms: u64) -> String {
     let total_seconds = ms / 1000;
     let minutes = total_seconds / 60;
     let seconds = total_seconds % 60;
@@ -159,6 +167,13 @@ impl History {
         self.selected = self.selected.saturating_sub(1);
     }
 
+    pub fn select_index(&mut self, index: usize) {
+        if self.is_empty() {
+            return;
+        }
+        self.selected = index.min(self.history.len() - 1);
+    }
+
     pub fn set_modifier(&mut self, modifier: Modifier) {
         if let Some(time) = self.history.get_mut(self.selected) {
             time.set_modifier(modifier);
@@ -189,7 +204,8 @@ impl History {
     }
 
     pub fn get_latest_mo3(&self) -> Option<String> {
-        self.get_mo3(self.history.len()).map(Self::format_average_value)
+        self.get_mo3(self.history.len())
+            .map(Self::format_average_value)
     }
 
     pub fn get_fastest_mo3(&self) -> Option<String> {
@@ -301,6 +317,40 @@ impl History {
             AverageValue::Time(ms) => format_millis(ms),
             AverageValue::Dnf => "DNF".to_string(),
         }
+    }
+
+    pub const fn len(&self) -> usize {
+        self.history.len()
+    }
+
+    pub fn get_time_at(&self, index: usize) -> Option<&Time> {
+        self.history.get(index)
+    }
+
+    pub fn mo3_at(&self, solve_index: usize) -> Option<String> {
+        self.get_mo3(solve_index + 1)
+            .map(Self::format_average_value)
+    }
+
+    pub fn ao5_at(&self, solve_index: usize) -> Option<String> {
+        self.get_ao5(solve_index + 1)
+            .map(Self::format_average_value)
+    }
+
+    pub fn mo3_times_at(&self, solve_index: usize) -> Option<&[Time]> {
+        if solve_index < 2 || solve_index >= self.history.len() {
+            return None;
+        }
+        self.get_mo3(solve_index + 1)?;
+        self.history.get(solve_index - 2..=solve_index)
+    }
+
+    pub fn ao5_times_at(&self, solve_index: usize) -> Option<&[Time]> {
+        if solve_index < 4 || solve_index >= self.history.len() {
+            return None;
+        }
+        self.get_ao5(solve_index + 1)?;
+        self.history.get(solve_index - 4..=solve_index)
     }
 }
 

@@ -23,6 +23,8 @@ use crate::widgets::details::DetailsWidget;
 use crate::widgets::help::HelpWidget;
 use crate::widgets::scramble::ScrambleWidget;
 use crate::widgets::stats::StatsWidget;
+use crate::widgets::detailed_stats::DetailedStatsWidget;
+use crate::widgets::mean_detail::MeanDetailWidget;
 
 fn main() {
     ratatui::run(run);
@@ -92,6 +94,7 @@ enum Msg {
     NextScramble,
     OpenDetails,
     CloseDetails,
+    OpenDetailedStats,
     DeleteTime,
     NavLeft,
     NavRight,
@@ -116,6 +119,7 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NextScramble),
         (KeyCode::Char('?'), KeyEventKind::Press) => Some(Msg::Help),
         (KeyCode::Char('i'), KeyEventKind::Press) => Some(Msg::ToggleInspection),
+        (KeyCode::Char('t'), KeyEventKind::Press) => Some(Msg::OpenDetailedStats),
         (KeyCode::Char('d'), KeyEventKind::Press) => Some(Msg::DeleteTime),
         (KeyCode::Enter, KeyEventKind::Press) => Some(Msg::OpenDetails),
         (KeyCode::Esc, KeyEventKind::Press) => Some(Msg::CloseDetails),
@@ -144,6 +148,7 @@ fn update(model: &mut Model, msg: Msg) {
         Msg::ToggleInspection => handle_toggle_inspection(model),
         Msg::OpenDetails => handle_open_details(model),
         Msg::CloseDetails => handle_close_details(model),
+        Msg::OpenDetailedStats => handle_open_detailed_stats(model),
         Msg::DeleteTime => handle_delete_time(model),
         Msg::NavLeft => handle_nav_left(model),
         Msg::NavRight => handle_nav_right(model),
@@ -213,6 +218,10 @@ fn handle_tick(model: &mut Model) {
 fn handle_select_up(model: &mut Model) {
     if model.show_help() {
         model.scroll_help_up();
+    } else if model.show_mean_detail() {
+        model.mean_detail_select_up();
+    } else if model.show_detailed_stats() {
+        model.detailed_stats_select_up();
     } else if model.show_details() {
         model.prev_details_modifier();
     } else {
@@ -223,6 +232,10 @@ fn handle_select_up(model: &mut Model) {
 fn handle_select_down(model: &mut Model) {
     if model.show_help() {
         model.scroll_help_down();
+    } else if model.show_mean_detail() {
+        model.mean_detail_select_down();
+    } else if model.show_detailed_stats() {
+        model.detailed_stats_select_down();
     } else if model.show_details() {
         model.next_details_modifier();
     } else {
@@ -283,13 +296,35 @@ fn handle_toggle_inspection(model: &mut Model) {
 }
 
 fn handle_open_details(model: &mut Model) {
+    if model.show_mean_detail() {
+        model.open_details_for_selected_mean_time();
+        return;
+    }
+    if model.show_detailed_stats() && !model.show_mean_detail() {
+        model.open_mean_detail();
+        return;
+    }
     if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
         model.open_details();
     }
 }
 
+fn handle_open_detailed_stats(model: &mut Model) {
+    if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
+        model.open_detailed_stats();
+    }
+}
+
 const fn handle_close_details(model: &mut Model) {
-    model.close_details();
+    if model.show_details() && model.can_return_to_mean_detail() {
+        model.return_to_mean_detail();
+    } else if model.show_mean_detail() {
+        model.close_mean_detail();
+    } else if model.show_detailed_stats() {
+        model.close_detailed_stats();
+    } else {
+        model.close_details();
+    }
 }
 
 fn handle_delete_time(model: &mut Model) {
@@ -303,21 +338,76 @@ fn handle_delete_time(model: &mut Model) {
 }
 
 fn handle_nav_left(model: &mut Model) {
-    if model.show_details() {
+    if model.show_detailed_stats() && !model.show_mean_detail() {
+        model.detailed_stats_col_left();
+    } else if model.show_details() {
         model.details_nav_prev();
     }
 }
 
 fn handle_nav_right(model: &mut Model) {
-    if model.show_details() {
+    if model.show_detailed_stats() && !model.show_mean_detail() {
+        model.detailed_stats_col_right();
+    } else if model.show_details() {
         model.details_nav_next();
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     if model.show_help() {
         model.set_help_max_scroll(HelpWidget::max_scroll_for_height(area.height));
         HelpWidget::new(model.help_scroll()).render(area, buf);
+        return;
+    }
+
+    if model.show_detailed_stats() && model.show_mean_detail() {
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Fill(1), Constraint::Length(1)])
+            .split(area);
+
+        let widget = MeanDetailWidget::new(
+            model.history(),
+            model.detailed_stats_row(),
+            model.detailed_stats_col(),
+            model.mean_detail_selected_index(),
+        );
+        widget.render(layout[0], buf);
+
+        let help_text = Line::from(vec![
+            Span::raw("↑/↓: select time  "),
+            Span::raw("Enter: open details  "),
+            Span::raw("Esc: back to stats"),
+        ]);
+        Paragraph::new(help_text)
+            .alignment(Alignment::Center)
+            .render(layout[1], buf);
+        return;
+    }
+
+    if model.show_detailed_stats() {
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Fill(1), Constraint::Length(1)])
+            .split(area);
+
+        DetailedStatsWidget::new(
+            model.history().clone(),
+            model.detailed_stats_row(),
+            model.detailed_stats_col(),
+        )
+        .render(layout[0], buf);
+
+        let help_text = Line::from(vec![
+            Span::raw("↑/↓: navigate  "),
+            Span::raw("←/→: mo3/ao5  "),
+            Span::raw("Enter: view mean  "),
+            Span::raw("Esc: back"),
+        ]);
+        Paragraph::new(help_text)
+            .alignment(Alignment::Center)
+            .render(layout[1], buf);
         return;
     }
 
@@ -333,12 +423,17 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         )
         .render(details_layout[0], buf);
 
+        let esc_label = if model.can_return_to_mean_detail() {
+            "Esc: back to mean"
+        } else {
+            "Esc: close"
+        };
         let details_help = Line::from(vec![
             Span::raw("Space: toggle modifier  "),
             Span::raw("↑/↓: select modifier  "),
             Span::raw("←/→: navigate times  "),
             Span::raw("d: delete  "),
-            Span::raw("Esc: close"),
+            Span::raw(esc_label),
         ]);
         Paragraph::new(details_help)
             .alignment(Alignment::Center)

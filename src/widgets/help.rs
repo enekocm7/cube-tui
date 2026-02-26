@@ -59,7 +59,29 @@ impl HelpWidget {
             )]),
             Line::from("Up / Down          Select previous / next time in history"),
             Line::from("Enter              Open details screen for selected time"),
+            Line::from("t                  Open detailed stats screen"),
             Line::from("d                  Delete selected time"),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "DETAILED STATS",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from("Up / Down          Select solve"),
+            Line::from("Left / Right       Switch mo3 / ao5 column"),
+            Line::from("Enter              Open mean detail"),
+            Line::from("Esc                Close detailed stats"),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "MEAN DETAIL",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from("Up / Down          Select time within mean"),
+            Line::from("Enter              Open details for selected time"),
+            Line::from("Esc                Back to detailed stats"),
             Line::from(""),
             Line::from(vec![Span::styled(
                 "DETAILS SCREEN",
