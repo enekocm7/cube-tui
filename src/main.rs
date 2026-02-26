@@ -98,6 +98,7 @@ enum Msg {
     DeleteTime,
     NavLeft,
     NavRight,
+    ToggleFocus,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -110,6 +111,7 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Down, KeyEventKind::Press) => Some(Msg::SelectDown),
         (KeyCode::Left, KeyEventKind::Press) => Some(Msg::NavLeft),
         (KeyCode::Right, KeyEventKind::Press) => Some(Msg::NavRight),
+        (KeyCode::Tab, KeyEventKind::Press) => Some(Msg::ToggleFocus),
         (KeyCode::Char('e'), KeyEventKind::Press) => Some(Msg::NextEvent),
         (KeyCode::Char('E'), KeyEventKind::Press) => Some(Msg::PrevEvent),
         (KeyCode::Char(']'), KeyEventKind::Press) => Some(Msg::NextSession),
@@ -152,6 +154,7 @@ fn update(model: &mut Model, msg: Msg) {
         Msg::DeleteTime => handle_delete_time(model),
         Msg::NavLeft => handle_nav_left(model),
         Msg::NavRight => handle_nav_right(model),
+        Msg::ToggleFocus => handle_toggle_focus(model),
         Msg::Quit => {}
     }
 }
@@ -224,6 +227,8 @@ fn handle_select_up(model: &mut Model) {
         model.detailed_stats_select_up();
     } else if model.show_details() {
         model.prev_details_modifier();
+    } else if model.main_focus_is_stats() {
+        model.main_stats_select_up();
     } else {
         model.history_mut().select_previous();
     }
@@ -238,9 +243,18 @@ fn handle_select_down(model: &mut Model) {
         model.detailed_stats_select_down();
     } else if model.show_details() {
         model.next_details_modifier();
+    } else if model.main_focus_is_stats() {
+        model.main_stats_select_down();
     } else {
         model.history_mut().select_next();
     }
+}
+
+const fn handle_toggle_focus(model: &mut Model) {
+    if model.show_help() || model.show_details() || model.show_detailed_stats() {
+        return;
+    }
+    model.toggle_main_focus();
 }
 
 fn handle_next_event(model: &mut Model) {
@@ -304,6 +318,10 @@ fn handle_open_details(model: &mut Model) {
         model.open_mean_detail();
         return;
     }
+    if model.main_focus_is_stats() {
+        model.open_mean_detail_from_stats();
+        return;
+    }
     if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
         model.open_details();
     }
@@ -340,6 +358,8 @@ fn handle_delete_time(model: &mut Model) {
 fn handle_nav_left(model: &mut Model) {
     if model.show_detailed_stats() && !model.show_mean_detail() {
         model.detailed_stats_col_left();
+    } else if model.main_focus_is_stats() {
+        model.main_stats_col_left();
     } else if model.show_details() {
         model.details_nav_prev();
     }
@@ -348,6 +368,8 @@ fn handle_nav_left(model: &mut Model) {
 fn handle_nav_right(model: &mut Model) {
     if model.show_detailed_stats() && !model.show_mean_detail() {
         model.detailed_stats_col_right();
+    } else if model.main_focus_is_stats() {
+        model.main_stats_col_right();
     } else if model.show_details() {
         model.details_nav_next();
     }
@@ -484,7 +506,15 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     let history_block = Block::default().title(history_title).borders(Borders::ALL);
     history_block.render(main_layout[0], buf);
     let history_area = inner_area(main_layout[0]);
-    model.history().clone().render(history_area, buf);
+    if model.main_focus_is_stats() {
+        model
+            .history()
+            .clone()
+            .without_selection_highlight()
+            .render(history_area, buf);
+    } else {
+        model.history().clone().render(history_area, buf);
+    }
 
     let timer_title = format!(
         "Timer - Inspection: {}",
@@ -502,11 +532,18 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         .wrap(Wrap { trim: true })
         .render(main_layout[1], buf);
 
-    StatsWidget::new(model.history().clone()).render(main_layout[2], buf);
+    let stats_widget = if model.main_focus_is_stats() {
+        StatsWidget::new(model.history().clone())
+            .with_selection(model.main_stats_row(), model.main_stats_col())
+    } else {
+        StatsWidget::new(model.history().clone())
+    };
+    stats_widget.render(main_layout[2], buf);
 
     let help_text = Line::from(vec![
         Span::raw("Space: hold/release  "),
         Span::raw("Enter: details  "),
+        Span::raw("Tab: history/stats  "),
         Span::raw("r: reset  "),
         Span::raw("q: quit  "),
         Span::raw("?: help"),

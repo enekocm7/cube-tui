@@ -117,17 +117,29 @@ impl Display for Time {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct History {
-    history: Vec<Time>,
+    times: Vec<Time>,
     #[serde(skip)]
-    pub selected: usize,
+    pub selected: Option<usize>,
+    #[serde(skip, default = "default_highlight_selection")]
+    highlight_selection: bool,
+}
+
+const fn default_highlight_selection() -> bool {
+    true
 }
 
 impl History {
     pub const fn new() -> Self {
         Self {
-            history: Vec::new(),
-            selected: 0,
+            times: Vec::new(),
+            selected: None,
+            highlight_selection: true,
         }
+    }
+
+    pub const fn without_selection_highlight(mut self) -> Self {
+        self.highlight_selection = false;
+        self
     }
 
     pub fn add_ms(&mut self, timestamp_in_millis: u64, event: WcaEvent, scramble: String) {
@@ -135,21 +147,21 @@ impl History {
     }
 
     pub fn add(&mut self, item: Time) {
-        self.history.push(item);
-        self.selected = self.history.len() - 1;
+        self.times.push(item);
+        self.selected = Some(self.times.len() - 1);
     }
 
     pub const fn is_empty(&self) -> bool {
-        self.history.is_empty()
+        self.times.is_empty()
     }
 
     pub fn last(&self) -> Option<&Time> {
-        self.history.last()
+        self.times.last()
     }
 
     pub const fn select_last(&mut self) {
         if !self.is_empty() {
-            self.selected = self.history.len() - 1;
+            self.selected = Some(self.times.len() - 1);
         }
     }
 
@@ -157,61 +169,68 @@ impl History {
         if self.is_empty() {
             return;
         }
-        self.selected = (self.selected + 1).min(self.history.len() - 1);
+        let selected = self.selected.unwrap_or(0);
+        self.selected = Some((selected + 1).min(self.times.len() - 1));
     }
 
-    pub const fn select_previous(&mut self) {
+    pub fn select_previous(&mut self) {
         if self.is_empty() {
             return;
         }
-        self.selected = self.selected.saturating_sub(1);
+        let selected = self.selected.unwrap_or(0);
+        self.selected = Some(selected.saturating_sub(1));
     }
 
     pub fn select_index(&mut self, index: usize) {
         if self.is_empty() {
             return;
         }
-        self.selected = index.min(self.history.len() - 1);
+        self.selected = Some(index.min(self.times.len() - 1));
     }
 
     pub fn set_modifier(&mut self, modifier: Modifier) {
-        if let Some(time) = self.history.get_mut(self.selected) {
+        if let Some(selected) = self.selected
+            && let Some(time) = self.times.get_mut(selected)
+        {
             time.set_modifier(modifier);
         }
     }
 
     pub fn selected_time(&self) -> Option<&Time> {
-        self.history.get(self.selected)
+        self.selected.and_then(|selected| self.times.get(selected))
     }
 
     pub fn delete_selected(&mut self) {
         if !self.is_empty() {
-            self.history.remove(self.selected);
-            if self.selected >= self.history.len() && !self.is_empty() {
-                self.selected = self.history.len() - 1;
+            let selected = self.selected.unwrap_or(self.times.len() - 1);
+            self.times.remove(selected);
+            if self.times.is_empty() {
+                self.selected = None;
+            } else {
+                self.selected = Some(selected.min(self.times.len() - 1));
             }
         }
     }
 
     pub fn get_latest_time(&self) -> Option<&Time> {
-        self.history.last()
+        self.times.last()
     }
 
     pub fn get_fastest_time(&self) -> Option<&Time> {
-        self.history
+        self.times
             .iter()
             .min_by_key(|time| time.timestamp_in_millis)
     }
 
     pub fn get_latest_mo3(&self) -> Option<String> {
-        self.get_mo3(self.history.len())
+        self.get_mo3(self.times.len())
             .map(Self::format_average_value)
     }
 
     pub fn get_fastest_mo3(&self) -> Option<String> {
         let mut fastest = u64::MAX;
         let mut has_enough_solves_for_average = false;
-        for i in 3..=self.history.len() {
+        for i in 3..=self.times.len() {
             let Some(mo3) = self.get_mo3(i) else {
                 continue;
             };
@@ -231,14 +250,14 @@ impl History {
     }
 
     pub fn get_latest_ao5(&self) -> Option<String> {
-        self.get_ao5(self.history.len())
+        self.get_ao5(self.times.len())
             .map(Self::format_average_value)
     }
 
     pub fn get_fastest_ao5(&self) -> Option<String> {
         let mut fastest = u64::MAX;
         let mut has_enough_solves_for_average = false;
-        for i in 5..=self.history.len() {
+        for i in 5..=self.times.len() {
             let Some(ao5) = self.get_ao5(i) else {
                 continue;
             };
@@ -262,7 +281,7 @@ impl History {
             return None;
         }
 
-        let times = self.history.get(index.saturating_sub(3)..index)?;
+        let times = self.times.get(index.saturating_sub(3)..index)?;
 
         let mut sum = 0;
         for time in times {
@@ -281,7 +300,7 @@ impl History {
         }
 
         let attempts: Vec<Option<u64>> = self
-            .history
+            .times
             .get(index.saturating_sub(5)..index)?
             .iter()
             .map(Self::effective_millis)
@@ -320,11 +339,11 @@ impl History {
     }
 
     pub const fn len(&self) -> usize {
-        self.history.len()
+        self.times.len()
     }
 
     pub fn get_time_at(&self, index: usize) -> Option<&Time> {
-        self.history.get(index)
+        self.times.get(index)
     }
 
     pub fn mo3_at(&self, solve_index: usize) -> Option<String> {
@@ -337,20 +356,67 @@ impl History {
             .map(Self::format_average_value)
     }
 
+    pub fn latest_mo3_index(&self) -> Option<usize> {
+        if self.get_mo3(self.times.len()).is_some() {
+            Some(self.times.len().saturating_sub(1))
+        } else {
+            None
+        }
+    }
+
+    pub fn latest_ao5_index(&self) -> Option<usize> {
+        if self.get_ao5(self.times.len()).is_some() {
+            Some(self.times.len().saturating_sub(1))
+        } else {
+            None
+        }
+    }
+
+    fn fastest_average_index(
+        &self,
+        start_index: usize,
+        average_at: fn(&Self, usize) -> Option<AverageValue>,
+    ) -> Option<usize> {
+        let mut best: Option<(u64, usize)> = None;
+        for index in start_index..=self.times.len() {
+            let Some(average) = average_at(self, index) else {
+                continue;
+            };
+            if let AverageValue::Time(value) = average {
+                let solve_index = index - 1;
+                best = match best {
+                    Some((best_value, best_index)) if best_value <= value => {
+                        Some((best_value, best_index))
+                    }
+                    _ => Some((value, solve_index)),
+                };
+            }
+        }
+        best.map(|(_, i)| i)
+    }
+
+    pub fn fastest_mo3_index(&self) -> Option<usize> {
+        self.fastest_average_index(3, Self::get_mo3)
+    }
+
+    pub fn fastest_ao5_index(&self) -> Option<usize> {
+        self.fastest_average_index(5, Self::get_ao5)
+    }
+
     pub fn mo3_times_at(&self, solve_index: usize) -> Option<&[Time]> {
-        if solve_index < 2 || solve_index >= self.history.len() {
+        if solve_index < 2 || solve_index >= self.times.len() {
             return None;
         }
         self.get_mo3(solve_index + 1)?;
-        self.history.get(solve_index - 2..=solve_index)
+        self.times.get(solve_index - 2..=solve_index)
     }
 
     pub fn ao5_times_at(&self, solve_index: usize) -> Option<&[Time]> {
-        if solve_index < 4 || solve_index >= self.history.len() {
+        if solve_index < 4 || solve_index >= self.times.len() {
             return None;
         }
         self.get_ao5(solve_index + 1)?;
-        self.history.get(solve_index - 4..=solve_index)
+        self.times.get(solve_index - 4..=solve_index)
     }
 }
 
@@ -359,18 +425,19 @@ impl Widget for History {
     where
         Self: Sized,
     {
-        let total = self.history.len();
+        let total = self.times.len();
         let height = area.height as usize;
+        let selected = self.selected.unwrap_or(0);
 
-        let scroll_full = self.selected.saturating_sub(height.saturating_sub(1));
+        let scroll_full = selected.saturating_sub(height.saturating_sub(1));
         let need_below = scroll_full + height < total;
 
         let bot_rows = usize::from(need_below);
         let items_height = height.saturating_sub(bot_rows);
 
-        let scroll_offset = self.selected.saturating_sub(items_height.saturating_sub(1));
+        let scroll_offset = selected.saturating_sub(items_height.saturating_sub(1));
 
-        for (i, item) in self.history.iter().enumerate().skip(scroll_offset) {
+        for (i, item) in self.times.iter().enumerate().skip(scroll_offset) {
             let display_row = i - scroll_offset;
             if display_row >= items_height {
                 break;
@@ -378,7 +445,7 @@ impl Widget for History {
             let Ok(row_offset) = u16::try_from(display_row) else {
                 break;
             };
-            let style = if i == self.selected {
+            let style = if self.highlight_selection && self.selected.is_some() && i == selected {
                 ratatui::style::Style::default()
                     .bg(ratatui::style::Color::Blue)
                     .fg(ratatui::style::Color::Black)

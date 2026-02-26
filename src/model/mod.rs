@@ -151,6 +151,24 @@ struct DetailedStatsState {
     col: usize,
     show_mean_detail: bool,
     mean_detail_selected_index: usize,
+    opened_from_stats_column: bool,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum MainFocus {
+    History,
+    Stats,
+}
+
+struct MainStatsSelection {
+    row: usize,
+    col: usize,
+}
+
+impl Default for MainStatsSelection {
+    fn default() -> Self {
+        Self { row: 1, col: 0 }
+    }
 }
 
 pub struct Model {
@@ -159,6 +177,8 @@ pub struct Model {
     help_state: HelpState,
     details_state: DetailsState,
     detailed_stats_state: DetailedStatsState,
+    main_focus: MainFocus,
+    main_stats_selection: MainStatsSelection,
 }
 
 impl Model {
@@ -169,6 +189,8 @@ impl Model {
             help_state: HelpState::default(),
             details_state: DetailsState::default(),
             detailed_stats_state: DetailedStatsState::default(),
+            main_focus: MainFocus::History,
+            main_stats_selection: MainStatsSelection::default(),
         }
     }
 
@@ -277,6 +299,68 @@ impl Model {
         self.help_state = HelpState::default();
         self.details_state = DetailsState::default();
         self.detailed_stats_state = DetailedStatsState::default();
+        self.main_focus = MainFocus::History;
+        self.main_stats_selection = MainStatsSelection::default();
+    }
+
+    pub const fn main_focus_is_stats(&self) -> bool {
+        matches!(self.main_focus, MainFocus::Stats)
+    }
+
+    pub const fn toggle_main_focus(&mut self) {
+        self.main_focus = match self.main_focus {
+            MainFocus::History => MainFocus::Stats,
+            MainFocus::Stats => MainFocus::History,
+        };
+    }
+
+    pub const fn main_stats_row(&self) -> usize {
+        self.main_stats_selection.row
+    }
+
+    pub const fn main_stats_col(&self) -> usize {
+        self.main_stats_selection.col
+    }
+
+    pub const fn main_stats_select_up(&mut self) {
+        self.main_stats_selection.row = self.main_stats_selection.row.saturating_sub(1);
+    }
+
+    pub fn main_stats_select_down(&mut self) {
+        self.main_stats_selection.row = (self.main_stats_selection.row + 1).min(2);
+    }
+
+    pub const fn main_stats_col_left(&mut self) {
+        self.main_stats_selection.col = 0;
+    }
+
+    pub const fn main_stats_col_right(&mut self) {
+        self.main_stats_selection.col = 1;
+    }
+
+    pub fn open_mean_detail_from_stats(&mut self) -> bool {
+        let row = self.main_stats_selection.row;
+        let col = self.main_stats_selection.col;
+
+        let solve_index = match (row, col) {
+            (1, 0) => self.history().latest_mo3_index(),
+            (1, 1) => self.history().fastest_mo3_index(),
+            (2, 0) => self.history().latest_ao5_index(),
+            (2, 1) => self.history().fastest_ao5_index(),
+            _ => None,
+        };
+
+        let Some(solve_index) = solve_index else {
+            return false;
+        };
+
+        self.detailed_stats_state.show = true;
+        self.detailed_stats_state.row = solve_index;
+        self.detailed_stats_state.col = usize::from(row != 1);
+        self.detailed_stats_state.show_mean_detail = true;
+        self.detailed_stats_state.mean_detail_selected_index = 0;
+        self.detailed_stats_state.opened_from_stats_column = true;
+        true
     }
 
     pub fn reset_timer(&mut self) {
@@ -467,12 +551,14 @@ impl Model {
         self.detailed_stats_state.col = 0;
         self.detailed_stats_state.show_mean_detail = false;
         self.detailed_stats_state.mean_detail_selected_index = 0;
+        self.detailed_stats_state.opened_from_stats_column = false;
     }
 
     pub const fn close_detailed_stats(&mut self) {
         self.detailed_stats_state.show = false;
         self.detailed_stats_state.show_mean_detail = false;
         self.detailed_stats_state.mean_detail_selected_index = 0;
+        self.detailed_stats_state.opened_from_stats_column = false;
     }
 
     pub const fn detailed_stats_row(&self) -> usize {
@@ -515,12 +601,18 @@ impl Model {
         if has_mean {
             self.detailed_stats_state.show_mean_detail = true;
             self.detailed_stats_state.mean_detail_selected_index = 0;
+            self.detailed_stats_state.opened_from_stats_column = false;
         }
     }
 
     pub const fn close_mean_detail(&mut self) {
+        let opened_from_stats_column = self.detailed_stats_state.opened_from_stats_column;
         self.detailed_stats_state.show_mean_detail = false;
         self.detailed_stats_state.mean_detail_selected_index = 0;
+        self.detailed_stats_state.opened_from_stats_column = false;
+        if opened_from_stats_column {
+            self.detailed_stats_state.show = false;
+        }
     }
 
     pub fn mean_detail_times_len(&self) -> usize {

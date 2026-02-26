@@ -13,6 +13,7 @@ impl HelpWidget {
         Self { scroll }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn help_text() -> Vec<Line<'static>> {
         vec![
             Line::from(vec![Span::styled(
@@ -59,8 +60,19 @@ impl HelpWidget {
             )]),
             Line::from("Up / Down          Select previous / next time in history"),
             Line::from("Enter              Open details screen for selected time"),
+            Line::from("Tab                Toggle focus between history and stats"),
             Line::from("t                  Open detailed stats screen"),
             Line::from("d                  Delete selected time"),
+            Line::from(""),
+            Line::from(vec![Span::styled(
+                "MAIN STATS FOCUS",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from("Up / Down          Select time/mo3/ao5 row"),
+            Line::from("Left / Right       Select current/best column"),
+            Line::from("Enter              Open mean detail for selected mean cell"),
             Line::from(""),
             Line::from(vec![Span::styled(
                 "DETAILED STATS",
