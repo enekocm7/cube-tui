@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::model::{Model, Settings};
 use crate::widgets::history::History;
 
-fn data_dir() -> Option<PathBuf> {
+pub fn data_dir() -> Option<PathBuf> {
     let dir = dirs::data_dir()?.join("cube-tui");
     fs::create_dir_all(&dir).ok()?;
     Some(dir)

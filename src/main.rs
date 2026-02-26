@@ -1,6 +1,4 @@
-use std::time::{Duration, Instant};
-
-use ratatui::DefaultTerminal;
+use clap::{Parser, Subcommand};
 use ratatui::crossterm::event;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::crossterm::{
@@ -11,6 +9,8 @@ use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
+use ratatui::DefaultTerminal;
+use std::time::{Duration, Instant};
 
 mod model;
 mod persistence;
@@ -19,15 +19,60 @@ mod widgets;
 
 use crate::model::{InspectionState, Model, TimerState};
 use crate::scramble::WcaEvent;
+use crate::widgets::detailed_stats::DetailedStatsWidget;
 use crate::widgets::details::DetailsWidget;
 use crate::widgets::help::HelpWidget;
+use crate::widgets::mean_detail::MeanDetailWidget;
 use crate::widgets::scramble::ScrambleWidget;
 use crate::widgets::stats::StatsWidget;
-use crate::widgets::detailed_stats::DetailedStatsWidget;
-use crate::widgets::mean_detail::MeanDetailWidget;
 
 fn main() {
-    ratatui::run(run);
+    let cli = Cli::parse();
+
+    match cli {
+        Cli { data: true, .. } => {
+            if let Some(dir) = persistence::data_dir() {
+                println!("{}", dir.display());
+            } else {
+                eprintln!("Error: Could not determine data directory");
+                std::process::exit(1);
+            }
+        }
+        Cli { subcommand: Some(Command::Import), .. } => {
+            eprintln!("Import not yet implemented");
+        }
+        Cli { subcommand: Some(Command::Export), .. } => {
+            eprintln!("Export not yet implemented");
+        }
+        _ => {
+            ratatui::run(run);
+        }
+    }
+}
+
+#[derive(Parser, Debug)]
+#[command(name = "cube", version, about = "A Rubik's Cube timer TUI application", long_about = None)]
+struct Cli {
+    #[arg(short, long, help = "Print the data directory and exit")]
+    data: bool,
+    #[command(subcommand)]
+    subcommand: Option<Command>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Command {
+    #[command(
+        name = "import",
+        alias = "i",
+        about = "Imports a cstimer.txt into the session history"
+    )]
+    Import,
+    #[command(
+        name = "export",
+        alias = "e",
+        about = "Exports the session history to a cstimer.txt file"
+    )]
+    Export,
 }
 
 fn run(terminal: &mut DefaultTerminal) {
@@ -487,7 +532,14 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
 
     let main_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Length(24), Constraint::Min(10), Constraint::Length(30)].as_ref())
+        .constraints(
+            [
+                Constraint::Length(24),
+                Constraint::Min(10),
+                Constraint::Length(30),
+            ]
+            .as_ref(),
+        )
         .split(outer_layout[1]);
 
     ScrambleWidget::new(model.scramble().as_str(), model.event().name())
