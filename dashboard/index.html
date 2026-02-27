@@ -3,6 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <style>
+      html,
+      body {
+        background: Canvas;
+      }
+    </style>
+    <script>
+      () => {
+        const root = document.documentElement;
+        root.classList.add("preload");
+
+        const storedTheme = localStorage.getItem("theme");
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const isDarkTheme = storedTheme ? storedTheme === "dark" : prefersDark;
+
+        root.style.colorScheme = isDarkTheme ? "dark" : "light";
+        root.classList.toggle("dark", isDarkTheme);
+
+        window.addEventListener("DOMContentLoaded", () => {
+          requestAnimationFrame(() => {
+            root.classList.remove("preload");
+          });
+        });
+      };
+    </script>
     <link rel="icon" href="/trace.ico" />
     <title>Cube-tui</title>
   </head>

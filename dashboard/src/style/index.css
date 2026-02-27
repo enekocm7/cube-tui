@@ -66,6 +66,9 @@ html:not(.dark) {
   --color-accent:       var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-thumb:        var(--thumb-bg);
+  --color-header-bg:    var(--header-bg);
+  --color-moon:         var(--moon-color);
+  --color-sun:          var(--sun-color);
 }
 
 /* ─────────────────────────────────────────
@@ -126,5 +129,29 @@ html:not(.dark) {
 @layer utilities {
   .animate-fade-in-up {
     animation: fade-in-up 0.45s ease-out both;
+  }
+
+  .theme-toggle {
+    width: 5.5rem;
+    background: var(--btn-bg);
+    border-color: var(--border);
+  }
+
+  .theme-toggle-thumb {
+    width: calc(50% - 4px);
+    left: 4px;
+    background: var(--thumb-bg);
+  }
+
+  .theme-toggle[data-theme="light"] .theme-toggle-thumb {
+    left: calc(50%);
+  }
+
+  .theme-toggle-moon {
+    color: var(--moon-color);
+  }
+
+  .theme-toggle-sun {
+    color: var(--sun-color);
   }
 }
