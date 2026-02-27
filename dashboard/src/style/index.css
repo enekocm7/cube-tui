@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --color-accent: #646cff;
+  --color-accent-hover: #535bf2;
+  --color-bg-dark: #242424;
+  --color-bg-button: #1a1a1a;
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply m-0 flex place-content-center place-items-center min-w-80 min-h-screen
+      font-sans leading-normal font-normal
+      text-white/87 bg-bg-dark
+      dark:text-white/87 dark:bg-bg-dark;
+  }
+
+  a {
+    @apply font-medium text-accent no-underline hover:text-accent-hover;
+  }
+
+  h1 {
+    @apply text-[3.2em] leading-[1.1];
+  }
+
+  button {
+    @apply rounded-lg border border-transparent px-[1.2em] py-[0.6em]
+      text-base font-medium font-sans
+      bg-bg-button cursor-pointer
+      transition-[border-color] duration-250
+      hover:border-accent
+      focus:outline focus:outline-[auto];
+  }
+
+  @media (prefers-color-scheme: light) {
+    body {
+      @apply text-[#213547] bg-white;
+    }
+    a:hover {
+      @apply text-[#747bff];
+    }
+    button {
+      @apply bg-[#f9f9f9];
+    }
+  }
+}
