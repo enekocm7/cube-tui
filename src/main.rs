@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use ratatui::DefaultTerminal;
 use ratatui::crossterm::event;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::crossterm::{
@@ -9,7 +10,6 @@ use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
-use ratatui::DefaultTerminal;
 use std::time::{Duration, Instant};
 
 mod model;
@@ -38,11 +38,23 @@ fn main() {
                 std::process::exit(1);
             }
         }
-        Cli { subcommand: Some(Command::Import), .. } => {
+        Cli {
+            subcommand: Some(Command::Import),
+            ..
+        } => {
             eprintln!("Import not yet implemented");
         }
-        Cli { subcommand: Some(Command::Export), .. } => {
+        Cli {
+            subcommand: Some(Command::Export),
+            ..
+        } => {
             eprintln!("Export not yet implemented");
+        }
+        Cli {
+            subcommand: Some(Command::Dashboard),
+            ..
+        } => {
+            eprintln!("Dashboard not implemented yet");
         }
         _ => {
             ratatui::run(run);
@@ -73,6 +85,12 @@ pub enum Command {
         about = "Exports the session history to a cstimer.txt file"
     )]
     Export,
+    #[command(
+        name = "dashboard",
+        alias = "d",
+        about = "Starts a local dashboard for viewing data"
+    )]
+    Dashboard,
 }
 
 fn run(terminal: &mut DefaultTerminal) {
