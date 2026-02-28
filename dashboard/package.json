@@ -15,6 +15,7 @@
     "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "recharts": "^3.7.0",
     "tailwindcss": "^4.2.1"
   },
   "devDependencies": {

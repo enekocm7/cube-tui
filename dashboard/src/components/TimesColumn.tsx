@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react"
-import { Hash, X } from "lucide-react"
+import { X } from "lucide-react"
 import type { History, Time, WcaEvent } from "../types/types"
 import { Modifier, WCA_EVENT_NAMES } from "../types/types"
+import { HistoryModule } from "./modules/HistoryModule"
+import { SessionStatsModule } from "./modules/SessionStatsModule"
+import { TimeTrendModule } from "./modules/TimeTrendModule"
 import {
     effectiveMs,
     formatMillis,
     formatTime,
-    formatDate,
-    formatStat,
     computeAo,
     computeBest,
     computeMean,
 } from "../utils/format"
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function ModalStatCard({ label, value }: { label: string; value: string }) {
     const dim = value === "—" || value === "DNF"
     return (
         <div className="bg-raised rounded-lg px-3 py-2.5 border border-border flex flex-col gap-1">
@@ -23,69 +24,6 @@ function StatCard({ label, value }: { label: string; value: string }) {
             <span className={`font-mono text-sm font-semibold tabular-nums ${dim ? "text-text-muted" : "text-text"}`}>
                 {value}
             </span>
-        </div>
-    )
-}
-
-interface TimeRowProps {
-    index: number
-    time: Time
-    isBest: boolean
-    onOpen: () => void
-    animationDelay: number
-}
-
-function TimeRow({ index, time, isBest, onOpen, animationDelay }: TimeRowProps) {
-    const isDnf = time.modifier === Modifier.DNF
-    const isPlusTwo = time.modifier === Modifier.PlusTwo
-
-    const timeColor = isDnf
-        ? "text-red-400"
-        : isBest
-            ? "text-accent"
-            : isPlusTwo
-                ? "text-amber-400"
-                : "text-text"
-
-    return (
-        <div
-            className={`
-                border-b border-border/40 cursor-pointer
-                transition-colors duration-150
-                hover:bg-raised/70
-                animate-fade-in-up
-            `}
-            style={{ animationDelay: `${animationDelay}ms`, animationFillMode: "both" }}
-            onClick={onOpen}
-        >
-            <div className="flex items-center gap-3 px-5 py-2.5">
-                <span className="w-8 text-right font-mono text-xs text-text-dim shrink-0 select-none">
-                    {index}
-                </span>
-
-                <span className={`font-mono text-sm font-medium tabular-nums w-36 shrink-0 ${timeColor}`}>
-                    {formatTime(time)}
-                    {isBest && (
-                        <span className="ml-2 text-[9px] font-sans font-bold uppercase tracking-widest text-accent/60">
-                            pb
-                        </span>
-                    )}
-                </span>
-
-                <span className="hidden sm:inline-flex text-[10px] px-1.5 py-0.5 rounded-md bg-btn-bg border border-border text-text-dim font-medium shrink-0">
-                    {WCA_EVENT_NAMES[time.event]}
-                </span>
-
-                <div className="flex-1" />
-
-                <span className="text-xs text-text-dim tabular-nums">
-                    {formatDate(time.solved_at_unix_ms)}
-                </span>
-
-                <span className="text-[10px] uppercase tracking-widest text-text-dim font-semibold shrink-0">
-                    Details
-                </span>
-            </div>
         </div>
     )
 }
@@ -151,12 +89,12 @@ function TimeDetailsModal({ time, solveIndex, isBest, bestMs, onClose }: TimeDet
                 </div>
 
                 <div className="px-5 py-4 grid grid-cols-2 gap-2">
-                    <StatCard label="Event" value={WCA_EVENT_NAMES[time.event]} />
-                    <StatCard label="Penalty" value={modifierLabel(time.modifier)} />
-                    <StatCard label="Raw" value={formatMillis(rawMs)} />
-                    <StatCard label="Final" value={formatTime(time)} />
-                    <StatCard label="Session Best" value={isBest ? "Yes" : "No"} />
-                    <StatCard label="Δ vs Best" value={deltaVsBest === null ? "—" : formatDelta(deltaVsBest)} />
+                    <ModalStatCard label="Event" value={WCA_EVENT_NAMES[time.event]} />
+                    <ModalStatCard label="Penalty" value={modifierLabel(time.modifier)} />
+                    <ModalStatCard label="Raw" value={formatMillis(rawMs)} />
+                    <ModalStatCard label="Final" value={formatTime(time)} />
+                    <ModalStatCard label="Session Best" value={isBest ? "Yes" : "No"} />
+                    <ModalStatCard label="Δ vs Best" value={deltaVsBest === null ? "—" : formatDelta(deltaVsBest)} />
                 </div>
 
                 <div className="px-5 pb-5">
@@ -218,60 +156,29 @@ export default function TimesColumn({ history }: TimesColumnProps) {
 
     return (
         <>
-            <div className="rounded-xl border border-border bg-surface overflow-hidden animate-fade-in-up shadow-lg">
-
-            <div className="px-5 pt-5 pb-4 border-b border-border">
-                <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-base font-semibold text-text tracking-tight">
-                        {eventLabel}
-                    </h2>
-                    <span className="text-xs text-text-muted">
-                        <span className="font-mono font-semibold text-accent">{times.length}</span>
-                        {" "}solve{times.length !== 1 ? "s" : ""}
-                    </span>
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+                <div className="xl:col-span-4">
+                    <SessionStatsModule
+                        eventLabel={eventLabel}
+                        timesCount={times.length}
+                        bestMs={bestMs}
+                        ao5={ao5}
+                        ao12={ao12}
+                        meanMs={meanMs}
+                    />
                 </div>
 
-                <div className="grid grid-cols-4 gap-2">
-                    <StatCard label="Best"  value={formatStat(bestMs)} />
-                    <StatCard label="Ao5"   value={formatStat(ao5)}    />
-                    <StatCard label="Ao12"  value={formatStat(ao12)}   />
-                    <StatCard label="Mean"  value={formatStat(meanMs)} />
+                <div className="xl:col-span-8">
+                    <TimeTrendModule times={times} />
                 </div>
-            </div>
 
-            <div className="flex items-center gap-3 px-5 py-2 border-b border-border bg-raised/40">
-                <span className="w-8 text-right">
-                    <Hash size={10} className="ml-auto text-text-dim" />
-                </span>
-                <span className="text-[10px] uppercase tracking-widest text-text-dim font-semibold w-36 shrink-0">Time</span>
-                <span className="hidden sm:block text-[10px] uppercase tracking-widest text-text-dim font-semibold">Event</span>
-                <div className="flex-1" />
-                <span className="text-[10px] uppercase tracking-widest text-text-dim font-semibold">Date</span>
-                <span className="w-3" />
-            </div>
-
-            {times.length === 0 ? (
-                <div className="py-20 text-center text-text-muted text-sm">
-                    No solves recorded.
+                <div className="xl:col-span-12">
+                    <HistoryModule
+                        times={times}
+                        bestMs={bestMs}
+                        onOpenSolve={handleOpen}
+                    />
                 </div>
-            ) : (
-                <div className="overflow-y-auto max-h-[58vh]">
-                    {reversed.map((time, i) => {
-                        const ms = effectiveMs(time)
-                        const isBest = ms !== null && ms === bestMs
-                        return (
-                            <TimeRow
-                                key={times.length - 1 - i}
-                                index={times.length - i}
-                                time={time}
-                                isBest={isBest}
-                                onOpen={() => handleOpen(i)}
-                                animationDelay={Math.min(i * 18, 400)}
-                            />
-                        )
-                    })}
-                </div>
-            )}
             </div>
 
             {selectedTime && (
