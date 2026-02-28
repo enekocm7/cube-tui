@@ -1,11 +1,10 @@
-import {useState} from "react"
 import {Header} from "./Header.tsx"
 import {ImportButton} from "./ImportButton.tsx"
-import type {History} from "../types/types"
-import TimesColumn from "./TimesColumn.tsx";
+import TimesColumn from "./TimesColumn.tsx"
+import {usePersistedSessions} from "../utils/usePersistedSessions"
 
 function App() {
-    const [sessions, setSessions] = useState<History[]>([])
+    const [sessions, setSessions] = usePersistedSessions()
 
     return (
         <div className="min-h-screen transition-colors duration-300">
