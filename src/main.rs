@@ -12,6 +12,8 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 use std::time::{Duration, Instant};
 
+#[cfg(feature = "dashboard")]
+mod dashboard;
 mod model;
 mod persistence;
 mod scramble;
@@ -50,11 +52,12 @@ fn main() {
         } => {
             eprintln!("Export not yet implemented");
         }
+        #[cfg(feature = "dashboard")]
         Cli {
             subcommand: Some(Command::Dashboard),
             ..
         } => {
-            eprintln!("Dashboard not implemented yet");
+            dashboard::run_dashboard();
         }
         _ => {
             ratatui::run(run);
@@ -85,6 +88,7 @@ pub enum Command {
         about = "Exports the session history to a cstimer.txt file"
     )]
     Export,
+    #[cfg(feature = "dashboard")]
     #[command(
         name = "dashboard",
         alias = "d",

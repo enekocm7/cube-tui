@@ -3,6 +3,9 @@ name = "cube-tui"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+dashboard = ["axum", "tokio", "rust-embed", "open", "mime_guess"]
+
 [[bin]]
 name = "cube"
 path = "src/main.rs"
@@ -15,3 +18,8 @@ serde_json = "1"
 dirs = "6.0.0"
 chrono = "0.4"
 clap = { version = "4.5.60", features = ["derive", "color"] }
+axum = { version = "0.8", optional = true }
+tokio = { version = "1", features = ["full"], optional = true }
+rust-embed = { version = "8", features = ["mime-guess"], optional = true }
+open = { version = "5", optional = true }
+mime_guess = { version = "2", optional = true }
