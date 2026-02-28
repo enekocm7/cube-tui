@@ -28,7 +28,7 @@ function App() {
     const selectedSession = sessions[selectedIndex]
 
     return (
-        <div className="min-h-screen transition-colors duration-300">
+        <div className="min-h-screen bg-bg transition-colors duration-300">
             <Header showImport={sessions.length > 0} setSessions={handleImport}/>
             <main className="max-w-5xl mx-auto px-6 py-8">
                 {sessions.length === 0 ? (
