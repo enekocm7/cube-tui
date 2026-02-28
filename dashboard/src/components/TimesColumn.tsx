@@ -1,9 +1,10 @@
-import { useState } from "react"
-import { ChevronDown, ChevronUp, Hash } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Hash, X } from "lucide-react"
 import type { History, Time, WcaEvent } from "../types/types"
 import { Modifier, WCA_EVENT_NAMES } from "../types/types"
 import {
     effectiveMs,
+    formatMillis,
     formatTime,
     formatDate,
     formatStat,
@@ -30,12 +31,11 @@ interface TimeRowProps {
     index: number
     time: Time
     isBest: boolean
-    expanded: boolean
-    onToggle: () => void
+    onOpen: () => void
     animationDelay: number
 }
 
-function TimeRow({ index, time, isBest, expanded, onToggle, animationDelay }: TimeRowProps) {
+function TimeRow({ index, time, isBest, onOpen, animationDelay }: TimeRowProps) {
     const isDnf = time.modifier === Modifier.DNF
     const isPlusTwo = time.modifier === Modifier.PlusTwo
 
@@ -54,10 +54,9 @@ function TimeRow({ index, time, isBest, expanded, onToggle, animationDelay }: Ti
                 transition-colors duration-150
                 hover:bg-raised/70
                 animate-fade-in-up
-                ${expanded ? "bg-raised/50" : ""}
             `}
             style={{ animationDelay: `${animationDelay}ms`, animationFillMode: "both" }}
-            onClick={onToggle}
+            onClick={onOpen}
         >
             <div className="flex items-center gap-3 px-5 py-2.5">
                 <span className="w-8 text-right font-mono text-xs text-text-dim shrink-0 select-none">
@@ -83,19 +82,93 @@ function TimeRow({ index, time, isBest, expanded, onToggle, animationDelay }: Ti
                     {formatDate(time.solved_at_unix_ms)}
                 </span>
 
-                <span className="text-text-dim shrink-0 transition-transform duration-200">
-                    {expanded
-                        ? <ChevronUp size={12} strokeWidth={2} />
-                        : <ChevronDown size={12} strokeWidth={1.5} />
-                    }
+                <span className="text-[10px] uppercase tracking-widest text-text-dim font-semibold shrink-0">
+                    Details
                 </span>
             </div>
+        </div>
+    )
+}
 
-            {expanded && time.scramble && (
-                <div className="px-5 pb-3 ml-11 text-xs text-text-muted font-mono leading-relaxed break-all">
-                    {time.scramble}
+function formatDateTime(unix_ms: number): string {
+    if (!unix_ms) return "—"
+    return new Date(unix_ms).toLocaleString("en", { dateStyle: "medium", timeStyle: "short" })
+}
+
+function modifierLabel(modifier: Modifier): string {
+    switch (modifier) {
+        case Modifier.None:
+            return "None"
+        case Modifier.PlusTwo:
+            return "+2"
+        case Modifier.DNF:
+            return "DNF"
+    }
+}
+
+function formatDelta(ms: number): string {
+    const sign = ms >= 0 ? "+" : "-"
+    return `${sign}${formatMillis(Math.abs(ms))}`
+}
+
+interface TimeDetailsModalProps {
+    time: Time
+    solveIndex: number
+    isBest: boolean
+    bestMs: number | null
+    onClose: () => void
+}
+
+function TimeDetailsModal({ time, solveIndex, isBest, bestMs, onClose }: TimeDetailsModalProps) {
+    const rawMs = time.timestamp_in_millis
+    const finalMs = effectiveMs(time)
+    const deltaVsBest = finalMs !== null && bestMs !== null ? finalMs - bestMs : null
+
+    return (
+        <div
+            className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-center justify-center px-4"
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-xl rounded-xl border border-border bg-surface shadow-lg"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Solve details"
+            >
+                <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+                    <div>
+                        <p className="text-xs uppercase tracking-widest text-text-dim font-semibold">Solve {solveIndex}</p>
+                        <h3 className="text-base font-semibold text-text mt-1">{formatTime(time)}</h3>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        aria-label="Close details"
+                        className="rounded-lg border border-border text-text-muted hover:text-text hover:border-border-hover p-1.5 transition-colors"
+                    >
+                        <X size={16} strokeWidth={2} />
+                    </button>
                 </div>
-            )}
+
+                <div className="px-5 py-4 grid grid-cols-2 gap-2">
+                    <StatCard label="Event" value={WCA_EVENT_NAMES[time.event]} />
+                    <StatCard label="Penalty" value={modifierLabel(time.modifier)} />
+                    <StatCard label="Raw" value={formatMillis(rawMs)} />
+                    <StatCard label="Final" value={formatTime(time)} />
+                    <StatCard label="Session Best" value={isBest ? "Yes" : "No"} />
+                    <StatCard label="Δ vs Best" value={deltaVsBest === null ? "—" : formatDelta(deltaVsBest)} />
+                </div>
+
+                <div className="px-5 pb-5">
+                    <p className="text-[10px] uppercase tracking-widest text-text-dim font-semibold mb-1.5">Solved At</p>
+                    <p className="text-sm text-text-muted mb-4">{formatDateTime(time.solved_at_unix_ms)}</p>
+
+                    <p className="text-[10px] uppercase tracking-widest text-text-dim font-semibold mb-1.5">Scramble</p>
+                    <div className="rounded-lg border border-border bg-raised px-3 py-2.5 text-xs text-text-muted font-mono leading-relaxed break-all">
+                        {time.scramble || "—"}
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }
@@ -105,7 +178,7 @@ interface TimesColumnProps {
 }
 
 export default function TimesColumn({ history }: TimesColumnProps) {
-    const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
+    const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
 
     const times = history.times
     const reversed = [...times].reverse()
@@ -123,12 +196,29 @@ export default function TimesColumn({ history }: TimesColumnProps) {
         .sort((a, b) => b[1] - a[1])[0]?.[0]
     const eventLabel = mainEvent ? WCA_EVENT_NAMES[mainEvent] : "Session"
 
-    function handleToggle(i: number) {
-        setExpandedIdx(prev => (prev === i ? null : i))
+    useEffect(() => {
+        function handleEscape(event: KeyboardEvent) {
+            if (event.key === "Escape") {
+                setSelectedIdx(null)
+            }
+        }
+
+        window.addEventListener("keydown", handleEscape)
+        return () => window.removeEventListener("keydown", handleEscape)
+    }, [])
+
+    function handleOpen(i: number) {
+        setSelectedIdx(i)
     }
 
+    const selectedTime = selectedIdx !== null ? reversed[selectedIdx] : null
+    const selectedSolveIndex = selectedIdx !== null ? times.length - selectedIdx : 0
+    const selectedEffective = selectedTime ? effectiveMs(selectedTime) : null
+    const selectedIsBest = selectedEffective !== null && selectedEffective === bestMs
+
     return (
-        <div className="rounded-xl border border-border bg-surface overflow-hidden animate-fade-in-up shadow-lg">
+        <>
+            <div className="rounded-xl border border-border bg-surface overflow-hidden animate-fade-in-up shadow-lg">
 
             <div className="px-5 pt-5 pb-4 border-b border-border">
                 <div className="flex items-baseline justify-between mb-4">
@@ -175,14 +265,24 @@ export default function TimesColumn({ history }: TimesColumnProps) {
                                 index={times.length - i}
                                 time={time}
                                 isBest={isBest}
-                                expanded={expandedIdx === i}
-                                onToggle={() => handleToggle(i)}
+                                onOpen={() => handleOpen(i)}
                                 animationDelay={Math.min(i * 18, 400)}
                             />
                         )
                     })}
                 </div>
             )}
-        </div>
+            </div>
+
+            {selectedTime && (
+                <TimeDetailsModal
+                    time={selectedTime}
+                    solveIndex={selectedSolveIndex}
+                    isBest={selectedIsBest}
+                    bestMs={bestMs}
+                    onClose={() => setSelectedIdx(null)}
+                />
+            )}
+        </>
     )
 }
