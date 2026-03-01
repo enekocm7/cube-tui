@@ -1,5 +1,4 @@
 use clap::{Parser, Subcommand};
-use ratatui::DefaultTerminal;
 use ratatui::crossterm::event;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::crossterm::{
@@ -10,8 +9,10 @@ use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
+use ratatui::DefaultTerminal;
 use std::time::{Duration, Instant};
 
+pub mod bluetooth;
 #[cfg(feature = "dashboard")]
 mod dashboard;
 mod model;

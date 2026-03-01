@@ -46,3 +46,4 @@ pub fn save_settings(settings: Settings) {
         fs::write(path, json).ok();
     }
 }
+
