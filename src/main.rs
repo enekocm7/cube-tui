@@ -12,6 +12,7 @@ use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 use ratatui::DefaultTerminal;
 use std::time::{Duration, Instant};
 
+#[cfg(feature = "bluetooth")]
 pub mod bluetooth;
 #[cfg(feature = "dashboard")]
 mod dashboard;
@@ -22,6 +23,8 @@ mod widgets;
 
 use crate::model::{InspectionState, Model, TimerState};
 use crate::scramble::WcaEvent;
+#[cfg(feature = "bluetooth")]
+use crate::widgets::bluetooth::BluetoothWidget;
 use crate::widgets::detailed_stats::DetailedStatsWidget;
 use crate::widgets::details::DetailsWidget;
 use crate::widgets::help::HelpWidget;
@@ -167,6 +170,10 @@ enum Msg {
     NavLeft,
     NavRight,
     ToggleFocus,
+    #[cfg(feature = "bluetooth")]
+    ToggleBluetooth,
+    #[cfg(feature = "bluetooth")]
+    DisconnectBluetooth,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -191,6 +198,10 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char('i'), KeyEventKind::Press) => Some(Msg::ToggleInspection),
         (KeyCode::Char('t'), KeyEventKind::Press) => Some(Msg::OpenDetailedStats),
         (KeyCode::Char('d'), KeyEventKind::Press) => Some(Msg::DeleteTime),
+        #[cfg(feature = "bluetooth")]
+        (KeyCode::Char('b'), KeyEventKind::Press) => Some(Msg::ToggleBluetooth),
+        #[cfg(feature = "bluetooth")]
+        (KeyCode::Char('x'), KeyEventKind::Press) => Some(Msg::DisconnectBluetooth),
         (KeyCode::Enter, KeyEventKind::Press) => Some(Msg::OpenDetails),
         (KeyCode::Esc, KeyEventKind::Press) => Some(Msg::CloseDetails),
         _ => None,
@@ -199,7 +210,86 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
 
 const INSPECTION_LIMIT_MS: u64 = 15_000;
 
+const fn allowed_msg(model: &Model, msg: Msg) -> bool {
+    #[cfg(feature = "bluetooth")]
+    if model.show_bluetooth() {
+        return matches!(
+            msg,
+            Msg::SelectUp
+                | Msg::SelectDown
+                | Msg::OpenDetails
+                | Msg::CloseDetails
+                | Msg::ToggleBluetooth
+                | Msg::DisconnectBluetooth
+                | Msg::Tick
+                | Msg::Quit
+        );
+    }
+    if model.show_help() {
+        return matches!(
+            msg,
+            Msg::SelectUp | Msg::SelectDown | Msg::Help | Msg::Tick | Msg::Quit
+        );
+    }
+    if model.show_details() {
+        return matches!(
+            msg,
+            Msg::SelectUp
+                | Msg::SelectDown
+                | Msg::NavLeft
+                | Msg::NavRight
+                | Msg::Press
+                | Msg::Release
+                | Msg::DeleteTime
+                | Msg::CloseDetails
+                | Msg::Tick
+                | Msg::Quit
+        );
+    }
+    if model.show_mean_detail() {
+        return matches!(
+            msg,
+            Msg::SelectUp
+                | Msg::SelectDown
+                | Msg::OpenDetails
+                | Msg::CloseDetails
+                | Msg::Tick
+                | Msg::Quit
+        );
+    }
+    if model.show_detailed_stats() {
+        return matches!(
+            msg,
+            Msg::SelectUp
+                | Msg::SelectDown
+                | Msg::NavLeft
+                | Msg::NavRight
+                | Msg::OpenDetails
+                | Msg::CloseDetails
+                | Msg::Tick
+                | Msg::Quit
+        );
+    }
+    true
+}
+
 fn update(model: &mut Model, msg: Msg) {
+    if matches!(msg, Msg::Tick) {
+        #[cfg(feature = "bluetooth")]
+        {
+            if model.show_bluetooth() {
+                model.poll_bluetooth();
+            }
+            if model.bluetooth_timer_active() {
+                model.poll_bluetooth_timer();
+            }
+        }
+    }
+
+    if !allowed_msg(model, msg) {
+        return;
+    }
+
     match msg {
         Msg::Press => handle_press(model),
         Msg::Release => handle_release(model),
@@ -223,11 +313,19 @@ fn update(model: &mut Model, msg: Msg) {
         Msg::NavLeft => handle_nav_left(model),
         Msg::NavRight => handle_nav_right(model),
         Msg::ToggleFocus => handle_toggle_focus(model),
+        #[cfg(feature = "bluetooth")]
+        Msg::ToggleBluetooth => handle_toggle_bluetooth(model),
+        #[cfg(feature = "bluetooth")]
+        Msg::DisconnectBluetooth => handle_disconnect_bluetooth(model),
         Msg::Quit => {}
     }
 }
 
 fn handle_press(model: &mut Model) {
+    #[cfg(feature = "bluetooth")]
+    if model.bluetooth_connected() {
+        return;
+    }
     if model.show_details() {
         if model.timer_state() == TimerState::Idle {
             let modifier = model.selected_details_modifier();
@@ -261,6 +359,10 @@ fn handle_press(model: &mut Model) {
 }
 
 fn handle_release(model: &mut Model) {
+    #[cfg(feature = "bluetooth")]
+    if model.bluetooth_connected() {
+        return;
+    }
     if model.show_details() {
         return;
     }
@@ -289,7 +391,14 @@ fn handle_tick(model: &mut Model) {
 fn handle_select_up(model: &mut Model) {
     if model.show_help() {
         model.scroll_help_up();
-    } else if model.show_mean_detail() {
+        return;
+    }
+    #[cfg(feature = "bluetooth")]
+    if model.show_bluetooth() {
+        model.bluetooth_select_up();
+        return;
+    }
+    if model.show_mean_detail() {
         model.mean_detail_select_up();
     } else if model.show_detailed_stats() {
         model.detailed_stats_select_up();
@@ -305,7 +414,14 @@ fn handle_select_up(model: &mut Model) {
 fn handle_select_down(model: &mut Model) {
     if model.show_help() {
         model.scroll_help_down();
-    } else if model.show_mean_detail() {
+        return;
+    }
+    #[cfg(feature = "bluetooth")]
+    if model.show_bluetooth() {
+        model.bluetooth_select_down();
+        return;
+    }
+    if model.show_mean_detail() {
         model.mean_detail_select_down();
     } else if model.show_detailed_stats() {
         model.detailed_stats_select_down();
@@ -320,6 +436,10 @@ fn handle_select_down(model: &mut Model) {
 
 const fn handle_toggle_focus(model: &mut Model) {
     if model.show_help() || model.show_details() || model.show_detailed_stats() {
+        return;
+    }
+    #[cfg(feature = "bluetooth")]
+    if model.show_bluetooth() {
         return;
     }
     model.toggle_main_focus();
@@ -372,12 +492,123 @@ const fn handle_help(model: &mut Model) {
     model.toggle_help();
 }
 
+#[cfg(feature = "bluetooth")]
+fn handle_toggle_bluetooth(model: &mut Model) {
+    if model.show_help() || model.show_details() || model.show_detailed_stats() {
+        return;
+    }
+
+    if let Some(tx) = model.toggle_bluetooth() {
+        use crate::bluetooth::timer::{get_adapter, get_devices};
+        use crate::model::BluetoothEvent;
+        use futures_util::StreamExt;
+
+        std::thread::spawn(move || {
+            let Ok(runtime) = tokio::runtime::Runtime::new() else {
+                let _ = tx.send(BluetoothEvent::Error("Failed to create runtime".into()));
+                return;
+            };
+
+            runtime.block_on(async move {
+                let adapter = match get_adapter().await {
+                    Ok(adapter) => adapter,
+                    Err(err) => {
+                        let _ = tx.send(BluetoothEvent::Error(err.to_string()));
+                        return;
+                    }
+                };
+
+                let _ = tx.send(BluetoothEvent::Adapter(adapter.clone()));
+                let _ = tx.send(BluetoothEvent::Status("Scanning for devices...".into()));
+
+                let mut stream = match get_devices(&adapter).await {
+                    Ok(stream) => stream,
+                    Err(err) => {
+                        let _ = tx.send(BluetoothEvent::Error(err.to_string()));
+                        return;
+                    }
+                };
+
+                while let Some(device) = stream.next().await {
+                    if tx.send(BluetoothEvent::Device(device)).is_err() {
+                        break;
+                    }
+                }
+            });
+        });
+    }
+}
+
+#[cfg(feature = "bluetooth")]
+fn handle_disconnect_bluetooth(model: &mut Model) {
+    if model.bluetooth_connected() {
+        model.disconnect_bluetooth();
+    }
+}
+
+#[cfg(feature = "bluetooth")]
+fn handle_bluetooth_connect(model: &mut Model) {
+    use crate::bluetooth::timer::{connect, disconnect, get_adapter, TimerState as BtTimerState};
+    use futures_util::StreamExt;
+
+    let Some(device) = model.bluetooth_selected_device().cloned() else {
+        return;
+    };
+
+    let Some((tx, cancel_rx)) = model.connect_bluetooth_device() else {
+        return;
+    };
+
+    let device_id = device.id;
+    std::thread::spawn(move || {
+        let Ok(runtime) = tokio::runtime::Runtime::new() else {
+            let _ = tx.send(BtTimerState::Disconnected);
+            return;
+        };
+
+        runtime.block_on(async move {
+            let Ok(adapter) = get_adapter().await else {
+                let _ = tx.send(BtTimerState::Disconnected);
+                return;
+            };
+
+            let Ok(mut stream) = connect(&device_id, &adapter).await else {
+                let _ = tx.send(BtTimerState::Disconnected);
+                return;
+            };
+
+            if tx.send(BtTimerState::Idle).is_err() {
+                return;
+            }
+
+            loop {
+                tokio::select! {
+                    state = stream.next() => match state {
+                        Some(state) => { if tx.send(state).is_err() { break; } }
+                        None => break,
+                    },
+                    // cancel_tx was dropped — disconnect_bluetooth was called
+                    _ = cancel_rx.recv_async() => break,
+                }
+            }
+
+            let _ = disconnect(&device_id, &adapter).await;
+            let _ = tx.send(BtTimerState::Disconnected);
+        });
+    });
+}
+
 fn handle_toggle_inspection(model: &mut Model) {
     model.toggle_inspection();
     persistence::save_settings(*model.settings());
 }
 
 fn handle_open_details(model: &mut Model) {
+    #[cfg(feature = "bluetooth")]
+    if model.show_bluetooth() {
+        handle_bluetooth_connect(model);
+        return;
+    }
     if model.show_mean_detail() {
         model.open_details_for_selected_mean_time();
         return;
@@ -401,7 +632,12 @@ fn handle_open_detailed_stats(model: &mut Model) {
     }
 }
 
-const fn handle_close_details(model: &mut Model) {
+fn handle_close_details(model: &mut Model) {
+    #[cfg(feature = "bluetooth")]
+    if model.show_bluetooth() {
+        model.close_bluetooth();
+        return;
+    }
     if model.show_details() && model.can_return_to_mean_detail() {
         model.return_to_mean_detail();
     } else if model.show_mean_detail() {
@@ -448,6 +684,38 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     if model.show_help() {
         model.set_help_max_scroll(HelpWidget::max_scroll_for_height(area.height));
         HelpWidget::new(model.help_scroll()).render(area, buf);
+        return;
+    }
+
+    #[cfg(feature = "bluetooth")]
+    if model.show_bluetooth() {
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Fill(1), Constraint::Length(1)])
+            .split(area);
+
+        BluetoothWidget::new(
+            model.bluetooth_devices().to_vec(),
+            model.bluetooth_selected_index(),
+            model.bluetooth_status().map(str::to_string),
+        )
+        .render(layout[0], buf);
+
+        let help_text = if model.bluetooth_connected() {
+            Line::from(vec![
+                Span::raw("x: disconnect  "),
+                Span::raw("Esc: back to timer"),
+            ])
+        } else {
+            Line::from(vec![
+                Span::raw("↑/↓: select device  "),
+                Span::raw("Enter: connect  "),
+                Span::raw("Esc: close"),
+            ])
+        };
+        Paragraph::new(help_text)
+            .alignment(Alignment::Center)
+            .render(layout[1], buf);
         return;
     }
 
@@ -591,8 +859,14 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         model.history().clone().render(history_area, buf);
     }
 
+    #[cfg(feature = "bluetooth")]
+    let bt_label = model
+        .connected_device_name()
+        .map_or_else(String::new, |name| format!(" | 🔗 {name}"));
+    #[cfg(not(feature = "bluetooth"))]
+    let bt_label = String::new();
     let timer_title = format!(
-        "Timer - Inspection: {}",
+        "Timer - Inspection: {}{bt_label}",
         if model.inspection_enabled() {
             "On"
         } else {

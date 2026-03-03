@@ -1,9 +1,10 @@
 use std::time::Instant;
 
-use serde::{Deserialize, Serialize};
-
+#[cfg(feature = "bluetooth")]
+use crate::bluetooth::{BtTimerState, DeviceInfo};
 use crate::scramble::{self, Scramble, WcaEvent};
 use crate::widgets::history::{History, Modifier, Time};
+use serde::{Deserialize, Serialize};
 
 pub const MAX_SESSIONS: usize = 99;
 
@@ -171,12 +172,40 @@ impl Default for MainStatsSelection {
     }
 }
 
+#[cfg(feature = "bluetooth")]
+#[derive(Debug)]
+pub enum BluetoothEvent {
+    Status(String),
+    Error(String),
+    Device(DeviceInfo),
+    Adapter(btleplug::platform::Adapter),
+}
+
+#[cfg(feature = "bluetooth")]
+#[derive(Default)]
+struct BluetoothState {
+    show: bool,
+    selected_index: usize,
+    devices: Vec<DeviceInfo>,
+    status: Option<String>,
+    rx: Option<flume::Receiver<BluetoothEvent>>,
+    scanning: bool,
+    timer_rx: Option<flume::Receiver<BtTimerState>>,
+    cancel_tx: Option<flume::Sender<()>>,
+    adapter: Option<btleplug::platform::Adapter>,
+    connected: bool,
+    connected_device_name: Option<String>,
+    connected_device_id: Option<btleplug::platform::PeripheralId>,
+}
+
 pub struct Model {
     session_state: SessionState,
     settings: Settings,
     help_state: HelpState,
     details_state: DetailsState,
     detailed_stats_state: DetailedStatsState,
+    #[cfg(feature = "bluetooth")]
+    bluetooth_state: BluetoothState,
     main_focus: MainFocus,
     main_stats_selection: MainStatsSelection,
 }
@@ -189,6 +218,8 @@ impl Model {
             help_state: HelpState::default(),
             details_state: DetailsState::default(),
             detailed_stats_state: DetailedStatsState::default(),
+            #[cfg(feature = "bluetooth")]
+            bluetooth_state: BluetoothState::default(),
             main_focus: MainFocus::History,
             main_stats_selection: MainStatsSelection::default(),
         }
@@ -245,6 +276,10 @@ impl Model {
 
         self.details_state = DetailsState::default();
         self.detailed_stats_state = DetailedStatsState::default();
+        #[cfg(feature = "bluetooth")]
+        {
+            self.bluetooth_state = BluetoothState::default();
+        }
 
         true
     }
@@ -299,6 +334,10 @@ impl Model {
         self.help_state = HelpState::default();
         self.details_state = DetailsState::default();
         self.detailed_stats_state = DetailedStatsState::default();
+        #[cfg(feature = "bluetooth")]
+        {
+            self.bluetooth_state = BluetoothState::default();
+        }
         self.main_focus = MainFocus::History;
         self.main_stats_selection = MainStatsSelection::default();
     }
@@ -434,7 +473,239 @@ impl Model {
     pub const fn show_help(&self) -> bool {
         self.help_state.show
     }
+}
 
+impl Model {
+    #[cfg(feature = "bluetooth")]
+    pub const fn show_bluetooth(&self) -> bool {
+        self.bluetooth_state.show
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn toggle_bluetooth(&mut self) -> Option<flume::Sender<BluetoothEvent>> {
+        self.bluetooth_state.show = !self.bluetooth_state.show;
+        if self.bluetooth_state.show {
+            self.bluetooth_state.selected_index = 0;
+            self.bluetooth_state.devices.clear();
+            self.bluetooth_state.status = Some("Starting scan...".to_string());
+            let (tx, rx) = flume::unbounded();
+            self.bluetooth_state.rx = Some(rx);
+            self.bluetooth_state.scanning = true;
+            Some(tx)
+        } else {
+            self.stop_bluetooth_scan();
+            None
+        }
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn close_bluetooth(&mut self) {
+        self.bluetooth_state.show = false;
+        self.stop_bluetooth_scan();
+        if !self.bluetooth_state.connected {
+            self.bluetooth_state.timer_rx = None;
+            self.bluetooth_state.connected_device_name = None;
+        }
+    }
+
+    #[cfg(feature = "bluetooth")]
+    fn stop_bluetooth_scan(&mut self) {
+        self.bluetooth_state.rx = None;
+        self.bluetooth_state.scanning = false;
+        self.bluetooth_state.status = None;
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn poll_bluetooth(&mut self) {
+        let Some(rx) = self.bluetooth_state.rx.take() else {
+            return;
+        };
+
+        while let Ok(event) = rx.try_recv() {
+            match event {
+                BluetoothEvent::Status(status) => {
+                    self.bluetooth_state.status = Some(status);
+                }
+                BluetoothEvent::Error(error) => {
+                    self.bluetooth_state.scanning = false;
+                    if error.contains("No Bluetooth adapters found") {
+                        self.bluetooth_state.status =
+                            Some("⚠ No Bluetooth adapters found".to_string());
+                    } else {
+                        self.bluetooth_state.status = Some(format!("Error: {error}"));
+                    }
+                }
+                BluetoothEvent::Device(device) => {
+                    self.upsert_bluetooth_device(device);
+                    let count = self.bluetooth_state.devices.len();
+                    self.bluetooth_state.status =
+                        Some(format!("Scanning... ({count} device(s) found)"));
+                }
+                BluetoothEvent::Adapter(adapter) => {
+                    self.bluetooth_state.adapter = Some(adapter);
+                }
+            }
+        }
+
+        self.bluetooth_state.rx = Some(rx);
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn bluetooth_devices(&self) -> &[DeviceInfo] {
+        &self.bluetooth_state.devices
+    }
+
+    #[cfg(feature = "bluetooth")]
+    fn upsert_bluetooth_device(&mut self, device: DeviceInfo) {
+        let existing = self
+            .bluetooth_state
+            .devices
+            .iter_mut()
+            .find(|entry| entry.id == device.id);
+
+        if let Some(existing) = existing {
+            *existing = device;
+            return;
+        }
+        self.bluetooth_state.devices.push(device);
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn bluetooth_status(&self) -> Option<&str> {
+        self.bluetooth_state.status.as_deref()
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub const fn bluetooth_selected_index(&self) -> usize {
+        self.bluetooth_state.selected_index
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub const fn bluetooth_select_up(&mut self) {
+        self.bluetooth_state.selected_index = self.bluetooth_state.selected_index.saturating_sub(1);
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn bluetooth_select_down(&mut self) {
+        let max_index = self.bluetooth_state.devices.len().saturating_sub(1);
+        self.bluetooth_state.selected_index =
+            (self.bluetooth_state.selected_index + 1).min(max_index);
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn bluetooth_selected_device(&self) -> Option<&DeviceInfo> {
+        self.bluetooth_state
+            .devices
+            .get(self.bluetooth_state.selected_index)
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn connect_bluetooth_device(
+        &mut self,
+    ) -> Option<(flume::Sender<BtTimerState>, flume::Receiver<()>)> {
+        let device = self
+            .bluetooth_state
+            .devices
+            .get(self.bluetooth_state.selected_index)?;
+        let device_name = device.name.clone();
+        self.bluetooth_state.connected_device_id = Some(device.id.clone());
+        let (tx, rx) = flume::unbounded();
+        self.bluetooth_state.timer_rx = Some(rx);
+        let (cancel_tx, cancel_rx) = flume::bounded(1);
+        self.bluetooth_state.cancel_tx = Some(cancel_tx);
+        self.bluetooth_state.connected = false;
+        self.bluetooth_state.connected_device_name = device_name;
+        self.bluetooth_state.status = Some("Connecting...".to_string());
+        Some((tx, cancel_rx))
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn poll_bluetooth_timer(&mut self) {
+        let Some(rx) = self.bluetooth_state.timer_rx.take() else {
+            return;
+        };
+
+        let mut disconnected = false;
+        while let Ok(bt_state) = rx.try_recv() {
+            match bt_state {
+                BtTimerState::Idle | BtTimerState::GetSet | BtTimerState::HandsOn => {
+                    if !self.bluetooth_state.connected {
+                        self.bluetooth_state.connected = true;
+                        let name = self
+                            .bluetooth_state
+                            .connected_device_name
+                            .as_deref()
+                            .unwrap_or("device");
+                        self.bluetooth_state.status = Some(format!("✓ Connected to {name}"));
+                    }
+                    self.get_current_session_mut().timer_state =
+                        if matches!(bt_state, BtTimerState::Idle) {
+                            TimerState::Idle
+                        } else {
+                            TimerState::Pulsed
+                        };
+                }
+                BtTimerState::HandsOff => {
+                    self.get_current_session_mut().timer_state = TimerState::Idle;
+                }
+                BtTimerState::Running => {
+                    self.get_current_session_mut().timer_state =
+                        TimerState::Running(Instant::now());
+                }
+                BtTimerState::Finished(time_ms) => {
+                    self.get_current_session_mut().last_time_ms = time_ms;
+                    let event = self.event();
+                    let scramble = self.scramble().as_str().to_string();
+                    self.history_mut().add_ms(time_ms, event, scramble);
+                    self.get_current_session_mut().timer_state = TimerState::Idle;
+                    self.next_scramble();
+                    crate::persistence::save(self);
+                }
+                BtTimerState::Disconnected => {
+                    disconnected = true;
+                    break;
+                }
+            }
+        }
+
+        if disconnected {
+            self.disconnect_bluetooth();
+        } else {
+            self.bluetooth_state.timer_rx = Some(rx);
+        }
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub const fn bluetooth_connected(&self) -> bool {
+        self.bluetooth_state.connected
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub const fn bluetooth_timer_active(&self) -> bool {
+        self.bluetooth_state.timer_rx.is_some()
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn connected_device_name(&self) -> Option<&str> {
+        self.bluetooth_state.connected_device_name.as_deref()
+    }
+
+    /// Signals the background connection thread to disconnect and clears state.
+    ///
+    /// Dropping `cancel_tx` immediately unblocks the `recv_async()` in the
+    /// background thread's `tokio::select!`, which then calls `timer::disconnect`
+    /// and exits. No runtime or blocking on the calling thread.
+    #[cfg(feature = "bluetooth")]
+    pub fn disconnect_bluetooth(&mut self) {
+        self.bluetooth_state.cancel_tx = None;
+        self.bluetooth_state.timer_rx = None;
+        self.bluetooth_state.connected = false;
+        self.bluetooth_state.connected_device_name = None;
+        self.bluetooth_state.connected_device_id = None;
+    }
+}
+
+impl Model {
     pub const fn toggle_help(&mut self) {
         self.help_state.show = !self.help_state.show;
         if self.help_state.show {

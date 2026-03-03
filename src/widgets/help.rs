@@ -116,6 +116,17 @@ impl HelpWidget {
             Line::from("?                  Show / Hide this help screen"),
             Line::from("q                  Quit application"),
             Line::from(""),
+            Line::from(vec![Span::styled(
+                "BLUETOOTH",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from("b                  Open bluetooth device list"),
+            Line::from("Up / Down          Select bluetooth device"),
+            Line::from("Enter              Connect to selected device"),
+            Line::from("Esc                Close bluetooth device list"),
+            Line::from(""),
         ]
     }
 
