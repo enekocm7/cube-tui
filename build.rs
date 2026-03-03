@@ -12,6 +12,7 @@ fn main() {
     println!("cargo:rerun-if-changed=dashboard/vite.config.ts");
     println!("cargo:rerun-if-changed=dashboard/tsconfig.json");
     println!("cargo:rerun-if-changed=dashboard/tsconfig.app.json");
+    println!("cargo:rerun-if-changed=dashboard/dist");
 
     let dashboard_dir = Path::new("dashboard");
 
