@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use ratatui::DefaultTerminal;
 use ratatui::crossterm::event;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEventKind};
 use ratatui::crossterm::{
@@ -9,7 +10,6 @@ use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
-use ratatui::DefaultTerminal;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -583,7 +583,7 @@ fn handle_disconnect_bluetooth(model: &mut Model) {
 
 #[cfg(feature = "bluetooth")]
 fn handle_bluetooth_connect(model: &mut Model) {
-    use crate::bluetooth::timer::{connect, disconnect, get_adapter, TimerState as BtTimerState};
+    use crate::bluetooth::timer::{TimerState as BtTimerState, connect, disconnect, get_adapter};
     use futures_util::StreamExt;
 
     let Some(device) = model.bluetooth_selected_device().cloned() else {
@@ -667,6 +667,7 @@ fn handle_open_detailed_stats(model: &mut Model) {
     }
 }
 
+#[allow(clippy::missing_const_for_fn)]
 fn handle_close_details(model: &mut Model) {
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
