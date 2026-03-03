@@ -75,10 +75,13 @@ fn main() {
             let histories = persistence::load().unwrap_or_default();
             let mut model = Model::new();
             model.restore_from_history(histories);
-            if let Err(err) = cstimer::export(&path, &model) {
-                eprintln!("Export failed: {err}");
-            } else {
-                println!("Exported successfully to: {}", path.display());
+            match cstimer::export(&path, &model) {
+                Ok(path) => {
+                    println!("Exported successfully to: {}", path.display());
+                }
+                Err(err) => {
+                    eprintln!("Export failed: {err}");
+                }
             }
             std::process::exit(1);
         }

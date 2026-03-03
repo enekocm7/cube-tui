@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -136,7 +136,7 @@ pub fn import(path: &Path) -> anyhow::Result<Vec<History>> {
 ///
 /// # Errors
 /// Returns an error if the file cannot be written or serialization fails.
-pub fn export(path: &Path, model: &Model) -> anyhow::Result<()> {
+pub fn export(path: &Path, model: &Model) -> anyhow::Result<PathBuf> {
     let histories = model.all_sessions_history();
     let mut root = serde_json::Map::new();
     for (index, history) in histories.iter().enumerate() {
@@ -163,6 +163,10 @@ pub fn export(path: &Path, model: &Model) -> anyhow::Result<()> {
     }
 
     let json = serde_json::to_string_pretty(&serde_json::Value::Object(root))?;
-    std::fs::write(path, json)?;
-    Ok(())
+    let export_path = match path.extension().and_then(|ext| ext.to_str()) {
+        Some("txt") => path.to_path_buf(),
+        _ => path.with_extension("json"),
+    };
+    std::fs::write(export_path.clone(), json)?;
+    Ok(export_path)
 }
