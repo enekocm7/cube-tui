@@ -10,10 +10,12 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 use ratatui::DefaultTerminal;
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 #[cfg(feature = "bluetooth")]
 pub mod bluetooth;
+pub mod cstimer;
 #[cfg(feature = "dashboard")]
 mod dashboard;
 mod model;
@@ -45,16 +47,40 @@ fn main() {
             }
         }
         Cli {
-            subcommand: Some(Command::Import),
+            subcommand: Some(Command::Import { path }),
             ..
         } => {
-            eprintln!("Import not yet implemented");
+            if !path.exists() {
+                eprintln!("File does not exist: {}", path.display());
+                std::process::exit(1);
+            }
+            match cstimer::import(&path) {
+                Ok(histories) => {
+                    let mut model = Model::new();
+                    model.restore_from_history(histories);
+                    persistence::save(&model);
+                    println!("Imported successfully from: {}", path.display());
+                    std::process::exit(1);
+                }
+                Err(err) => {
+                    eprintln!("Import failed: {err}");
+                    std::process::exit(1);
+                }
+            }
         }
         Cli {
-            subcommand: Some(Command::Export),
+            subcommand: Some(Command::Export { path }),
             ..
         } => {
-            eprintln!("Export not yet implemented");
+            let histories = persistence::load().unwrap_or_default();
+            let mut model = Model::new();
+            model.restore_from_history(histories);
+            if let Err(err) = cstimer::export(&path, &model) {
+                eprintln!("Export failed: {err}");
+            } else {
+                println!("Exported successfully to: {}", path.display());
+            }
+            std::process::exit(1);
         }
         #[cfg(feature = "dashboard")]
         Cli {
@@ -83,15 +109,21 @@ pub enum Command {
     #[command(
         name = "import",
         alias = "i",
-        about = "Imports a cstimer.txt into the session history"
+        about = "Imports a cstimer.json into the session history"
     )]
-    Import,
+    Import {
+        #[arg(value_name = "PATH", default_value = "cstimer.json")]
+        path: PathBuf,
+    },
     #[command(
         name = "export",
         alias = "e",
-        about = "Exports the session history to a cstimer.txt file"
+        about = "Exports the session history to a cstimer.json file"
     )]
-    Export,
+    Export {
+        #[arg(value_name = "PATH", default_value = "cstimer.json")]
+        path: PathBuf,
+    },
     #[cfg(feature = "dashboard")]
     #[command(
         name = "dashboard",

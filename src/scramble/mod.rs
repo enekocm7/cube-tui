@@ -1,5 +1,5 @@
-use rand::RngExt;
 use rand::prelude::IndexedRandom;
+use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -213,6 +213,102 @@ pub fn generate_scramble(event: WcaEvent) -> Scramble {
     Scramble::new(text)
 }
 
+pub fn classify_event(scramble: &str) -> WcaEvent {
+    let text = scramble.trim();
+    if text.is_empty() {
+        return WcaEvent::Cube3x3;
+    }
+
+    if text.contains('(') || text.contains('/') {
+        return WcaEvent::Square1;
+    }
+
+    if text.contains("R++")
+        || text.contains("R--")
+        || text.contains("D++")
+        || text.contains("D--")
+        || text.contains('\n')
+    {
+        return WcaEvent::Megaminx;
+    }
+
+    let tokens: Vec<&str> = text.split_whitespace().collect();
+    if tokens.iter().any(|token| is_clock_token(token)) {
+        return WcaEvent::Clock;
+    }
+
+    let move_count = tokens.len();
+    let has_tip = tokens
+        .iter()
+        .any(|token| token.chars().next().is_some_and(|_| false));
+    if has_tip {
+        return WcaEvent::Pyraminx;
+    }
+
+    let bases: Vec<&str> = tokens.iter().map(|t| base_move(t)).collect();
+    if bases.iter().all(|b| matches!(*b, "R" | "L" | "U" | "B")) {
+        return if move_count <= 10 {
+            WcaEvent::Skewb
+        } else {
+            WcaEvent::Pyraminx
+        };
+    }
+
+    let has_three_wide = bases
+        .iter()
+        .any(|b| matches!(*b, "3Rw" | "3Lw" | "3Uw" | "3Dw" | "3Fw" | "3Bw"));
+    if has_three_wide {
+        return if move_count >= 90 {
+            WcaEvent::Cube7x7
+        } else {
+            WcaEvent::Cube6x6
+        };
+    }
+
+    let has_wide = bases
+        .iter()
+        .any(|b| matches!(*b, "Rw" | "Lw" | "Uw" | "Dw" | "Fw" | "Bw"));
+    if has_wide {
+        return if move_count >= 50 {
+            WcaEvent::Cube5x5
+        } else {
+            WcaEvent::Cube4x4
+        };
+    }
+
+    if bases.iter().all(|b| matches!(*b, "R" | "U" | "F")) {
+        return WcaEvent::Cube2x2;
+    }
+
+    WcaEvent::Cube3x3
+}
+
+fn base_move(token: &str) -> &str {
+    token
+        .strip_suffix('2')
+        .unwrap_or_else(|| token.strip_suffix('\'').map_or(token, |stripped| stripped))
+}
+
+fn is_clock_token(token: &str) -> bool {
+    const POSITIONS: [&str; 9] = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"];
+    for pos in POSITIONS {
+        if let Some(rest) = token.strip_prefix(pos) {
+            if rest.len() < 2 {
+                continue;
+            }
+            let mut chars = rest.chars();
+            let sign = chars.next().unwrap_or('+');
+            if sign != '+' && sign != '-' {
+                continue;
+            }
+            if chars.all(|c| c.is_ascii_digit()) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 fn cube_2x2_moves() -> Vec<Move> {
     vec![Move::R, Move::U, Move::F]
 }
@@ -413,7 +509,7 @@ fn clock_scramble(length: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Modifier, Move, Scramble, WcaEvent, generate_scramble};
+    use super::{generate_scramble, Modifier, Move, Scramble, WcaEvent};
 
     #[test]
     fn scrambles_are_non_empty() {

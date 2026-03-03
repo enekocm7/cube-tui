@@ -39,12 +39,32 @@ impl Time {
         }
     }
 
+    pub const fn new_with_meta(
+        timestamp_in_millis: u64,
+        event: WcaEvent,
+        scramble: String,
+        solved_at_unix_ms: u64,
+        modifier: Modifier,
+    ) -> Self {
+        Self {
+            timestamp_in_millis,
+            event,
+            scramble,
+            solved_at_unix_ms,
+            modifier,
+        }
+    }
+
     pub fn scramble(&self) -> &str {
         &self.scramble
     }
 
     pub const fn solved_at_unix_ms(&self) -> u64 {
         self.solved_at_unix_ms
+    }
+
+    pub const fn raw_ms(&self) -> u64 {
+        self.timestamp_in_millis
     }
 
     pub const fn modifier(&self) -> Modifier {
@@ -149,6 +169,10 @@ impl History {
     pub fn add(&mut self, item: Time) {
         self.times.push(item);
         self.selected = Some(self.times.len() - 1);
+    }
+
+    pub fn times(&self) -> &[Time] {
+        &self.times
     }
 
     pub const fn is_empty(&self) -> bool {
