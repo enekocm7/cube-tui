@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }} executable
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: cube-linux-x86_64
+            binary_name: cube
+            release_file_name: cube-${{ github.ref_name }}-linux-x86_64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: cube-macos-x86_64
+            binary_name: cube
+            release_file_name: cube-${{ github.ref_name }}-macos-x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: cube-windows-x86_64
+            binary_name: cube.exe
+            release_file_name: cube-${{ github.ref_name }}-windows-x86_64.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry and build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release executable (dashboard embedded via build.rs)
+        run: cargo build --release --all-features --locked --target ${{ matrix.target }}
+
+      - name: Prepare executable (unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/${{ matrix.release_file_name }}
+
+      - name: Prepare executable (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          Copy-Item target/${{ matrix.target }}/release/${{ matrix.binary_name }} dist/${{ matrix.release_file_name }}
+
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.release_file_name }}
+
+  publish:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/cube-${{ github.ref_name }}-linux-x86_64
+            artifacts/**/cube-${{ github.ref_name }}-macos-x86_64
+            artifacts/**/cube-${{ github.ref_name }}-windows-x86_64.exe
+          generate_release_notes: true
