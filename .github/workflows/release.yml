@@ -47,6 +47,9 @@ jobs:
       - name: Cache cargo registry and build
         uses: Swatinem/rust-cache@v2
 
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
       - name: Build release executable (dashboard embedded via build.rs)
         run: cargo build --release --all-features --locked --target ${{ matrix.target }}
 
