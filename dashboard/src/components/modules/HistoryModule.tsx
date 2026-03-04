@@ -30,8 +30,10 @@ function TimeRow({
 				: "text-text";
 
 	return (
-		<div
+		<button
+			type="button"
 			className={`
+                w-full text-left
                 border-b border-border/40 cursor-pointer
                 transition-colors duration-150
                 hover:bg-raised/70
@@ -42,6 +44,9 @@ function TimeRow({
 				animationFillMode: "both",
 			}}
 			onClick={onOpen}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") onOpen();
+			}}
 		>
 			<div className="flex items-center gap-3 px-5 py-2.5">
 				<span className="w-8 text-right font-mono text-xs text-text-dim shrink-0 select-none">
@@ -69,7 +74,7 @@ function TimeRow({
 					{formatDate(time.solved_at_unix_ms)}
 				</span>
 			</div>
-		</div>
+		</button>
 	);
 }
 
@@ -116,7 +121,7 @@ export function HistoryModule({
 						const isBest = ms !== null && ms === bestMs;
 						return (
 							<TimeRow
-								key={times.length - 1 - i}
+								key={time.solved_at_unix_ms}
 								index={times.length - i}
 								time={time}
 								isBest={isBest}

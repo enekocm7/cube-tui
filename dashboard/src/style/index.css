@@ -6,152 +6,169 @@
    Semantic tokens — dark (default)
 ───────────────────────────────────────── */
 :root {
-  --bg:          #0c0c13;
-  --surface:     #11111c;
-  --raised:      #18182a;
-  --btn-bg:      #1c1c2e;
-  --border:      #1e1e32;
-  --border-hover:#2c2c46;
-  --text:        #ffffff;
-  --text-muted:  #6a6a8e;
-  --text-dim:    #38385a;
-  --accent:      #7c6eff;
-  --accent-hover:#6b5df0;
-  --header-bg:   rgba(12, 12, 19, 0.75);
-  --glow:        rgba(124, 110, 255, 0.18);
-  --thumb-bg:    #2c2c46;
-  --moon-color:  #7c6eff;
-  --sun-color:   #6a6a8e;
-  --logo-filter: invert(1) hue-rotate(180deg);
+    --bg: #0c0c13;
+    --surface: #11111c;
+    --raised: #18182a;
+    --btn-bg: #1c1c2e;
+    --border: #1e1e32;
+    --border-hover: #2c2c46;
+    --text: #ffffff;
+    --text-muted: #6a6a8e;
+    --text-dim: #38385a;
+    --accent: #7c6eff;
+    --accent-hover: #6b5df0;
+    --header-bg: rgba(12, 12, 19, 0.75);
+    --glow: rgba(124, 110, 255, 0.18);
+    --thumb-bg: #2c2c46;
+    --moon-color: #7c6eff;
+    --sun-color: #6a6a8e;
+    --logo-filter: invert(1) hue-rotate(180deg);
 }
 
 /* ─────────────────────────────────────────
    Semantic tokens — light
 ───────────────────────────────────────── */
 html:not(.dark) {
-  --bg:          #f5f5fa;
-  --surface:     #ffffff;
-  --raised:      #ededf5;
-  --btn-bg:      #e8e8f4;
-  --border:      #dddde8;
-  --border-hover:#b0b0cc;
-  --text:        #1a1a2e;
-  --text-muted:  #5a5a7a;
-  --text-dim:    #9090b0;
-  --accent:      #6b5df0;
-  --accent-hover:#5a4de0;
-  --header-bg:   rgba(245, 245, 250, 0.75);
-  --glow:        rgba(124, 110, 255, 0.08);
-  --thumb-bg:    #ffffff;
-  --moon-color:  #9090b0;
-  --sun-color:   #f59e0b;
-  --logo-filter: none;
+    --bg: #f5f5fa;
+    --surface: #ffffff;
+    --raised: #ededf5;
+    --btn-bg: #e8e8f4;
+    --border: #dddde8;
+    --border-hover: #b0b0cc;
+    --text: #1a1a2e;
+    --text-muted: #5a5a7a;
+    --text-dim: #9090b0;
+    --accent: #6b5df0;
+    --accent-hover: #5a4de0;
+    --header-bg: rgba(245, 245, 250, 0.75);
+    --glow: rgba(124, 110, 255, 0.08);
+    --thumb-bg: #ffffff;
+    --moon-color: #9090b0;
+    --sun-color: #f59e0b;
+    --logo-filter: none;
 }
 
 /* ─────────────────────────────────────────
    Map to Tailwind tokens (inline = dynamic)
 ───────────────────────────────────────── */
 @theme inline {
-  --font-sans:          'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  --font-mono:          'JetBrains Mono', 'Fira Code', monospace;
-  --color-bg:           var(--bg);
-  --color-surface:      var(--surface);
-  --color-raised:       var(--raised);
-  --color-btn-bg:       var(--btn-bg);
-  --color-border:       var(--border);
-  --color-border-hover: var(--border-hover);
-  --color-text:         var(--text);
-  --color-text-muted:   var(--text-muted);
-  --color-text-dim:     var(--text-dim);
-  --color-accent:       var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-thumb:        var(--thumb-bg);
-  --color-header-bg:    var(--header-bg);
-  --color-moon:         var(--moon-color);
-  --color-sun:          var(--sun-color);
+    --font-sans: "Inter", system-ui, Avenir, Helvetica, Arial, sans-serif;
+    --font-mono: "JetBrains Mono", "Fira Code", monospace;
+    --color-bg: var(--bg);
+    --color-surface: var(--surface);
+    --color-raised: var(--raised);
+    --color-btn-bg: var(--btn-bg);
+    --color-border: var(--border);
+    --color-border-hover: var(--border-hover);
+    --color-text: var(--text);
+    --color-text-muted: var(--text-muted);
+    --color-text-dim: var(--text-dim);
+    --color-accent: var(--accent);
+    --color-accent-hover: var(--accent-hover);
+    --color-thumb: var(--thumb-bg);
+    --color-header-bg: var(--header-bg);
+    --color-moon: var(--moon-color);
+    --color-sun: var(--sun-color);
 }
 
 /* ─────────────────────────────────────────
    Base
 ───────────────────────────────────────── */
 @layer base {
-  :root {
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+    :root {
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
 
-  html {
-    background-color: var(--bg);
-  }
+    html {
+        background-color: var(--bg);
+    }
 
-  body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: var(--font-sans);
-    background-color: var(--bg);
-    color: var(--text);
-    transition: background-color 0.3s ease, color 0.3s ease;
-    background-image: radial-gradient(
-      ellipse 80% 55% at 50% -5%,
-      var(--glow),
-      transparent 65%
-    );
-  }
+    body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--font-sans);
+        background-color: var(--bg);
+        color: var(--text);
+        transition:
+            background-color 0.3s ease,
+            color 0.3s ease;
+        background-image: radial-gradient(ellipse 80% 55% at 50% -5%, var(--glow), transparent 65%);
+    }
 
-  /* Kill all transitions on first paint — prevents dark-mode flash */
-  html.preload * {
-    transition: none !important;
-  }
+    /* Kill all transitions on first paint — prevents dark-mode flash */
+    html.preload * {
+        transition: none !important;
+    }
 
-  * { box-sizing: border-box; }
+    * {
+        box-sizing: border-box;
+    }
 
-  ::-webkit-scrollbar             { width: 5px; }
-  ::-webkit-scrollbar-track       { background: transparent; }
-  ::-webkit-scrollbar-thumb       { background: var(--btn-bg); border-radius: 99px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+    ::-webkit-scrollbar {
+        width: 5px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: var(--btn-bg);
+        border-radius: 99px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent);
+    }
 
-  button { cursor: pointer; }
+    button {
+        cursor: pointer;
+    }
 }
 
 /* Logo filter driven by CSS var — no JS needed */
 .logo-img {
-  filter: var(--logo-filter);
-  transition: filter 0.3s ease;
+    filter: var(--logo-filter);
+    transition: filter 0.3s ease;
 }
 
 @keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @layer utilities {
-  .animate-fade-in-up {
-    animation: fade-in-up 0.45s ease-out both;
-  }
+    .animate-fade-in-up {
+        animation: fade-in-up 0.45s ease-out both;
+    }
 
-  .theme-toggle {
-    width: 5.5rem;
-    background: var(--btn-bg);
-    border-color: var(--border);
-  }
+    .theme-toggle {
+        width: 5.5rem;
+        background: var(--btn-bg);
+        border-color: var(--border);
+    }
 
-  .theme-toggle-thumb {
-    width: calc(50% - 4px);
-    left: 4px;
-    background: var(--thumb-bg);
-  }
+    .theme-toggle-thumb {
+        width: calc(50% - 4px);
+        left: 4px;
+        background: var(--thumb-bg);
+    }
 
-  .theme-toggle[data-theme="light"] .theme-toggle-thumb {
-    left: calc(50%);
-  }
+    .theme-toggle[data-theme="light"] .theme-toggle-thumb {
+        left: calc(50%);
+    }
 
-  .theme-toggle-moon {
-    color: var(--moon-color);
-  }
+    .theme-toggle-moon {
+        color: var(--moon-color);
+    }
 
-  .theme-toggle-sun {
-    color: var(--sun-color);
-  }
+    .theme-toggle-sun {
+        color: var(--sun-color);
+    }
 }

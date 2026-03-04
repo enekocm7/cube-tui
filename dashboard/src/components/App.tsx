@@ -27,7 +27,7 @@ function App() {
             })
             .catch(() => {
             });
-    }, []);
+    }, [setSessions]);
 
     useEffect(() => {
         if (sessions.length === 0) {
