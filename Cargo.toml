@@ -2,6 +2,8 @@
 name = "cube-tui"
 version = "0.1.0"
 edition = "2024"
+repository = "github.com/enekocm7/cube-tui"
+readme = "README.md"
 
 [features]
 dashboard = ["axum", "tokio", "rust-embed", "open", "mime_guess"]
