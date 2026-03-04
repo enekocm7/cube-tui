@@ -2,7 +2,7 @@
 name = "cube-tui"
 version = "0.1.0"
 edition = "2024"
-repository = "github.com/enekocm7/cube-tui"
+repository = "https://github.com/enekocm7/cube-tui"
 readme = "README.md"
 description = "Terminal UI timer and session manager for speedcubing, with optional web dashboard and BLE (GAN) timer support."
 license = "MIT"
