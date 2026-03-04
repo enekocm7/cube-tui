@@ -2,7 +2,7 @@
 pub mod timer;
 
 #[cfg(feature = "bluetooth")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BtTimerState {
     Disconnected,
     GetSet,
@@ -11,6 +11,7 @@ pub enum BtTimerState {
     Idle,
     HandsOn,
     Finished(u64),
+    Error(String),
 }
 
 #[cfg(feature = "bluetooth")]

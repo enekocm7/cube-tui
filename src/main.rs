@@ -583,14 +583,14 @@ fn handle_disconnect_bluetooth(model: &mut Model) {
 
 #[cfg(feature = "bluetooth")]
 fn handle_bluetooth_connect(model: &mut Model) {
-    use crate::bluetooth::timer::{TimerState as BtTimerState, connect, disconnect, get_adapter};
+    use crate::bluetooth::timer::{TimerState as BtTimerState, connect, disconnect};
     use futures_util::StreamExt;
 
     let Some(device) = model.bluetooth_selected_device().cloned() else {
         return;
     };
 
-    let Some((tx, cancel_rx)) = model.connect_bluetooth_device() else {
+    let Some((tx, cancel_rx, adapter, conn_tx)) = model.connect_bluetooth_device() else {
         return;
     };
 
@@ -602,19 +602,16 @@ fn handle_bluetooth_connect(model: &mut Model) {
         };
 
         runtime.block_on(async move {
-            let Ok(adapter) = get_adapter().await else {
-                let _ = tx.send(BtTimerState::Disconnected);
-                return;
+            let mut stream = match connect(&device_id, &adapter).await {
+                Ok(s) => s,
+                Err(e) => {
+                    let _ = tx.send(BtTimerState::Error(e.to_string()));
+                    let _ = tx.send(BtTimerState::Disconnected);
+                    return;
+                }
             };
 
-            let Ok(mut stream) = connect(&device_id, &adapter).await else {
-                let _ = tx.send(BtTimerState::Disconnected);
-                return;
-            };
-
-            if tx.send(BtTimerState::Idle).is_err() {
-                return;
-            }
+            let _ = conn_tx.send(());
 
             loop {
                 tokio::select! {
@@ -622,7 +619,6 @@ fn handle_bluetooth_connect(model: &mut Model) {
                         Some(state) => { if tx.send(state).is_err() { break; } }
                         None => break,
                     },
-                    // cancel_tx was dropped — disconnect_bluetooth was called
                     _ = cancel_rx.recv_async() => break,
                 }
             }

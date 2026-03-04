@@ -3,8 +3,8 @@ use btleplug::{
     api::{Central, CentralEvent, Manager as _, Peripheral, ScanFilter},
     platform::Manager,
 };
-use futures_util::{Stream, StreamExt};
 use flume;
+use futures_util::{Stream, StreamExt};
 use uuid::Uuid;
 
 pub use super::{BtTimerState as TimerState, DeviceInfo};
@@ -102,9 +102,26 @@ pub async fn connect(
 
     let peripheral = adapter.peripheral(id).await?;
     peripheral.connect().await?;
-    peripheral.discover_services().await?;
+    adapter.stop_scan().await?;
+    while !peripheral.is_connected().await? {
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    let mut retries = 5;
+    while let Err(err) = peripheral.discover_services().await {
+        if retries == 0 {
+            return Err(err.into());
+        }
+        retries -= 1;
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    }
 
-    let characteristics = peripheral.characteristics();
+    let mut characteristics = peripheral.characteristics();
+    let mut char_retries = 10;
+    while characteristics.is_empty() && char_retries > 0 {
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        characteristics = peripheral.characteristics();
+        char_retries -= 1;
+    }
 
     let state_characteristic = characteristics
         .iter()

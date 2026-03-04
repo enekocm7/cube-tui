@@ -8,6 +8,14 @@ use serde::{Deserialize, Serialize};
 
 pub const MAX_SESSIONS: usize = 99;
 
+#[cfg(feature = "bluetooth")]
+pub type BluetoothConnection = (
+    flume::Sender<BtTimerState>,
+    flume::Receiver<()>,
+    btleplug::platform::Adapter,
+    flume::Sender<()>,
+);
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum TimerState {
     Idle,
@@ -192,6 +200,7 @@ struct BluetoothState {
     scanning: bool,
     timer_rx: Option<flume::Receiver<BtTimerState>>,
     cancel_tx: Option<flume::Sender<()>>,
+    connected_rx: Option<flume::Receiver<()>>,
     adapter: Option<btleplug::platform::Adapter>,
     connected: bool,
     connected_device_name: Option<String>,
@@ -600,9 +609,8 @@ impl Model {
     }
 
     #[cfg(feature = "bluetooth")]
-    pub fn connect_bluetooth_device(
-        &mut self,
-    ) -> Option<(flume::Sender<BtTimerState>, flume::Receiver<()>)> {
+    pub fn connect_bluetooth_device(&mut self) -> Option<BluetoothConnection> {
+        let adapter = self.bluetooth_state.adapter.clone()?;
         let device = self
             .bluetooth_state
             .devices
@@ -613,14 +621,29 @@ impl Model {
         self.bluetooth_state.timer_rx = Some(rx);
         let (cancel_tx, cancel_rx) = flume::bounded(1);
         self.bluetooth_state.cancel_tx = Some(cancel_tx);
+        let (conn_tx, conn_rx) = flume::bounded(1);
+        self.bluetooth_state.connected_rx = Some(conn_rx);
         self.bluetooth_state.connected = false;
         self.bluetooth_state.connected_device_name = device_name;
         self.bluetooth_state.status = Some("Connecting...".to_string());
-        Some((tx, cancel_rx))
+        Some((tx, cancel_rx, adapter, conn_tx))
     }
 
     #[cfg(feature = "bluetooth")]
     pub fn poll_bluetooth_timer(&mut self) {
+        if let Some(conn_rx) = &self.bluetooth_state.connected_rx
+            && conn_rx.try_recv() == Ok(())
+        {
+            self.bluetooth_state.connected = true;
+            let name = self
+                .bluetooth_state
+                .connected_device_name
+                .as_deref()
+                .unwrap_or("device");
+            self.bluetooth_state.status = Some(format!("✓ Connected to {name}"));
+            self.bluetooth_state.connected_rx = None;
+        }
+
         let Some(rx) = self.bluetooth_state.timer_rx.take() else {
             return;
         };
@@ -629,15 +652,6 @@ impl Model {
         while let Ok(bt_state) = rx.try_recv() {
             match bt_state {
                 BtTimerState::Idle | BtTimerState::GetSet | BtTimerState::HandsOn => {
-                    if !self.bluetooth_state.connected {
-                        self.bluetooth_state.connected = true;
-                        let name = self
-                            .bluetooth_state
-                            .connected_device_name
-                            .as_deref()
-                            .unwrap_or("device");
-                        self.bluetooth_state.status = Some(format!("✓ Connected to {name}"));
-                    }
                     self.get_current_session_mut().timer_state =
                         if matches!(bt_state, BtTimerState::Idle) {
                             TimerState::Idle
@@ -662,6 +676,11 @@ impl Model {
                     crate::persistence::save(self);
                 }
                 BtTimerState::Disconnected => {
+                    disconnected = true;
+                    break;
+                }
+                BtTimerState::Error(err) => {
+                    self.bluetooth_state.status = Some(format!("Error: {err}"));
                     disconnected = true;
                     break;
                 }
@@ -699,6 +718,7 @@ impl Model {
     pub fn disconnect_bluetooth(&mut self) {
         self.bluetooth_state.cancel_tx = None;
         self.bluetooth_state.timer_rx = None;
+        self.bluetooth_state.connected_rx = None;
         self.bluetooth_state.connected = false;
         self.bluetooth_state.connected_device_name = None;
         self.bluetooth_state.connected_device_id = None;
