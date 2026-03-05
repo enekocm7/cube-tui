@@ -144,6 +144,7 @@ struct DetailsState {
     show: bool,
     modifier_index: usize,
     return_to_mean_detail: Option<MeanDetailReturnState>,
+    return_to_stats: Option<StatsReturnState>,
 }
 
 #[derive(Copy, Clone)]
@@ -151,6 +152,12 @@ struct MeanDetailReturnState {
     row: usize,
     col: usize,
     selected_index: usize,
+}
+
+#[derive(Copy, Clone)]
+struct StatsReturnState {
+    row: usize,
+    col: usize,
 }
 
 #[derive(Default)]
@@ -389,6 +396,28 @@ impl Model {
     pub fn open_mean_detail_from_stats(&mut self) -> bool {
         let row = self.main_stats_selection.row;
         let col = self.main_stats_selection.col;
+
+        if row == 0 {
+            let solve_index = if col == 0 {
+                self.history().len().checked_sub(1)
+            } else {
+                self.history()
+                    .times()
+                    .iter()
+                    .enumerate()
+                    .min_by_key(|(_, t)| t.raw_ms())
+                    .map(|(i, _)| i)
+            };
+
+            let Some(solve_index) = solve_index else {
+                return false;
+            };
+
+            self.history_mut().select_index(solve_index);
+            self.open_details();
+            self.details_state.return_to_stats = Some(StatsReturnState { row, col });
+            return true;
+        }
 
         let solve_index = match (row, col) {
             (1, 0) => self.history().latest_mo3_index(),
@@ -761,6 +790,7 @@ impl Model {
     pub fn open_details(&mut self) {
         self.details_state.show = true;
         self.details_state.return_to_mean_detail = None;
+        self.details_state.return_to_stats = None;
         self.details_state.modifier_index = match self.history().selected_time().map(Time::modifier)
         {
             Some(Modifier::DNF) => 1,
@@ -771,6 +801,22 @@ impl Model {
     pub const fn close_details(&mut self) {
         self.details_state.show = false;
         self.details_state.return_to_mean_detail = None;
+        self.details_state.return_to_stats = None;
+    }
+
+    pub const fn can_return_to_stats(&self) -> bool {
+        self.details_state.return_to_stats.is_some()
+    }
+
+    pub const fn return_to_stats_column(&mut self) -> bool {
+        let Some(return_state) = self.details_state.return_to_stats.take() else {
+            return false;
+        };
+        self.details_state.show = false;
+        self.main_focus = MainFocus::Stats;
+        self.main_stats_selection.row = return_state.row;
+        self.main_stats_selection.col = return_state.col;
+        true
     }
 
     pub const fn can_return_to_mean_detail(&self) -> bool {
