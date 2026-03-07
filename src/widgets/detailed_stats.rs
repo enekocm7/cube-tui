@@ -43,7 +43,7 @@ impl Widget for DetailedStatsWidget {
             return;
         }
 
-        let header = format!(" {:>4}  {:>12}  {:>12}  {:>12}", "#", "Time", "mo3", "ao5");
+        let header = format!(" {:>6}  {:>12}  {:>12}  {:>12}", "#", "Time", "mo3", "ao5");
         let header_style = Style::default()
             .fg(Color::Cyan)
             .add_modifier(Modifier::BOLD);
@@ -84,7 +84,7 @@ impl Widget for DetailedStatsWidget {
 
             let is_selected = solve_idx == self.selected_row;
 
-            let num_str = format!(" {:>4}", solve_idx + 1);
+            let num_str = format!(" {:>6}", solve_idx + 1);
             buf.set_string(
                 inner.x,
                 inner.y + row_offset,
@@ -94,7 +94,7 @@ impl Widget for DetailedStatsWidget {
 
             let time_col = format!("  {:>12}", truncate(&time_str, 12));
             buf.set_string(
-                inner.x + 5,
+                inner.x + 8,
                 inner.y + row_offset,
                 &time_col,
                 row_style(is_selected, false),
@@ -102,7 +102,7 @@ impl Widget for DetailedStatsWidget {
 
             let mo3_col = format!("  {:>12}", truncate(&mo3_str, 12));
             buf.set_string(
-                inner.x + 19,
+                inner.x + 22,
                 inner.y + row_offset,
                 &mo3_col,
                 row_style(is_selected, is_selected && self.selected_col == 0),
@@ -110,7 +110,7 @@ impl Widget for DetailedStatsWidget {
 
             let ao5_col = format!("  {:>12}", truncate(&ao5_str, 12));
             buf.set_string(
-                inner.x + 33,
+                inner.x + 36,
                 inner.y + row_offset,
                 &ao5_col,
                 row_style(is_selected, is_selected && self.selected_col == 1),
