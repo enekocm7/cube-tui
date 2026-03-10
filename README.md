@@ -2,6 +2,8 @@
 
 A terminal UI timer and session manager for speedcubing.
 
+![teaser](images/main.png)
+
 Out of the box, it's a lightweight TUI timer that lets you time solves, scramble, and check basic stats directly from
 your terminal. All your session data is saved locally.
 
