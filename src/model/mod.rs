@@ -525,7 +525,23 @@ impl Model {
         self.bluetooth_state.show = !self.bluetooth_state.show;
         if self.bluetooth_state.show {
             self.bluetooth_state.selected_index = 0;
-            self.bluetooth_state.devices.clear();
+            let was_connected = self.bluetooth_state.connected_device_id.is_some();
+            if was_connected {
+                if !self.bluetooth_state
+                    .devices
+                    .iter()
+                    .any(|d| Some(&d.id) == self.bluetooth_state.connected_device_id.as_ref())
+                {
+                    self.bluetooth_state.devices.push(DeviceInfo {
+                        id: self.bluetooth_state.connected_device_id.clone().unwrap(),
+                        name: self.bluetooth_state.connected_device_name.clone(),
+                        rssi: None,
+                        disconnected: false,
+                    });
+                }
+            } else {
+                self.bluetooth_state.devices.clear();
+            }
             self.bluetooth_state.status = Some("Starting scan...".to_string());
             let (tx, rx) = flume::unbounded();
             self.bluetooth_state.rx = Some(rx);
@@ -680,10 +696,19 @@ impl Model {
 
     #[cfg(feature = "bluetooth")]
     pub fn poll_bluetooth_timer(&mut self) {
-        if let Some(conn_rx) = &self.bluetooth_state.connected_rx
+            if let Some(conn_rx) = &self.bluetooth_state.connected_rx
             && conn_rx.try_recv() == Ok(())
         {
             self.bluetooth_state.connected = true;
+            if let Some(connected_id) = &self.bluetooth_state.connected_device_id
+                && let Some(index) = self
+                    .bluetooth_state
+                    .devices
+                    .iter()
+                    .position(|d| &d.id == connected_id)
+            {
+                self.bluetooth_state.selected_index = index;
+            }
             let name = self
                 .bluetooth_state
                 .connected_device_name
@@ -756,6 +781,11 @@ impl Model {
     #[cfg(feature = "bluetooth")]
     pub fn connected_device_name(&self) -> Option<&str> {
         self.bluetooth_state.connected_device_name.as_deref()
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn connected_device_id(&self) -> Option<btleplug::platform::PeripheralId> {
+        self.bluetooth_state.connected_device_id.clone()
     }
 
     /// Signals the background connection thread to disconnect and clears state.

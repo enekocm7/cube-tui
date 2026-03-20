@@ -643,7 +643,11 @@ fn handle_toggle_inspection(model: &mut Model) {
 fn handle_open_details(model: &mut Model) {
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
-        handle_bluetooth_connect(model);
+        if model.bluetooth_connected() {
+            handle_disconnect_bluetooth(model);
+        } else {
+            handle_bluetooth_connect(model);
+        }
         return;
     }
     if model.show_mean_detail() {
@@ -736,12 +740,14 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             model.bluetooth_devices().to_vec(),
             model.bluetooth_selected_index(),
             model.bluetooth_status().map(str::to_string),
+            model.connected_device_id(),
         )
         .render(layout[0], buf);
 
         let help_text = if model.bluetooth_connected() {
             Line::from(vec![
-                Span::raw("x: disconnect  "),
+                Span::raw("↑/↓: select  "),
+                Span::raw("Enter/x: disconnect  "),
                 Span::raw("Esc: back to timer"),
             ])
         } else {
