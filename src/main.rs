@@ -565,7 +565,13 @@ fn handle_toggle_bluetooth(model: &mut Model) {
                 };
 
                 while let Some(device) = stream.next().await {
-                    if tx.send(BluetoothEvent::Device(device)).is_err() {
+                    let event = if device.disconnected {
+                        BluetoothEvent::Disconnected(device)
+                    } else {
+                        BluetoothEvent::Device(device)
+                    };
+
+                    if tx.send(event).is_err() {
                         break;
                     }
                 }

@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::time::Duration;
+
 use btleplug::platform::{Adapter, PeripheralId};
 use btleplug::{
     api::{Central, CentralEvent, Manager as _, Peripheral, ScanFilter},
@@ -5,6 +8,7 @@ use btleplug::{
 };
 use flume;
 use futures_util::{Stream, StreamExt};
+use tokio::time::interval;
 use uuid::Uuid;
 
 pub use super::{BtTimerState as TimerState, DeviceInfo};
@@ -46,27 +50,68 @@ pub async fn get_devices(adapter: &Adapter) -> anyhow::Result<impl Stream<Item =
             return;
         };
 
-        while let Some(event) = events.next().await {
-            match event {
-                CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id) => {
-                    if let Ok(peripheral) = adapter.peripheral(&id).await {
-                        let props = peripheral.properties().await.unwrap_or(None);
-                        let device = DeviceInfo {
-                            id,
-                            name: props.as_ref().and_then(|p| p.local_name.clone()),
-                            rssi: props.and_then(|p| p.rssi),
-                        };
-                        let is_gan = device
-                            .name
-                            .as_ref()
-                            .is_some_and(|n| n.to_lowercase().contains("gan"));
+        let mut discovered_ids = HashMap::<PeripheralId, (i16, u8)>::new();
+        let mut interval = interval(Duration::from_millis(400));
+        let max: u8 = 8;
 
-                        if is_gan && tx.send_async(device).await.is_err() {
-                            break;
+        'outer: loop {
+            tokio::select! {
+                Some(event) = events.next() => {
+                    match event {
+                        CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id) => {
+                            if let Ok(peripheral) = adapter.peripheral(&id).await {
+                                let props = peripheral.properties().await.unwrap_or(None);
+                                let device = DeviceInfo {
+                                    id: id.clone(),
+                                    name: props.as_ref().and_then(|p| p.local_name.clone()),
+                                    rssi: props.and_then(|p| p.rssi),
+                                    disconnected: false,
+                                };
+                                let is_gan = device
+                                    .name
+                                    .as_ref()
+                                    .is_some_and(|n| n.to_lowercase().contains("gan"));
+                                if is_gan {
+                                    discovered_ids.insert(id, (device.rssi.unwrap_or(0),1));
+                                    if tx.send_async(device).await.is_err() {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                _ = interval.tick() => {
+                    let mut dead: Vec<PeripheralId> = Vec::new();
+                    for (id, entry) in &mut discovered_ids {
+                        if let Ok(peripheral) = adapter.peripheral(id).await {
+                            let props = peripheral.properties().await.unwrap_or(None);
+                            if let Some(new_rssi) = props.and_then(|p| p.rssi) {
+                                if new_rssi == entry.0 {
+                                    entry.1 += 1;
+                                } else {
+                                    entry.0 = new_rssi;
+                                }
+                                if entry.1 >= max {
+                                    dead.push(id.clone());
+                                }
+                            }
+                        }
+                    }
+                    for id in &dead {
+                        discovered_ids.remove(id);
+                        let device = DeviceInfo {
+                            id: id.clone(),
+                            name: None,
+                            rssi: None,
+                            disconnected: true,
+                        };
+                        if tx.send_async(device).await.is_err() {
+                            break 'outer;
                         }
                     }
                 }
-                _ => {}
             }
         }
     });
