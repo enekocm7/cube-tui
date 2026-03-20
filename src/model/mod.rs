@@ -1,6 +1,6 @@
 use std::time::Instant;
-use btleplug::platform::PeripheralId;
 #[cfg(feature = "bluetooth")]
+use btleplug::platform::PeripheralId;
 use crate::bluetooth::{BtTimerState, DeviceInfo};
 use crate::scramble::{self, Scramble, WcaEvent};
 use crate::widgets::history::{History, Modifier, Time};
