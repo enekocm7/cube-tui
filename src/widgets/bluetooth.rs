@@ -10,6 +10,7 @@ pub struct BluetoothWidget {
     devices: Vec<DeviceInfo>,
     selected_index: usize,
     status: Option<String>,
+    connected_device_id: Option<btleplug::platform::PeripheralId>,
 }
 
 impl BluetoothWidget {
@@ -17,11 +18,13 @@ impl BluetoothWidget {
         devices: Vec<DeviceInfo>,
         selected_index: usize,
         status: Option<String>,
+        connected_device_id: Option<btleplug::platform::PeripheralId>,
     ) -> Self {
         Self {
             devices,
             selected_index,
             status,
+            connected_device_id,
         }
     }
 }
@@ -57,6 +60,10 @@ impl Widget for BluetoothWidget {
         } else {
             lines.extend(self.devices.into_iter().enumerate().map(|(index, device)| {
                 let name = device.name.unwrap_or_else(|| "(unknown)".to_string());
+                let is_connected = self
+                    .connected_device_id
+                    .as_ref()
+                    .is_some_and(|id| *id == device.id);
                 let rssi = device
                     .rssi
                     .map_or_else(|| "? dBm".to_string(), |value| format!("{value} dBm"));
@@ -65,14 +72,25 @@ impl Widget for BluetoothWidget {
                 } else {
                     "  "
                 };
-                let line = format!("{prefix}{name}  [{rssi}]");
+                let suffix = if is_connected {
+                    " [Connected]".to_string()
+                } else {
+                    String::new()
+                };
+                let line = format!("{prefix}{name}  [{rssi}]{suffix}");
                 if index == self.selected_index {
                     Line::from(Span::styled(
                         line,
                         Style::default()
-                            .fg(Color::Cyan)
+                            .fg(if is_connected {
+                                Color::Green
+                            } else {
+                                Color::Cyan
+                            })
                             .add_modifier(Modifier::BOLD),
                     ))
+                } else if is_connected {
+                    Line::from(Span::styled(line, Style::default().fg(Color::Green)))
                 } else {
                     Line::from(Span::raw(line))
                 }

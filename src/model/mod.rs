@@ -1,5 +1,5 @@
 use std::time::Instant;
-
+use btleplug::platform::PeripheralId;
 #[cfg(feature = "bluetooth")]
 use crate::bluetooth::{BtTimerState, DeviceInfo};
 use crate::scramble::{self, Scramble, WcaEvent};
@@ -193,6 +193,7 @@ pub enum BluetoothEvent {
     Status(String),
     Error(String),
     Device(DeviceInfo),
+    Disconnected(DeviceInfo),
     Adapter(btleplug::platform::Adapter),
 }
 
@@ -211,7 +212,7 @@ struct BluetoothState {
     adapter: Option<btleplug::platform::Adapter>,
     connected: bool,
     connected_device_name: Option<String>,
-    connected_device_id: Option<btleplug::platform::PeripheralId>,
+    connected_device_id: Option<PeripheralId>,
 }
 
 pub struct Model {
@@ -582,6 +583,12 @@ impl Model {
                 BluetoothEvent::Adapter(adapter) => {
                     self.bluetooth_state.adapter = Some(adapter);
                 }
+                BluetoothEvent::Disconnected(device) => {
+                    self.remove_bluetooth_device(&device);
+                    let count = self.bluetooth_state.devices.len();
+                    self.bluetooth_state.status =
+                        Some(format!("Scanning... ({count} device(s) found)"));
+                }
             }
         }
 
@@ -606,6 +613,19 @@ impl Model {
             return;
         }
         self.bluetooth_state.devices.push(device);
+    }
+
+    #[cfg(feature = "bluetooth")]
+    fn remove_bluetooth_device(&mut self, device: &DeviceInfo) {
+        if let Some(device_index) = self
+            .bluetooth_state
+            .devices
+            .iter()
+            .enumerate()
+            .find_map(|(i, dev)| if dev.id == device.id { Some(i) } else { None })
+        {
+            self.bluetooth_state.devices.remove(device_index);
+        }
     }
 
     #[cfg(feature = "bluetooth")]
@@ -736,6 +756,11 @@ impl Model {
     #[cfg(feature = "bluetooth")]
     pub fn connected_device_name(&self) -> Option<&str> {
         self.bluetooth_state.connected_device_name.as_deref()
+    }
+
+    #[cfg(feature = "bluetooth")]
+    pub fn connected_device_id(&self) -> Option<PeripheralId> {
+        self.bluetooth_state.connected_device_id.clone()
     }
 
     /// Signals the background connection thread to disconnect and clears state.

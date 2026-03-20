@@ -20,4 +20,5 @@ pub struct DeviceInfo {
     pub id: btleplug::platform::PeripheralId,
     pub name: Option<String>,
     pub rssi: Option<i16>,
+    pub disconnected: bool,
 }
