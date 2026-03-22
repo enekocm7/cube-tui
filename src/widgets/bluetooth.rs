@@ -72,12 +72,7 @@ impl Widget for BluetoothWidget {
                 } else {
                     "  "
                 };
-                let suffix = if is_connected {
-                    " [Connected]".to_string()
-                } else {
-                    String::new()
-                };
-                let line = format!("{prefix}{name}  [{rssi}]{suffix}");
+                let line = format!("{prefix}{name}  [{rssi}]");
                 if index == self.selected_index {
                     Line::from(Span::styled(
                         line,

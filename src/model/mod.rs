@@ -533,6 +533,18 @@ impl Model {
     pub fn toggle_bluetooth(&mut self) -> Option<flume::Sender<BluetoothEvent>> {
         self.bluetooth_state.show = !self.bluetooth_state.show;
         if self.bluetooth_state.show {
+            if self.bluetooth_state.screen_state == BluetoothScreenState::Connected {
+                self.sync_connected_device_list();
+                let name = self
+                    .bluetooth_state
+                    .connected_device_name
+                    .as_deref()
+                    .unwrap_or("device");
+                self.bluetooth_state.status = Some(format!("✓ Connected to {name}"));
+                self.bluetooth_state.rx = None;
+                return None;
+            }
+
             self.bluetooth_state.selected_index = 0;
             self.bluetooth_state.devices.clear();
             self.bluetooth_state.status = Some("Starting scan...".to_string());
@@ -639,6 +651,23 @@ impl Model {
     }
 
     #[cfg(feature = "bluetooth")]
+    fn sync_connected_device_list(&mut self) {
+        self.bluetooth_state.devices = self
+            .bluetooth_state
+            .connected_device_id
+            .as_ref()
+            .map(|id| DeviceInfo {
+                id: id.clone(),
+                name: self.bluetooth_state.connected_device_name.clone(),
+                rssi: None,
+                disconnected: false,
+            })
+            .into_iter()
+            .collect();
+        self.bluetooth_state.selected_index = 0;
+    }
+
+    #[cfg(feature = "bluetooth")]
     pub fn bluetooth_status(&self) -> Option<&str> {
         self.bluetooth_state.status.as_deref()
     }
@@ -698,6 +727,7 @@ impl Model {
             && conn_rx.try_recv() == Ok(())
         {
             self.bluetooth_state.screen_state = BluetoothScreenState::Connected;
+            self.sync_connected_device_list();
             let name = self
                 .bluetooth_state
                 .connected_device_name
@@ -808,6 +838,8 @@ impl Model {
         self.bluetooth_state.connected_device_id = None;
         if self.bluetooth_state.show {
             self.bluetooth_state.screen_state = BluetoothScreenState::Searching;
+            self.bluetooth_state.selected_index = 0;
+            self.bluetooth_state.devices.clear();
             self.bluetooth_state.status = Some("Starting scan...".to_string());
             let (tx, rx) = flume::unbounded();
             self.bluetooth_state.rx = Some(rx.clone());
