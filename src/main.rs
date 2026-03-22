@@ -582,9 +582,45 @@ fn handle_toggle_bluetooth(model: &mut Model) {
 
 #[cfg(feature = "bluetooth")]
 fn handle_disconnect_bluetooth(model: &mut Model) {
-    if model.bluetooth_connected() {
-        model.disconnect_bluetooth();
+    if (model.bluetooth_connected() || model.bluetooth_connecting())
+        && let Some((tx, rx, adapter)) = model.disconnect_bluetooth()
+    {
+        restart_bluetooth_scan(tx, rx, adapter);
     }
+}
+
+#[cfg(feature = "bluetooth")]
+fn restart_bluetooth_scan(
+    tx: flume::Sender<crate::model::BluetoothEvent>,
+    _rx: flume::Receiver<crate::model::BluetoothEvent>,
+    adapter: btleplug::platform::Adapter,
+) {
+    use crate::bluetooth::timer::get_devices;
+    use futures_util::StreamExt;
+
+    std::thread::spawn(move || {
+        let Ok(runtime) = tokio::runtime::Runtime::new() else {
+            return;
+        };
+
+        runtime.block_on(async move {
+            let Ok(mut stream) = get_devices(&adapter).await else {
+                return;
+            };
+
+            while let Some(device) = stream.next().await {
+                let event = if device.disconnected {
+                    crate::model::BluetoothEvent::Disconnected(device)
+                } else {
+                    crate::model::BluetoothEvent::Device(device)
+                };
+
+                if tx.send(event).is_err() {
+                    break;
+                }
+            }
+        });
+    });
 }
 
 #[cfg(feature = "bluetooth")]
@@ -731,6 +767,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
 
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
+        use crate::model::BluetoothScreenState;
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Fill(1), Constraint::Length(1)])
@@ -744,18 +781,21 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         )
         .render(layout[0], buf);
 
-        let help_text = if model.bluetooth_connected() {
-            Line::from(vec![
+        let help_text = match model.bluetooth_screen_state() {
+            BluetoothScreenState::Connected => Line::from(vec![
                 Span::raw("↑/↓: select  "),
                 Span::raw("Enter/x: disconnect  "),
                 Span::raw("Esc: back to timer"),
-            ])
-        } else {
-            Line::from(vec![
+            ]),
+            BluetoothScreenState::Connecting => Line::from(vec![
+                Span::raw("↑/↓: select device  "),
+                Span::raw("Esc: back to timer"),
+            ]),
+            BluetoothScreenState::Searching => Line::from(vec![
                 Span::raw("↑/↓: select device  "),
                 Span::raw("Enter: connect  "),
                 Span::raw("Esc: close"),
-            ])
+            ]),
         };
         Paragraph::new(help_text)
             .alignment(Alignment::Center)
