@@ -1,5 +1,7 @@
 # cube-tui
 
+[![Crates.io](https://img.shields.io/crates/v/cube-tui.svg)](https://crates.io/crates/cube-tui)
+
 A terminal UI timer and session manager for speedcubing.
 
 ![teaser](images/main.png)
