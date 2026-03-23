@@ -85,3 +85,11 @@ cube dashboard
 
 will start the app with dashboard support
 enabled.
+
+Use a custom port if needed:
+
+```sh
+cube dashboard --port 8080
+```
+
+The default port is `7799`.

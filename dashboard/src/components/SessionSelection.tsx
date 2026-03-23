@@ -38,7 +38,8 @@ export function SessionSelection({ sessions, selectedIndex, onSelect }: SessionS
                     aria-label="Select session"
                 >
                     {sessions.map((session, index) => {
-                        const key = `${session.times[0].solved_at_unix_ms}-${session.times.length}-${session.times[0]?.event ?? "none"}`;
+                        const firstTime = session.times[0];
+                        const key = `${index}-${firstTime?.solved_at_unix_ms ?? "empty"}-${session.times.length}-${firstTime?.event ?? "none"}`;
                         return (
                             <option key={key} value={index}>
                                 {sessionLabel(session, index)}

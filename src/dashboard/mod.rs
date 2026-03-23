@@ -44,7 +44,7 @@ fn api_sessions() -> Response {
 }
 
 #[cfg(feature = "dashboard")]
-pub fn run_dashboard() {
+pub fn run_dashboard(port: u16) {
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
     rt.block_on(async {
         let app = Router::new()
@@ -55,11 +55,10 @@ pub fn run_dashboard() {
                 get(|Path(path): Path<String>| async move { serve_asset(&path) }),
             );
 
-        let port = 7799_u16;
         let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
         let url = format!("http://localhost:{port}");
 
-        eprintln!("Dashboard running at {url}");
+        println!("Dashboard running at {url}");
 
         if let Err(e) = open::that(&url) {
             eprintln!("Could not open browser automatically: {e}");

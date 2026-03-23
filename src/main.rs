@@ -87,10 +87,10 @@ fn main() {
         }
         #[cfg(feature = "dashboard")]
         Cli {
-            subcommand: Some(Command::Dashboard),
+            subcommand: Some(Command::Dashboard { port }),
             ..
         } => {
-            dashboard::run_dashboard();
+            dashboard::run_dashboard(port);
         }
         _ => {
             ratatui::run(run);
@@ -133,7 +133,15 @@ pub enum Command {
         alias = "d",
         about = "Starts a local dashboard for viewing data"
     )]
-    Dashboard,
+    Dashboard {
+        #[arg(
+            long,
+            default_value_t = 7799,
+            value_parser = clap::value_parser!(u16).range(1..=65535),
+            help = "Port for the local dashboard server"
+        )]
+        port: u16,
+    },
 }
 
 fn run(terminal: &mut DefaultTerminal) {
