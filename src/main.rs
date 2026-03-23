@@ -112,7 +112,7 @@ pub enum Command {
     #[command(
         name = "import",
         alias = "i",
-        about = "Imports a cstimer.json into the session history"
+        about = "Imports a cstimer.json/cstimer.txt into the session history"
     )]
     Import {
         #[arg(value_name = "PATH", default_value = "cstimer.json")]
