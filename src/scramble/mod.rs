@@ -1,5 +1,5 @@
-use rand::prelude::IndexedRandom;
 use rand::RngExt;
+use rand::prelude::IndexedRandom;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -509,7 +509,7 @@ fn clock_scramble(length: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{generate_scramble, Modifier, Move, Scramble, WcaEvent};
+    use super::{Modifier, Move, Scramble, WcaEvent, generate_scramble};
 
     #[test]
     fn scrambles_are_non_empty() {
