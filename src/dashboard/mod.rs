@@ -72,4 +72,3 @@ pub fn run_dashboard() {
         axum::serve(listener, app).await.expect("Server error");
     });
 }
-

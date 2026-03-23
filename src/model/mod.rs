@@ -1,11 +1,11 @@
-use std::time::Instant;
-#[cfg(feature = "bluetooth")]
-use btleplug::platform::PeripheralId;
 #[cfg(feature = "bluetooth")]
 use crate::bluetooth::{BtTimerState, DeviceInfo};
 use crate::scramble::{self, Scramble, WcaEvent};
 use crate::widgets::history::{History, Modifier, Time};
+#[cfg(feature = "bluetooth")]
+use btleplug::platform::PeripheralId;
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
 
 pub const MAX_SESSIONS: usize = 99;
 
@@ -826,7 +826,9 @@ impl Model {
     }
 
     #[cfg(feature = "bluetooth")]
-    pub fn disconnect_bluetooth(&mut self) -> Option<(
+    pub fn disconnect_bluetooth(
+        &mut self,
+    ) -> Option<(
         flume::Sender<BluetoothEvent>,
         flume::Receiver<BluetoothEvent>,
         btleplug::platform::Adapter,
