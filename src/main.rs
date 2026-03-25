@@ -611,7 +611,10 @@ fn restart_bluetooth_scan(
             };
 
             while let Some(device) = stream.next().await {
-                if tx.send(crate::model::BluetoothEvent::Device(device)).is_err() {
+                if tx
+                    .send(crate::model::BluetoothEvent::Device(device))
+                    .is_err()
+                {
                     break;
                 }
             }

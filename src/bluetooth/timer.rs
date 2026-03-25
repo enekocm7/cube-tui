@@ -50,10 +50,6 @@ pub async fn get_devices(adapter: &Adapter) -> anyhow::Result<impl Stream<Item =
             return;
         };
 
-        let mut discovered_ids = HashMap::<PeripheralId, u8>::new();
-        let mut interval = interval(Duration::from_millis(400));
-        let max: u8 = 8;
-
         loop {
             tokio::select! {
                 Some(event) = events.next() => {
@@ -70,7 +66,6 @@ pub async fn get_devices(adapter: &Adapter) -> anyhow::Result<impl Stream<Item =
                                         id: id.clone(),
                                         name,
                                     };
-                                    discovered_ids.insert(id, 1);
                                     if tx.send_async(device).await.is_err() {
                                         break;
                                     }
@@ -78,18 +73,6 @@ pub async fn get_devices(adapter: &Adapter) -> anyhow::Result<impl Stream<Item =
                             }
                         }
                         _ => {}
-                    }
-                }
-                _ = interval.tick() => {
-                    let mut dead: Vec<PeripheralId> = Vec::new();
-                    for (id, stale) in &mut discovered_ids {
-                        *stale += 1;
-                        if *stale >= max {
-                            dead.push(id.clone());
-                        }
-                    }
-                    for id in &dead {
-                        discovered_ids.remove(id);
                     }
                 }
             }
