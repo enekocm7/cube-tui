@@ -194,7 +194,6 @@ pub enum BluetoothEvent {
     Status(String),
     Error(String),
     Device(DeviceInfo),
-    Disconnected(DeviceInfo),
     Adapter(btleplug::platform::Adapter),
 }
 
@@ -605,12 +604,6 @@ impl Model {
                 BluetoothEvent::Adapter(adapter) => {
                     self.bluetooth_state.adapter = Some(adapter);
                 }
-                BluetoothEvent::Disconnected(device) => {
-                    self.remove_bluetooth_device(&device);
-                    let count = self.bluetooth_state.devices.len();
-                    self.bluetooth_state.status =
-                        Some(format!("Scanning... ({count} device(s) found)"));
-                }
             }
         }
 
@@ -638,19 +631,6 @@ impl Model {
     }
 
     #[cfg(feature = "bluetooth")]
-    fn remove_bluetooth_device(&mut self, device: &DeviceInfo) {
-        if let Some(device_index) = self
-            .bluetooth_state
-            .devices
-            .iter()
-            .enumerate()
-            .find_map(|(i, dev)| if dev.id == device.id { Some(i) } else { None })
-        {
-            self.bluetooth_state.devices.remove(device_index);
-        }
-    }
-
-    #[cfg(feature = "bluetooth")]
     fn sync_connected_device_list(&mut self) {
         self.bluetooth_state.devices = self
             .bluetooth_state
@@ -659,8 +639,6 @@ impl Model {
             .map(|id| DeviceInfo {
                 id: id.clone(),
                 name: self.bluetooth_state.connected_device_name.clone(),
-                rssi: None,
-                disconnected: false,
             })
             .into_iter()
             .collect();
