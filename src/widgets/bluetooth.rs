@@ -64,15 +64,12 @@ impl Widget for BluetoothWidget {
                     .connected_device_id
                     .as_ref()
                     .is_some_and(|id| *id == device.id);
-                let rssi = device
-                    .rssi
-                    .map_or_else(|| "? dBm".to_string(), |value| format!("{value} dBm"));
                 let prefix = if index == self.selected_index {
                     "> "
                 } else {
                     "  "
                 };
-                let line = format!("{prefix}{name}  [{rssi}]");
+                let line = format!("{prefix}{name}");
                 if index == self.selected_index {
                     Line::from(Span::styled(
                         line,
