@@ -1032,5 +1032,5 @@ fn get_scramble_lines(scramble: &str, width: u16) -> u16 {
     //10 is the padding (5 on each side) so the max chars are width - 10
     let chars_per_line = width as usize - 10;
     let num_lines = scramble.len().div_ceil(chars_per_line);
-    num_lines as u16
+    u16::try_from(num_lines).unwrap_or(5)
 }
