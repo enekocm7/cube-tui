@@ -24,7 +24,6 @@ mod scramble;
 mod widgets;
 
 use crate::model::{InspectionState, Model, TimerState};
-use crate::scramble::WcaEvent;
 #[cfg(feature = "bluetooth")]
 use crate::widgets::bluetooth::BluetoothWidget;
 use crate::widgets::detailed_stats::DetailedStatsWidget;
@@ -882,18 +881,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         return;
     }
 
-    let scramble_lines: u16 = match model.event() {
-        WcaEvent::Cube2x2
-        | WcaEvent::Pyraminx
-        | WcaEvent::Skewb
-        | WcaEvent::Clock
-        | WcaEvent::Cube4x4
-        | WcaEvent::Square1
-        | WcaEvent::Cube3x3 => 1,
-        WcaEvent::Cube5x5 | WcaEvent::Cube6x6 => 2,
-        WcaEvent::Cube7x7 => 3,
-        WcaEvent::Megaminx => 7,
-    };
+    let scramble_lines = get_scramble_lines(model.scramble().as_str(), area.width);
 
     let scramble_height = (scramble_lines + 2).min(area.height.saturating_sub(1));
     let constraints = (Constraint::Length(scramble_height), Constraint::Fill(1));
@@ -1027,4 +1015,11 @@ fn timer_display(model: &Model) -> (String, Style) {
     };
 
     (text, style)
+}
+
+fn get_scramble_lines(scramble: &str, width: u16) -> u16 {
+    //10 is the padding (5 on each side) so the max chars are width - 10
+    let chars_per_line = width as usize - 10;
+    let num_lines = scramble.len().div_ceil(chars_per_line);
+    num_lines as u16
 }
