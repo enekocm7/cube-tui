@@ -3,8 +3,8 @@ use reqwest::blocking::Client;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
-use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::OnceLock;
 use std::thread;
 use std::time::Duration;
 
@@ -39,9 +39,23 @@ pub fn start_wca_scramble_server() -> Result<WcaScrambleServer, String> {
         return Err("Missing scrambles directory next to Cargo.toml".to_string());
     }
 
-    for (program, args) in runtimes() {
+    for (program, args, install_cmd) in runtimes() {
         if !runtime_exists(program) {
             continue;
+        }
+
+        if let Some(install) = install_cmd {
+            let install_result = Command::new(program)
+                .args(install)
+                .current_dir(&scrambles_dir)
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+
+            if !install_result.is_ok_and(|s| s.success()) {
+                continue;
+            }
         }
 
         let Ok(mut child) = Command::new(program)
@@ -100,10 +114,14 @@ struct ScrambleApiResponse {
     scramble: String,
 }
 
-const fn runtimes() -> [(&'static str, &'static [&'static str]); 3] {
+const fn runtimes() -> [(
+    &'static str,
+    &'static [&'static str],
+    Option<&'static [&'static str]>,
+); 3] {
     [
-        ("node", &["index.ts"]),
-        ("bun", &["index.ts"]),
+        ("node", &["index.ts"], Some(&["install"])),
+        ("bun", &["index.ts"], Some(&["install"])),
         (
             "deno",
             &[
@@ -114,6 +132,7 @@ const fn runtimes() -> [(&'static str, &'static [&'static str]); 3] {
                 "--node-modules-dir=auto",
                 "index.ts",
             ],
+            None,
         ),
     ]
 }
