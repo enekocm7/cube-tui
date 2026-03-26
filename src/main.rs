@@ -92,6 +92,17 @@ fn main() {
             dashboard::run_dashboard(port);
         }
         _ => {
+            #[cfg(feature = "wca-scrambles")]
+            let _wca_scramble_server = match scramble::start_wca_scramble_server() {
+                Ok(server) => Some(server),
+                Err(error) => {
+                    eprintln!(
+                        "Warning: Could not enable WCA scrambles ({error}). Falling back to built-in random scrambles."
+                    );
+                    None
+                }
+            };
+
             ratatui::run(run);
         }
     }

@@ -1,0 +1,17 @@
+{
+    "name": "scrambles",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "index.ts",
+    "packageManager": "pnpm@10.33.0",
+    "scripts": {
+        "serve": "node index.ts"
+    },
+    "devDependencies": {
+        "@types/express": "5.0.6"
+    },
+    "dependencies": {
+        "cubing": "0.63.3",
+        "express": "5.2.1"
+    }
+}

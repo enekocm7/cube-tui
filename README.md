@@ -12,7 +12,8 @@ your terminal. All your session data is saved locally.
 ## Requirements
 
 - [Rust & Cargo](https://rustup.rs/)
-- [Bun](https://bun.sh/) (only required if you are installing the `dashboard` feature)
+- [Bun](https://bun.sh/) (required for the `dashboard` feature)
+- One of [Node.js](https://nodejs.org/), [Bun](https://bun.sh/), or [Deno](https://deno.com/) (required for the `wca-scrambles` feature)
 
 ## Installation & Features
 
@@ -39,6 +40,20 @@ cargo install cube-tui --features dashboard
 *Note: The build script will automatically use Bun to install dependencies and build the web frontend, embedding it
 directly into the executable.*
 
+### WCA Scrambles
+
+Uses [cubing.js](https://github.com/cubing/cubing.js) scramble generation for WCA events (instead of the built-in
+random generator).
+
+To install with WCA scrambles support:
+
+```sh
+cargo install cube-tui --features wca-scrambles
+```
+
+When this feature is enabled, cube uses WCA API scrambles by default. If the local scrambles app cannot be started,
+it automatically falls back to the built-in random generator.
+
 ### Bluetooth
 
 Allows the app to connect directly to Bluetooth Low Energy (BLE) timers. Right now, only the GAN timer is supported.
@@ -51,7 +66,7 @@ cargo install cube-tui --features bluetooth
 
 ### All Features
 
-If you want both the dashboard and Bluetooth timer support:
+If you want dashboard, Bluetooth timer support, and WCA scramble API support:
 
 ```sh
 cargo install cube-tui --all-features

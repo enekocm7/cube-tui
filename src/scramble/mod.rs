@@ -3,6 +3,12 @@ use rand::prelude::IndexedRandom;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+#[cfg(feature = "wca-scrambles")]
+mod wca;
+
+#[cfg(feature = "wca-scrambles")]
+pub use wca::start_wca_scramble_server;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WcaEvent {
     Cube2x2,
@@ -196,7 +202,18 @@ impl fmt::Display for Scramble {
 }
 
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
-    let text = match event {
+    #[cfg(feature = "wca-scrambles")]
+    if let Some(text) = wca::fetch_wca_scramble(event) {
+        return Scramble::new(text);
+    }
+
+    let text = random_scramble(event);
+
+    Scramble::new(text)
+}
+
+fn random_scramble(event: WcaEvent) -> String {
+    match event {
         WcaEvent::Cube2x2 => cube_scramble(10, &cube_2x2_moves(), &cube_modifiers()),
         WcaEvent::Cube3x3 => cube_scramble(20, &cube_3x3_moves(), &cube_modifiers()),
         WcaEvent::Cube4x4 => cube_scramble(40, &cube_4x4_moves(), &cube_modifiers()),
@@ -208,9 +225,7 @@ pub fn generate_scramble(event: WcaEvent) -> Scramble {
         WcaEvent::Skewb => skewb_scramble(9),
         WcaEvent::Square1 => square1_scramble(15),
         WcaEvent::Clock => clock_scramble(14),
-    };
-
-    Scramble::new(text)
+    }
 }
 
 pub fn classify_event(scramble: &str) -> WcaEvent {
