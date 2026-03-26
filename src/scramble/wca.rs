@@ -40,11 +40,14 @@ pub fn start_wca_scramble_server() -> Result<WcaScrambleServer, String> {
     }
 
     for (program, args, install_cmd) in runtimes() {
+        eprintln!("Trying runtime: {}", program);
         if !runtime_exists(program) {
+            eprintln!("  {} not found, skipping", program);
             continue;
         }
 
         if let Some(install) = install_cmd {
+            eprintln!("  Running {} install...", program);
             let install_result = Command::new(program)
                 .args(install)
                 .current_dir(&scrambles_dir)
@@ -54,10 +57,13 @@ pub fn start_wca_scramble_server() -> Result<WcaScrambleServer, String> {
                 .status();
 
             if !install_result.is_ok_and(|s| s.success()) {
+                eprintln!("  Install failed for {}", program);
                 continue;
             }
+            eprintln!("  Install succeeded for {}", program);
         }
 
+        eprintln!("  Starting {} server...", program);
         let Ok(mut child) = Command::new(program)
             .args(args)
             .current_dir(&scrambles_dir)
@@ -66,22 +72,26 @@ pub fn start_wca_scramble_server() -> Result<WcaScrambleServer, String> {
             .stderr(Stdio::null())
             .spawn()
         else {
+            eprintln!("  Failed to spawn {}", program);
             continue;
         };
 
         for _ in 0..STARTUP_RETRIES {
             if is_server_ready() {
+                eprintln!("  Server ready!");
                 WCA_ENABLED.store(true, Ordering::Relaxed);
                 return Ok(WcaScrambleServer { child: Some(child) });
             }
 
             if let Ok(Some(_)) = child.try_wait() {
+                eprintln!("  Server exited early");
                 break;
             }
 
             thread::sleep(STARTUP_WAIT);
         }
 
+        eprintln!("  Server failed to start, killing...");
         let _ = child.kill();
         let _ = child.wait();
     }
