@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::time::Duration;
 
 use btleplug::platform::{Adapter, PeripheralId};
@@ -8,7 +7,6 @@ use btleplug::{
 };
 use flume;
 use futures_util::{Stream, StreamExt};
-use tokio::time::interval;
 use uuid::Uuid;
 
 pub use super::{BtTimerState as TimerState, DeviceInfo};
