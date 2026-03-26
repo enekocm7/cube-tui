@@ -3,8 +3,8 @@ use reqwest::blocking::Client;
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 
@@ -33,70 +33,58 @@ pub fn start_wca_scramble_server() -> Result<WcaScrambleServer, String> {
         WCA_ENABLED.store(true, Ordering::Relaxed);
         return Ok(WcaScrambleServer { child: None });
     }
-
     let scrambles_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scrambles");
     if !scrambles_dir.is_dir() {
         return Err("Missing scrambles directory next to Cargo.toml".to_string());
     }
-
-    for (program, args, install_cmd) in runtimes() {
-        eprintln!("Trying runtime: {}", program);
-        if !runtime_exists(program) {
-            eprintln!("  {} not found, skipping", program);
+    for Runtime { name, run, install } in runtimes() {
+        eprintln!("Trying runtime: {name}");
+        if !runtime_exists(name) {
+            eprintln!("  {name} not found, skipping");
             continue;
         }
-
-        if let Some(install) = install_cmd {
-            eprintln!("  Running {} install...", program);
-            let install_result = Command::new(program)
-                .args(install)
-                .current_dir(&scrambles_dir)
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
-                .status();
-
-            if !install_result.is_ok_and(|s| s.success()) {
-                eprintln!("  Install failed for {}", program);
-                continue;
-            }
-            eprintln!("  Install succeeded for {}", program);
+        eprintln!("  Running {name} install...");
+        let install_result = Command::new(install[0])
+            .args([install[1]])
+            .current_dir(&scrambles_dir)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        if !install_result.is_ok_and(|s| s.success()) {
+            eprintln!("  Install failed for {name}");
+            continue;
         }
-
-        eprintln!("  Starting {} server...", program);
-        let Ok(mut child) = Command::new(program)
-            .args(args)
+        eprintln!("  Install succeeded for {name}");
+        eprintln!("  Starting {name} server...");
+        let Ok(mut child) = Command::new(name)
+            .arg(run)
             .current_dir(&scrambles_dir)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
         else {
-            eprintln!("  Failed to spawn {}", program);
+            eprintln!("  Failed to spawn {name}");
             continue;
         };
-
         for _ in 0..STARTUP_RETRIES {
             if is_server_ready() {
                 eprintln!("  Server ready!");
                 WCA_ENABLED.store(true, Ordering::Relaxed);
                 return Ok(WcaScrambleServer { child: Some(child) });
             }
-
             if let Ok(Some(_)) = child.try_wait() {
                 eprintln!("  Server exited early");
                 break;
             }
-
             thread::sleep(STARTUP_WAIT);
         }
-
         eprintln!("  Server failed to start, killing...");
         let _ = child.kill();
         let _ = child.wait();
     }
-
-    Err("Could not start WCA scrambles server (tried Node, Bun, and Deno)".to_string())
+    Err("Could not start WCA scrambles server (tried Node, Bun)".to_string())
 }
 
 pub fn fetch_wca_scramble(event: WcaEvent) -> Option<String> {
@@ -124,27 +112,24 @@ struct ScrambleApiResponse {
     scramble: String,
 }
 
-const fn runtimes() -> [(
-    &'static str,
-    &'static [&'static str],
-    Option<&'static [&'static str]>,
-); 3] {
-    [
-        ("node", &["index.ts"], Some(&["install"])),
-        ("bun", &["index.ts"], Some(&["install"])),
-        (
-            "deno",
-            &[
-                "run",
-                "--allow-net",
-                "--allow-read",
-                "--allow-env",
-                "--node-modules-dir=auto",
-                "index.ts",
-            ],
-            None,
-        ),
-    ]
+struct Runtime<'a> {
+    name: &'a str,
+    run: &'a str,
+    install: [&'a str; 2],
+}
+
+impl<'a> Runtime<'a> {
+    const fn new(name: &'a str, install_name: &'a str) -> Self {
+        Self {
+            name,
+            run: "index.ts",
+            install: [install_name, "install"],
+        }
+    }
+}
+
+fn runtimes() -> Vec<Runtime<'static>> {
+    vec![Runtime::new("bun", "bun"), Runtime::new("node", "npm")]
 }
 
 fn runtime_exists(program: &str) -> bool {

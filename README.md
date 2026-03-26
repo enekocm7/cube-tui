@@ -13,7 +13,7 @@ your terminal. All your session data is saved locally.
 
 - [Rust & Cargo](https://rustup.rs/)
 - [Bun](https://bun.sh/) (required for the `dashboard` feature)
-- One of [Node.js](https://nodejs.org/), [Bun](https://bun.sh/), or [Deno](https://deno.com/) (required for the `wca-scrambles` feature)
+- One of [Node.js](https://nodejs.org/), [Bun](https://bun.sh/) (required for the `wca-scrambles` feature)
 
 ## Installation & Features
 
