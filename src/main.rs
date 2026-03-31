@@ -375,16 +375,17 @@ fn update(model: &mut Model, msg: Msg) {
 }
 
 fn handle_press(model: &mut Model) {
-    #[cfg(feature = "bluetooth")]
-    if model.bluetooth_connected() {
-        return;
-    }
     if model.show_details() {
         if model.timer_state() == TimerState::Idle {
             let modifier = model.selected_details_modifier();
             model.history_mut().set_modifier(modifier);
             persistence::save(model);
         }
+        return;
+    }
+
+    #[cfg(feature = "bluetooth")]
+    if model.bluetooth_connected() {
         return;
     }
 
