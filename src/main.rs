@@ -39,7 +39,7 @@ fn main() {
     match cli {
         Cli { data: true, .. } => {
             if let Some(dir) = persistence::data_dir() {
-                println!("{}", dir.display());
+                print_as_link(&dir);
             } else {
                 eprintln!("Error: Could not determine data directory");
                 std::process::exit(1);
@@ -1034,4 +1034,10 @@ fn get_scramble_lines(scramble: &str, width: u16) -> u16 {
     let chars_per_line = width as usize - 10;
     let num_lines = scramble.len().div_ceil(chars_per_line);
     u16::try_from(num_lines).unwrap_or(5)
+}
+
+fn print_as_link(path: &std::path::Path) {
+    let display = path.display();
+    let url = format!("file:///{}", path.to_string_lossy().replace('\\', "/"));
+    println!("\x1b]8;;{url}\x1b\\{display}\x1b]8;;\x1b\\");
 }
