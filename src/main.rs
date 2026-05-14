@@ -37,6 +37,14 @@ fn main() {
     let cli = Cli::parse();
 
     match cli {
+        Cli { config: true, .. } => {
+            if let Some(path) = persistence::config_file() {
+                print_as_link(&path);
+            } else {
+                eprintln!("Error: Could not determine config file");
+                std::process::exit(1);
+            }
+        }
         Cli { data: true, .. } => {
             if let Some(dir) = persistence::data_dir() {
                 print_as_link(&dir);
@@ -111,8 +119,15 @@ fn main() {
 #[derive(Parser, Debug)]
 #[command(name = "cube", version, about = "A Rubik's Cube timer TUI application", long_about = None)]
 struct Cli {
-    #[arg(short, long, help = "Print the data directory and exit")]
+    #[arg(
+        short,
+        long,
+        exclusive = true,
+        help = "Print the data directory and exit"
+    )]
     data: bool,
+    #[arg(short, long, exclusive = true, help = "Print the config file and exit")]
+    config: bool,
     #[command(subcommand)]
     subcommand: Option<Command>,
 }
@@ -166,7 +181,7 @@ fn run(terminal: &mut DefaultTerminal) {
     if let Some(data) = persistence::load() {
         model.restore_from_history(data);
     }
-    if let Some(settings) = persistence::load_settings() {
+    if let Some(settings) = persistence::load_config() {
         model.set_settings(settings);
     }
     let tick_rate = Duration::from_millis(30);
@@ -683,7 +698,7 @@ fn handle_bluetooth_connect(model: &mut Model) {
 
 fn handle_toggle_inspection(model: &mut Model) {
     model.toggle_inspection();
-    persistence::save_settings(*model.settings());
+    persistence::save_config(*model.settings());
 }
 
 fn handle_open_details(model: &mut Model) {

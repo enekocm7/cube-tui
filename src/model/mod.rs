@@ -1,11 +1,13 @@
 #[cfg(feature = "bluetooth")]
 use crate::bluetooth::{BtTimerState, DeviceInfo};
+use crate::model::settings::Settings;
 use crate::scramble::{self, Scramble, WcaEvent};
 use crate::widgets::history::{History, Modifier, Time};
 #[cfg(feature = "bluetooth")]
 use btleplug::platform::PeripheralId;
-use serde::{Deserialize, Serialize};
 use std::time::Instant;
+
+pub mod settings;
 
 pub const MAX_SESSIONS: usize = 99;
 
@@ -99,23 +101,6 @@ impl Session {
     pub fn prev_event(&mut self) {
         self.event = self.event.prev();
         self.next_scramble();
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct Settings {
-    inspection: bool,
-}
-
-impl Settings {
-    pub const fn set_inspection(&mut self, inspection: bool) {
-        self.inspection = inspection;
-    }
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self { inspection: true }
     }
 }
 
@@ -329,7 +314,7 @@ impl Model {
     }
 
     pub const fn inspection_enabled(&self) -> bool {
-        self.settings.inspection
+        self.settings.timer.inspection
     }
 
     pub fn all_sessions_history(&self) -> Vec<History> {
@@ -470,7 +455,8 @@ impl Model {
     }
 
     pub const fn toggle_inspection(&mut self) {
-        self.settings.set_inspection(!self.settings.inspection);
+        self.settings
+            .set_inspection(!self.settings.timer.inspection);
     }
 
     pub fn elapsed_ms(&self) -> u64 {

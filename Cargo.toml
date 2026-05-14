@@ -38,3 +38,4 @@ reqwest = { version = "0.13.3", optional = true, default-features = false, featu
     "blocking",
     "json",
 ] }
+toml = "1.1.2"

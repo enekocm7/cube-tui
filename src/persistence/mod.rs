@@ -1,7 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 
-use crate::model::{Model, Settings};
+use crate::model::Model;
+use crate::model::settings::Settings;
 use crate::widgets::history::History;
 
 pub fn data_dir() -> Option<PathBuf> {
@@ -14,8 +15,8 @@ fn data_file() -> Option<PathBuf> {
     Some(data_dir()?.join("times.json"))
 }
 
-fn settings_file() -> Option<PathBuf> {
-    Some(data_dir()?.join("options.json"))
+pub fn config_file() -> Option<PathBuf> {
+    Some(data_dir()?.join("config.toml"))
 }
 
 pub fn save(model: &Model) {
@@ -33,16 +34,16 @@ pub fn load() -> Option<Vec<History>> {
     serde_json::from_str(&content).ok()
 }
 
-pub fn load_settings() -> Option<Settings> {
-    let path = settings_file()?;
+pub fn load_config() -> Option<Settings> {
+    let path = config_file()?;
     let content = fs::read_to_string(path).ok()?;
     serde_json::from_str(&content).ok()
 }
 
-pub fn save_settings(settings: Settings) {
-    let Some(path) = settings_file() else { return };
+pub fn save_config(settings: Settings) {
+    let Some(path) = config_file() else { return };
 
-    if let Ok(json) = serde_json::to_string_pretty(&settings) {
-        fs::write(path, json).ok();
+    if let Ok(toml) = toml::to_string_pretty(&settings) {
+        fs::write(path, toml).ok();
     }
 }
