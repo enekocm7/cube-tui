@@ -242,6 +242,7 @@ enum Msg {
     ToggleBluetooth,
     #[cfg(feature = "bluetooth")]
     DisconnectBluetooth,
+    ToggleZen,
 }
 
 const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
@@ -270,6 +271,7 @@ const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char('b'), KeyEventKind::Press) => Some(Msg::ToggleBluetooth),
         #[cfg(feature = "bluetooth")]
         (KeyCode::Char('x'), KeyEventKind::Press) => Some(Msg::DisconnectBluetooth),
+        (KeyCode::Char('z'), KeyEventKind::Press) => Some(Msg::ToggleZen),
         (KeyCode::Enter, KeyEventKind::Press) => Some(Msg::OpenDetails),
         (KeyCode::Esc, KeyEventKind::Press) => Some(Msg::CloseDetails),
         _ => None,
@@ -385,6 +387,7 @@ fn update(model: &mut Model, msg: Msg) {
         Msg::ToggleBluetooth => handle_toggle_bluetooth(model),
         #[cfg(feature = "bluetooth")]
         Msg::DisconnectBluetooth => handle_disconnect_bluetooth(model),
+        Msg::ToggleZen => handle_toggle_zen(model),
         Msg::Quit => {}
     }
 }
@@ -701,6 +704,11 @@ fn handle_toggle_inspection(model: &mut Model) {
     persistence::save_config(*model.settings());
 }
 
+fn handle_toggle_zen(model: &mut Model) {
+    model.toggle_zen();
+    persistence::save_config(*model.settings());
+}
+
 fn handle_open_details(model: &mut Model) {
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
@@ -908,6 +916,26 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         return;
     }
 
+    if model.zen_enabled() && matches!(model.timer_state(), TimerState::Running(_)) {
+        let vertical = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Fill(1),
+                Constraint::Length(1),
+                Constraint::Fill(1),
+            ])
+            .split(area);
+        Paragraph::new(Line::from(Span::styled(
+            "Running...",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )))
+        .alignment(Alignment::Center)
+        .render(vertical[1], buf);
+        return;
+    }
+
     let scramble_lines = get_scramble_lines(model.scramble().as_str(), area.width);
 
     let scramble_height = (scramble_lines + 2).min(area.height.saturating_sub(1));
@@ -964,11 +992,16 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     #[cfg(not(feature = "bluetooth"))]
     let bt_label = String::new();
     let timer_title = format!(
-        "Timer - Inspection: {}{bt_label}",
+        "Timer - Inspection: {}{}{bt_label}",
         if model.inspection_enabled() {
             "On"
         } else {
             "Off"
+        },
+        if model.zen_enabled() {
+            " | Zen: On"
+        } else {
+            ""
         }
     );
     let timer_block = Block::default().title(timer_title).borders(Borders::ALL);

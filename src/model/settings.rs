@@ -8,6 +8,7 @@ pub struct Settings {
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct TimerSettings {
     inspection: bool,
+    zen: bool,
 }
 
 impl Settings {
@@ -17,5 +18,13 @@ impl Settings {
 
     pub const fn inspection(&self) -> bool {
         self.timer.inspection
+    }
+
+    pub const fn set_zen(&mut self, zen: bool) {
+        self.timer.zen = zen;
+    }
+
+    pub const fn zen(&self) -> bool {
+        self.timer.zen
     }
 }

@@ -117,6 +117,14 @@ impl HelpWidget {
             Line::from("q                  Quit application"),
             Line::from(""),
             Line::from(vec![Span::styled(
+                "ZEN MODE",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )]),
+            Line::from("z                  Toggle zen mode (hides UI while timer runs)"),
+            Line::from(""),
+            Line::from(vec![Span::styled(
                 "BLUETOOTH",
                 Style::default()
                     .fg(Color::Cyan)

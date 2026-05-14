@@ -280,6 +280,14 @@ impl Model {
         self.settings.set_inspection(!self.settings.inspection());
     }
 
+    pub const fn toggle_zen(&mut self) {
+        self.settings.set_zen(!self.settings.zen());
+    }
+
+    pub const fn zen_enabled(&self) -> bool {
+        self.settings.zen()
+    }
+
     pub fn elapsed_ms(&self) -> u64 {
         self.get_current_session().elapsed_ms()
     }
