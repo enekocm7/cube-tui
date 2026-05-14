@@ -136,7 +136,7 @@ impl Model {
     }
 
     pub const fn inspection_enabled(&self) -> bool {
-        self.settings.timer.inspection
+        self.settings.inspection()
     }
 
     pub fn all_sessions_history(&self) -> Vec<History> {
@@ -277,8 +277,7 @@ impl Model {
     }
 
     pub const fn toggle_inspection(&mut self) {
-        self.settings
-            .set_inspection(!self.settings.timer.inspection);
+        self.settings.set_inspection(!self.settings.inspection());
     }
 
     pub fn elapsed_ms(&self) -> u64 {
