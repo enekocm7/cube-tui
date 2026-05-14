@@ -37,7 +37,7 @@ pub fn load() -> Option<Vec<History>> {
 pub fn load_config() -> Option<Settings> {
     let path = config_file()?;
     let content = fs::read_to_string(path).ok()?;
-    serde_json::from_str(&content).ok()
+    toml::from_str(&content).ok()
 }
 
 pub fn save_config(settings: Settings) {
