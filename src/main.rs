@@ -926,7 +926,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             ])
             .split(area);
         Paragraph::new(Line::from(Span::styled(
-            "Running...",
+            "Solving...",
             Style::default()
                 .fg(Color::Green)
                 .add_modifier(Modifier::BOLD),
