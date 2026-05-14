@@ -5,208 +5,30 @@ use crate::scramble::{self, Scramble, WcaEvent};
 use crate::widgets::history::{History, Modifier, Time};
 #[cfg(feature = "bluetooth")]
 use btleplug::platform::PeripheralId;
+#[cfg(feature = "bluetooth")]
 use std::time::Instant;
 
+#[cfg(feature = "bluetooth")]
+pub mod bluetooth;
+pub mod detailed_stats;
+pub mod details;
+pub mod help;
+pub mod main_focus;
+pub mod session;
 pub mod settings;
 
+#[cfg(feature = "bluetooth")]
+use bluetooth::BluetoothState;
+#[cfg(feature = "bluetooth")]
+pub use bluetooth::{BluetoothConnection, BluetoothEvent, BluetoothScreenState};
+use detailed_stats::DetailedStatsState;
+use details::{DetailsState, MeanDetailReturnState, StatsReturnState};
+use help::HelpState;
+use main_focus::{MainFocus, MainStatsSelection};
+pub use session::{InspectionState, TimerState};
+use session::{Session, SessionState};
+
 pub const MAX_SESSIONS: usize = 99;
-
-#[cfg(feature = "bluetooth")]
-pub type BluetoothConnection = (
-    flume::Sender<BtTimerState>,
-    flume::Receiver<()>,
-    btleplug::platform::Adapter,
-    flume::Sender<()>,
-);
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum TimerState {
-    Idle,
-    Pulsed,
-    Inspection(InspectionState),
-    Running(Instant),
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum InspectionState {
-    Pulsed(Instant),
-    Running(Instant),
-}
-
-pub struct Session {
-    pub timer_state: TimerState,
-    pub history: History,
-    pub scramble: Scramble,
-    pub last_time_ms: u64,
-    pub event: WcaEvent,
-}
-
-impl Session {
-    pub fn new() -> Self {
-        let event = WcaEvent::Cube3x3;
-        let scramble = scramble::generate_scramble(event);
-        Self {
-            timer_state: TimerState::Idle,
-            history: History::new(),
-            scramble,
-            last_time_ms: 0,
-            event,
-        }
-    }
-
-    pub const fn reset_timer(&mut self) {
-        self.timer_state = TimerState::Idle;
-        self.last_time_ms = 0;
-    }
-
-    pub fn start_inspection(&mut self) {
-        self.timer_state = TimerState::Inspection(InspectionState::Running(Instant::now()));
-    }
-
-    pub fn start_timer(&mut self) {
-        self.timer_state = TimerState::Running(Instant::now());
-    }
-
-    pub const fn stop_timer(&mut self) {
-        self.timer_state = TimerState::Idle;
-    }
-
-    pub const fn pulse_timer(&mut self) {
-        if let TimerState::Inspection(InspectionState::Running(start)) = self.timer_state {
-            self.timer_state = TimerState::Inspection(InspectionState::Pulsed(start));
-        }
-    }
-
-    pub fn elapsed_ms(&self) -> u64 {
-        match self.timer_state {
-            TimerState::Inspection(state) => match state {
-                InspectionState::Running(start) | InspectionState::Pulsed(start) => {
-                    u64::try_from(start.elapsed().as_millis()).unwrap()
-                }
-            },
-            TimerState::Running(start) => u64::try_from(start.elapsed().as_millis()).unwrap(),
-            TimerState::Idle | TimerState::Pulsed => self.last_time_ms,
-        }
-    }
-
-    pub fn next_scramble(&mut self) {
-        self.scramble = scramble::generate_scramble(self.event);
-    }
-
-    pub fn next_event(&mut self) {
-        self.event = self.event.next();
-        self.next_scramble();
-    }
-
-    pub fn prev_event(&mut self) {
-        self.event = self.event.prev();
-        self.next_scramble();
-    }
-}
-
-struct SessionState {
-    sessions: Vec<Session>,
-    current_session_index: usize,
-}
-
-impl SessionState {
-    fn new() -> Self {
-        Self {
-            sessions: vec![Session::new()],
-            current_session_index: 0,
-        }
-    }
-}
-
-#[derive(Default)]
-struct HelpState {
-    show: bool,
-    scroll: u16,
-    max_scroll: u16,
-}
-
-#[derive(Default)]
-struct DetailsState {
-    show: bool,
-    modifier_index: usize,
-    return_to_mean_detail: Option<MeanDetailReturnState>,
-    return_to_stats: Option<StatsReturnState>,
-}
-
-#[derive(Copy, Clone)]
-struct MeanDetailReturnState {
-    row: usize,
-    col: usize,
-    selected_index: usize,
-}
-
-#[derive(Copy, Clone)]
-struct StatsReturnState {
-    row: usize,
-    col: usize,
-}
-
-#[derive(Default)]
-struct DetailedStatsState {
-    show: bool,
-    row: usize,
-    col: usize,
-    show_mean_detail: bool,
-    mean_detail_selected_index: usize,
-    opened_from_stats_column: bool,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum MainFocus {
-    History,
-    Stats,
-}
-
-struct MainStatsSelection {
-    row: usize,
-    col: usize,
-}
-
-impl Default for MainStatsSelection {
-    fn default() -> Self {
-        Self { row: 1, col: 0 }
-    }
-}
-
-#[cfg(feature = "bluetooth")]
-#[derive(Debug)]
-pub enum BluetoothEvent {
-    Status(String),
-    Error(String),
-    Device(DeviceInfo),
-    Adapter(btleplug::platform::Adapter),
-}
-
-#[cfg(feature = "bluetooth")]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum BluetoothScreenState {
-    #[default]
-    Searching,
-    Connecting,
-    Connected,
-}
-
-#[cfg(feature = "bluetooth")]
-#[derive(Default)]
-struct BluetoothState {
-    show: bool,
-    screen_state: BluetoothScreenState,
-    selected_index: usize,
-    devices: Vec<DeviceInfo>,
-    status: Option<String>,
-    rx: Option<flume::Receiver<BluetoothEvent>>,
-    timer_rx: Option<flume::Receiver<BtTimerState>>,
-    cancel_tx: Option<flume::Sender<()>>,
-    connected_rx: Option<flume::Receiver<()>>,
-    adapter: Option<btleplug::platform::Adapter>,
-    connected_device_name: Option<String>,
-    connected_device_id: Option<PeripheralId>,
-}
 
 pub struct Model {
     session_state: SessionState,
