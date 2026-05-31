@@ -37,25 +37,12 @@ pub fn start_wca_scramble_server() -> Result<WcaScrambleServer, String> {
     if !scrambles_dir.is_dir() {
         return Err("Missing scrambles directory next to Cargo.toml".to_string());
     }
-    for Runtime { name, run, install } in runtimes() {
+    for Runtime { name, run } in runtimes() {
         eprintln!("Trying runtime: {name}");
         if !runtime_exists(name) {
             eprintln!("  {name} not found, skipping");
             continue;
         }
-        eprintln!("  Running {name} install...");
-        let install_result = Command::new(install[0])
-            .args([install[1]])
-            .current_dir(&scrambles_dir)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
-        if !install_result.is_ok_and(|s| s.success()) {
-            eprintln!("  Install failed for {name}");
-            continue;
-        }
-        eprintln!("  Install succeeded for {name}");
         eprintln!("  Starting {name} server...");
         let Ok(mut child) = Command::new(name)
             .arg(run)
@@ -115,21 +102,19 @@ struct ScrambleApiResponse {
 struct Runtime<'a> {
     name: &'a str,
     run: &'a str,
-    install: [&'a str; 2],
-}
-
-impl<'a> Runtime<'a> {
-    const fn new(name: &'a str, install_name: &'a str) -> Self {
-        Self {
-            name,
-            run: "index.ts",
-            install: [install_name, "install"],
-        }
-    }
 }
 
 fn runtimes() -> Vec<Runtime<'static>> {
-    vec![Runtime::new("bun", "bun"), Runtime::new("node", "npm")]
+    vec![
+        Runtime {
+            name: "bun",
+            run: "dist/index.js",
+        },
+        Runtime {
+            name: "node",
+            run: "dist/index.js",
+        },
+    ]
 }
 
 fn runtime_exists(program: &str) -> bool {

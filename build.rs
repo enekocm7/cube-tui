@@ -2,6 +2,48 @@ use std::path::Path;
 use std::process::Command;
 
 fn main() {
+    #[cfg(feature = "dashboard")]
+    build_dashboard();
+    #[cfg(feature = "wca-scrambles")]
+    build_scrambles();
+}
+
+fn build_scrambles() {
+    println!("cargo:rerun-if-changed=scrambles/index.ts");
+    println!("cargo:rerun-if-changed=scrambles/package.json");
+
+    let scrambles_dir = Path::new("scrambles");
+
+    let bun = if cfg!(target_os = "windows") {
+        "bun.exe"
+    } else {
+        "bun"
+    };
+
+    let status = Command::new(bun)
+        .args(["install"])
+        .current_dir(scrambles_dir)
+        .status()
+        .unwrap_or_else(|e| panic!("Failed to run `bun install`: {e}"));
+
+    assert!(
+        status.success(),
+        "`bun install` exited with status {status}"
+    );
+
+    let status = Command::new(bun)
+        .args(["run", "build"])
+        .current_dir(scrambles_dir)
+        .status()
+        .unwrap_or_else(|e| panic!("Failed to run `bun run build`: {e}"));
+
+    assert!(
+        status.success(),
+        "`bun run build` exited with status {status}"
+    );
+}
+
+fn build_dashboard() {
     if std::env::var("CARGO_FEATURE_DASHBOARD").is_err() {
         return;
     }

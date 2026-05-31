@@ -4,7 +4,8 @@
     "type": "module",
     "main": "index.ts",
     "scripts": {
-        "serve": "node index.ts"
+        "serve": "node index.ts",
+        "build": "bun build ./index.ts --outdir=dist --target=node --external=\"cubing*\""
     },
     "devDependencies": {
         "@types/express": "5.0.6"
