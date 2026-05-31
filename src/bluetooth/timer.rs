@@ -148,43 +148,27 @@ pub async fn connect(
 
     tokio::spawn(async move {
         while let Some(event) = notifications.next().await {
-            match event.value[3] {
-                1 => {
-                    if tx.send_async(TimerState::GetSet).await.is_err() {
-                        break;
-                    }
-                }
-                2 => {
-                    if tx.send_async(TimerState::HandsOff).await.is_err() {
-                        break;
-                    }
-                }
-                3 => {
-                    if tx.send_async(TimerState::Running).await.is_err() {
-                        break;
-                    }
-                }
-                5 => {
-                    if tx.send_async(TimerState::Idle).await.is_err() {
-                        break;
-                    }
-                }
-                6 => {
-                    if tx.send_async(TimerState::HandsOn).await.is_err() {
-                        break;
-                    }
-                }
+            let state = match event.value[3] {
+                1 => Some(TimerState::GetSet),
+                2 => Some(TimerState::HandsOff),
+                3 => Some(TimerState::Running),
+                5 => Some(TimerState::Idle),
+                6 => Some(TimerState::HandsOn),
                 7 => {
                     if let Ok(time) = peripheral.read(&time_characteristic).await
                         && let Ok(bytes) = <[u8; 4]>::try_from(&time[0..4])
                     {
-                        let time_ms = time_array_to_ms(bytes);
-                        if tx.send_async(TimerState::Finished(time_ms)).await.is_err() {
-                            break;
-                        }
+                        Some(TimerState::Finished(time_array_to_ms(bytes)))
+                    } else {
+                        None
                     }
                 }
-                _ => {}
+                _ => None,
+            };
+            if let Some(state) = state
+                && tx.send_async(state).await.is_err()
+            {
+                break;
             }
         }
     });
