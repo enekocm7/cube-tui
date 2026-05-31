@@ -1,3 +1,4 @@
+use macros::ColorGetters;
 use serde::{Deserialize, Serialize, de::Error};
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -44,7 +45,7 @@ impl Default for TimerSettings {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ColorGetters)]
 pub struct ThemeSettings {
     background: ColorSettings,
     border: ColorSettings,
@@ -52,32 +53,6 @@ pub struct ThemeSettings {
     selection: ColorSettings,
     selection_text: ColorSettings,
     text: ColorSettings,
-}
-
-impl ThemeSettings {
-    pub const fn background(&self) -> ratatui::style::Color {
-        self.background.to_color()
-    }
-
-    pub const fn border(&self) -> ratatui::style::Color {
-        self.border.to_color()
-    }
-
-    pub const fn scramble(&self) -> ratatui::style::Color {
-        self.scramble.to_color()
-    }
-
-    pub const fn selection(&self) -> ratatui::style::Color {
-        self.selection.to_color()
-    }
-
-    pub const fn selection_text(&self) -> ratatui::style::Color {
-        self.selection_text.to_color()
-    }
-
-    pub const fn text(&self) -> ratatui::style::Color {
-        self.text.to_color()
-    }
 }
 
 impl Default for ThemeSettings {
