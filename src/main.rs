@@ -792,9 +792,12 @@ fn handle_nav_right(model: &mut Model) {
 
 #[allow(clippy::too_many_lines)]
 fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
+    let theme = *model.settings().theme();
+    set_area_background(area, buf, theme.background());
     if model.show_help() {
+        let help_widget = HelpWidget::new(model.help_scroll());
         model.set_help_max_scroll(HelpWidget::max_scroll_for_height(area.height));
-        HelpWidget::new(model.help_scroll()).render(area, buf);
+        help_widget.render_with_theme(area, buf, &theme);
         return;
     }
 
@@ -812,22 +815,22 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             model.bluetooth_status().map(str::to_string),
             model.connected_device_id(),
         )
-        .render(layout[0], buf);
+        .render_with_theme(layout[0], buf, &theme);
 
         let help_text = match model.bluetooth_screen_state() {
             BluetoothScreenState::Connected => Line::from(vec![
-                Span::raw("↑/↓: select  "),
-                Span::raw("Enter/x: disconnect  "),
-                Span::raw("Esc: back to timer"),
+                Span::styled("↑/↓: select  ", Style::default().fg(theme.text())),
+                Span::styled("Enter/x: disconnect  ", Style::default().fg(theme.text())),
+                Span::styled("Esc: back to timer", Style::default().fg(theme.text())),
             ]),
             BluetoothScreenState::Connecting => Line::from(vec![
-                Span::raw("↑/↓: select device  "),
-                Span::raw("Esc: back to timer"),
+                Span::styled("↑/↓: select device  ", Style::default().fg(theme.text())),
+                Span::styled("Esc: back to timer", Style::default().fg(theme.text())),
             ]),
             BluetoothScreenState::Searching => Line::from(vec![
-                Span::raw("↑/↓: select device  "),
-                Span::raw("Enter: connect  "),
-                Span::raw("Esc: close"),
+                Span::styled("↑/↓: select device  ", Style::default().fg(theme.text())),
+                Span::styled("Enter: connect  ", Style::default().fg(theme.text())),
+                Span::styled("Esc: close", Style::default().fg(theme.text())),
             ]),
         };
         Paragraph::new(help_text)
@@ -848,12 +851,12 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             model.detailed_stats_col(),
             model.mean_detail_selected_index(),
         );
-        widget.render(layout[0], buf);
+        widget.render_with_theme(layout[0], buf, &theme);
 
         let help_text = Line::from(vec![
-            Span::raw("↑/↓: select time  "),
-            Span::raw("Enter: open details  "),
-            Span::raw("Esc: back to stats"),
+            Span::styled("↑/↓: select time  ", Style::default().fg(theme.text())),
+            Span::styled("Enter: open details  ", Style::default().fg(theme.text())),
+            Span::styled("Esc: back to stats", Style::default().fg(theme.text())),
         ]);
         Paragraph::new(help_text)
             .alignment(Alignment::Center)
@@ -872,13 +875,13 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             model.detailed_stats_row(),
             model.detailed_stats_col(),
         )
-        .render(layout[0], buf);
+        .render_with_theme(layout[0], buf, &theme);
 
         let help_text = Line::from(vec![
-            Span::raw("↑/↓: navigate  "),
-            Span::raw("←/→: mo3/ao5  "),
-            Span::raw("Enter: view mean  "),
-            Span::raw("Esc: back"),
+            Span::styled("↑/↓: navigate  ", Style::default().fg(theme.text())),
+            Span::styled("←/→: mo3/ao5  ", Style::default().fg(theme.text())),
+            Span::styled("Enter: view mean  ", Style::default().fg(theme.text())),
+            Span::styled("Esc: back", Style::default().fg(theme.text())),
         ]);
         Paragraph::new(help_text)
             .alignment(Alignment::Center)
@@ -896,7 +899,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             model.history().selected_time(),
             model.selected_details_modifier_index(),
         )
-        .render(details_layout[0], buf);
+        .render_with_theme(details_layout[0], buf, &theme);
 
         let esc_label = if model.can_return_to_mean_detail() {
             "Esc: back to mean"
@@ -904,11 +907,14 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             "Esc: close"
         };
         let details_help = Line::from(vec![
-            Span::raw("Space: toggle modifier  "),
-            Span::raw("↑/↓: select modifier  "),
-            Span::raw("←/→: navigate times  "),
-            Span::raw("d: delete  "),
-            Span::raw(esc_label),
+            Span::styled(
+                "Space: toggle modifier  ",
+                Style::default().fg(theme.text()),
+            ),
+            Span::styled("↑/↓: select modifier  ", Style::default().fg(theme.text())),
+            Span::styled("←/→: navigate times  ", Style::default().fg(theme.text())),
+            Span::styled("d: delete  ", Style::default().fg(theme.text())),
+            Span::styled(esc_label, Style::default().fg(theme.text())),
         ]);
         Paragraph::new(details_help)
             .alignment(Alignment::Center)
@@ -929,7 +935,8 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             "Solving...",
             Style::default()
                 .fg(Color::Green)
-                .add_modifier(Modifier::BOLD),
+                .add_modifier(Modifier::BOLD)
+                .bg(theme.background()),
         )))
         .alignment(Alignment::Center)
         .render(vertical[1], buf);
@@ -959,8 +966,11 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         )
         .split(outer_layout[1]);
 
-    ScrambleWidget::new(model.scramble().as_str(), model.event().name())
-        .render(outer_layout[0], buf);
+    ScrambleWidget::new(model.scramble().as_str(), model.event().name()).render_with_theme(
+        outer_layout[0],
+        buf,
+        &theme,
+    );
 
     let history_title = format!(
         "Session: {:02}/{:02}{}",
@@ -972,7 +982,10 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             ""
         }
     );
-    let history_block = Block::default().title(history_title).borders(Borders::ALL);
+    let history_block = Block::default()
+        .title(history_title)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.border()));
     history_block.render(main_layout[0], buf);
     let history_area = inner_area(main_layout[0]);
     if model.main_focus_is_stats() {
@@ -980,9 +993,12 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             .history()
             .clone()
             .without_selection_highlight()
-            .render(history_area, buf);
+            .render_with_theme(history_area, buf, &theme);
     } else {
-        model.history().clone().render(history_area, buf);
+        model
+            .history()
+            .clone()
+            .render_with_theme(history_area, buf, &theme);
     }
 
     #[cfg(feature = "bluetooth")]
@@ -1004,7 +1020,10 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             ""
         }
     );
-    let timer_block = Block::default().title(timer_title).borders(Borders::ALL);
+    let timer_block = Block::default()
+        .title(timer_title)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.border()));
     let (timer_text, timer_style) = timer_display(model);
     Paragraph::new(Line::from(Span::styled(timer_text, timer_style)))
         .block(timer_block)
@@ -1018,19 +1037,27 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     } else {
         StatsWidget::new(model.history().clone())
     };
-    stats_widget.render(main_layout[2], buf);
+    stats_widget.render_with_theme(main_layout[2], buf, &theme);
 
     let help_text = Line::from(vec![
-        Span::raw("Space: hold/release  "),
-        Span::raw("Enter: details  "),
-        Span::raw("Tab: history/stats  "),
-        Span::raw("r: reset  "),
-        Span::raw("q: quit  "),
-        Span::raw("?: help"),
+        Span::styled("Space: hold/release  ", Style::default().fg(theme.text())),
+        Span::styled("Enter: details  ", Style::default().fg(theme.text())),
+        Span::styled("Tab: history/stats  ", Style::default().fg(theme.text())),
+        Span::styled("r: reset  ", Style::default().fg(theme.text())),
+        Span::styled("q: quit  ", Style::default().fg(theme.text())),
+        Span::styled("?: help", Style::default().fg(theme.text())),
     ]);
     Paragraph::new(help_text)
         .alignment(Alignment::Center)
         .render(outer_layout[2], buf);
+}
+
+fn set_area_background(area: Rect, buf: &mut ratatui::buffer::Buffer, color: Color) {
+    let style = Style::default().bg(color);
+    let spaces = " ".repeat(area.width as usize);
+    for y in area.top()..area.bottom() {
+        buf.set_string(area.x, y, &spaces, style);
+    }
 }
 
 const fn inner_area(area: Rect) -> Rect {
@@ -1051,8 +1078,9 @@ fn format_elapsed(ms: u64) -> String {
 }
 
 fn timer_display(model: &Model) -> (String, Style) {
+    let theme = model.settings().theme();
     let style = match model.timer_state() {
-        TimerState::Idle => Style::default().fg(Color::White),
+        TimerState::Idle => Style::default().fg(theme.text()),
         TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_)) => {
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
         }

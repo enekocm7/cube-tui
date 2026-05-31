@@ -1,7 +1,8 @@
+use crate::model::settings::ThemeSettings;
 use crate::widgets::history::History;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Style};
+use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 use serde::{Deserialize, Serialize};
@@ -40,18 +41,11 @@ impl StatsWidget {
         normalized.chars().take(CELL_WIDTH).collect()
     }
 
-    fn selected_style() -> Style {
-        Style::default().bg(Color::Blue).fg(Color::Black)
-    }
-}
-
-impl Widget for StatsWidget {
-    #[allow(clippy::similar_names)]
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
-        let block = Block::default().title("Stats").borders(Borders::ALL);
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+        let block = Block::default()
+            .title("Stats")
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.border()));
 
         let best_time = self
             .history
@@ -85,31 +79,53 @@ impl Widget for StatsWidget {
         let best_ao5 = Self::fixed_cell(best_ao5);
         let current_ao5 = Self::fixed_cell(current_ao5);
 
-        let row_line = |label: &str, current: String, best: String, row: usize| {
-            let current_selected = self.selected_row == Some(row) && self.selected_col == Some(0);
-            let best_selected = self.selected_row == Some(row) && self.selected_col == Some(1);
+        let selected_row = self.selected_row;
+        let selected_col = self.selected_col;
 
-            let mut spans = vec![Span::raw(format!("{label:8}"))];
+        let row_line = |label: &str, current: String, best: String, row: usize| {
+            let current_selected = selected_row == Some(row) && selected_col == Some(0);
+            let best_selected = selected_row == Some(row) && selected_col == Some(1);
+
+            let mut spans = vec![Span::styled(
+                format!("{label:8}"),
+                Style::default().fg(theme.text()),
+            )];
             if current_selected {
                 spans.push(Span::styled(
                     format!("{current:>10}"),
-                    Self::selected_style(),
+                    Style::default()
+                        .bg(theme.selection())
+                        .fg(theme.selection_text()),
                 ));
             } else {
-                spans.push(Span::raw(format!("{current:>10}")));
+                spans.push(Span::styled(
+                    format!("{current:>10}"),
+                    Style::default().fg(theme.text()),
+                ));
             }
 
             if best_selected {
-                spans.push(Span::styled(format!("{best:>10}"), Self::selected_style()));
+                spans.push(Span::styled(
+                    format!("{best:>10}"),
+                    Style::default()
+                        .bg(theme.selection())
+                        .fg(theme.selection_text()),
+                ));
             } else {
-                spans.push(Span::raw(format!("{best:>10}")));
+                spans.push(Span::styled(
+                    format!("{best:>10}"),
+                    Style::default().fg(theme.text()),
+                ));
             }
 
             Line::from(spans)
         };
 
         let text = vec![
-            Line::from(format!("{:8}{:>10}{:>10}", "", "current", "best")),
+            Line::from(Span::styled(
+                format!("{:8}{:>10}{:>10}", "", "current", "best"),
+                Style::default().fg(theme.text()),
+            )),
             row_line("time", current_time, best_time, 0),
             row_line("mo3", current_mo3, best_mo3, 1),
             row_line("ao5", current_ao5, best_ao5, 2),

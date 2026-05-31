@@ -1,10 +1,11 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::prelude::Widget;
+
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::model::settings::ThemeSettings;
 use crate::scramble::WcaEvent;
 use crate::scramble::WcaEvent::Cube3x3;
 
@@ -442,13 +443,8 @@ impl History {
         self.get_ao5(solve_index + 1)?;
         self.times.get(solve_index - 4..=solve_index)
     }
-}
 
-impl Widget for History {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
         let total = self.times.len();
         let height = area.height as usize;
         let selected = self.selected.unwrap_or(0);
@@ -471,10 +467,10 @@ impl Widget for History {
             };
             let style = if self.highlight_selection && self.selected.is_some() && i == selected {
                 ratatui::style::Style::default()
-                    .bg(ratatui::style::Color::Blue)
-                    .fg(ratatui::style::Color::Black)
+                    .bg(theme.selection())
+                    .fg(theme.selection_text())
             } else {
-                ratatui::style::Style::default()
+                ratatui::style::Style::default().fg(theme.text())
             };
             buf.set_string(
                 area.x,

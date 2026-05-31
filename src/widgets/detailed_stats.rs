@@ -3,6 +3,7 @@ use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, Widget};
 
+use crate::model::settings::ThemeSettings;
 use crate::widgets::history::History;
 
 pub struct DetailedStatsWidget {
@@ -19,16 +20,12 @@ impl DetailedStatsWidget {
             selected_col,
         }
     }
-}
 
-impl Widget for DetailedStatsWidget {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
         let block = Block::default()
             .title("Detailed Stats (Enter: view mean, ←/→: mo3/ao5, Esc: back)")
-            .borders(Borders::ALL);
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.border()));
 
         let inner = block.inner(area);
         block.render(area, buf);
@@ -45,7 +42,7 @@ impl Widget for DetailedStatsWidget {
 
         let header = format!(" {:>6}  {:>12}  {:>12}  {:>12}", "#", "Time", "mo3", "ao5");
         let header_style = Style::default()
-            .fg(Color::Cyan)
+            .fg(theme.text())
             .add_modifier(Modifier::BOLD);
         buf.set_string(inner.x, inner.y, &header, header_style);
 
@@ -89,7 +86,7 @@ impl Widget for DetailedStatsWidget {
                 inner.x,
                 inner.y + row_offset,
                 &num_str,
-                row_style(is_selected, false),
+                row_style(is_selected, false, theme),
             );
 
             let time_col = format!("  {:>12}", truncate(&time_str, 12));
@@ -97,7 +94,7 @@ impl Widget for DetailedStatsWidget {
                 inner.x + 8,
                 inner.y + row_offset,
                 &time_col,
-                row_style(is_selected, false),
+                row_style(is_selected, false, theme),
             );
 
             let mo3_col = format!("  {:>12}", truncate(&mo3_str, 12));
@@ -105,7 +102,7 @@ impl Widget for DetailedStatsWidget {
                 inner.x + 22,
                 inner.y + row_offset,
                 &mo3_col,
-                row_style(is_selected, is_selected && self.selected_col == 0),
+                row_style(is_selected, is_selected && self.selected_col == 0, theme),
             );
 
             let ao5_col = format!("  {:>12}", truncate(&ao5_str, 12));
@@ -113,7 +110,7 @@ impl Widget for DetailedStatsWidget {
                 inner.x + 36,
                 inner.y + row_offset,
                 &ao5_col,
-                row_style(is_selected, is_selected && self.selected_col == 1),
+                row_style(is_selected, is_selected && self.selected_col == 1, theme),
             );
         }
 
@@ -122,7 +119,7 @@ impl Widget for DetailedStatsWidget {
                 inner.x,
                 inner.y + 1,
                 format!("↑ {scroll_offset} more"),
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.text()),
             );
         }
         let visible_end = scroll_offset + items_height;
@@ -132,22 +129,28 @@ impl Widget for DetailedStatsWidget {
                 inner.x,
                 inner.y + inner.height - 1,
                 format!("↓ {below} more"),
-                Style::default().fg(Color::DarkGray),
+                Style::default().fg(theme.text()),
             );
         }
     }
 }
 
-fn row_style(is_row_selected: bool, is_cell_highlighted: bool) -> Style {
+fn row_style(
+    is_row_selected: bool,
+    is_cell_highlighted: bool,
+    theme: &ThemeSettings,
+) -> Style {
     if is_cell_highlighted {
         Style::default()
             .bg(Color::Yellow)
-            .fg(Color::Black)
+            .fg(theme.selection_text())
             .add_modifier(Modifier::BOLD)
     } else if is_row_selected {
-        Style::default().bg(Color::Blue).fg(Color::Black)
-    } else {
         Style::default()
+            .bg(theme.selection())
+            .fg(theme.selection_text())
+    } else {
+        Style::default().fg(theme.text())
     }
 }
 

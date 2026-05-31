@@ -1,8 +1,78 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
+
+use crate::model::settings::ThemeSettings;
+
+enum HelpLine {
+    Header(&'static str),
+    Body(&'static str),
+    Empty,
+}
+
+const HELP_TEXT: &[HelpLine] = &[
+    HelpLine::Header("TIMER CONTROLS"),
+    HelpLine::Body("Space              Hold and release to start/stop timer"),
+    HelpLine::Body("r                  Reset timer"),
+    HelpLine::Body("n                  Next scramble"),
+    HelpLine::Empty,
+    HelpLine::Header("EVENT NAVIGATION"),
+    HelpLine::Body("e / E              Next / Previous event"),
+    HelpLine::Empty,
+    HelpLine::Header("SESSION MANAGEMENT"),
+    HelpLine::Body("[ / ]              Previous / Next session"),
+    HelpLine::Body("s                  Create new session"),
+    HelpLine::Body("S                  Delete current session"),
+    HelpLine::Empty,
+    HelpLine::Header("INSPECTION"),
+    HelpLine::Body("i                  Toggle disable/enable inspection"),
+    HelpLine::Empty,
+    HelpLine::Header("HISTORY NAVIGATION"),
+    HelpLine::Body("Up / Down          Select previous / next time in history"),
+    HelpLine::Body("Enter              Open details screen for selected time"),
+    HelpLine::Body("Tab                Toggle focus between history and stats"),
+    HelpLine::Body("t                  Open detailed stats screen"),
+    HelpLine::Body("d                  Delete selected time"),
+    HelpLine::Empty,
+    HelpLine::Header("MAIN STATS FOCUS"),
+    HelpLine::Body("Up / Down          Select time/mo3/ao5 row"),
+    HelpLine::Body("Left / Right       Select current/best column"),
+    HelpLine::Body("Enter              Open mean detail for selected mean cell"),
+    HelpLine::Empty,
+    HelpLine::Header("DETAILED STATS"),
+    HelpLine::Body("Up / Down          Select solve"),
+    HelpLine::Body("Left / Right       Switch mo3 / ao5 column"),
+    HelpLine::Body("Enter              Open mean detail"),
+    HelpLine::Body("Esc                Close detailed stats"),
+    HelpLine::Empty,
+    HelpLine::Header("MEAN DETAIL"),
+    HelpLine::Body("Up / Down          Select time within mean"),
+    HelpLine::Body("Enter              Open details for selected time"),
+    HelpLine::Body("Esc                Back to detailed stats"),
+    HelpLine::Empty,
+    HelpLine::Header("DETAILS SCREEN"),
+    HelpLine::Body("Left / Right       Navigate to previous / next time"),
+    HelpLine::Body("Up / Down          Select +2 / DNF modifier"),
+    HelpLine::Body("Space              Toggle selected modifier"),
+    HelpLine::Body("d                  Delete selected time"),
+    HelpLine::Body("Esc                Close details screen"),
+    HelpLine::Empty,
+    HelpLine::Header("INTERFACE"),
+    HelpLine::Body("?                  Show / Hide this help screen"),
+    HelpLine::Body("q                  Quit application"),
+    HelpLine::Empty,
+    HelpLine::Header("ZEN MODE"),
+    HelpLine::Body("z                  Toggle zen mode (hides UI while timer runs)"),
+    HelpLine::Empty,
+    HelpLine::Header("BLUETOOTH"),
+    HelpLine::Body("b                  Open bluetooth device list"),
+    HelpLine::Body("Up / Down          Select bluetooth device"),
+    HelpLine::Body("Enter              Connect to selected device"),
+    HelpLine::Body("Esc                Close bluetooth device list"),
+    HelpLine::Empty,
+];
 
 pub struct HelpWidget {
     scroll: u16,
@@ -13,146 +83,31 @@ impl HelpWidget {
         Self { scroll }
     }
 
-    #[allow(clippy::too_many_lines)]
-    fn help_text() -> Vec<Line<'static>> {
-        vec![
-            Line::from(vec![Span::styled(
-                "TIMER CONTROLS",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("Space              Hold and release to start/stop timer"),
-            Line::from("r                  Reset timer"),
-            Line::from("n                  Next scramble"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "EVENT NAVIGATION",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("e / E              Next / Previous event"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "SESSION MANAGEMENT",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("[ / ]              Previous / Next session"),
-            Line::from("s                  Create new session"),
-            Line::from("S                  Delete current session"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "INSPECTION",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("i                  Toggle disable/enable inspection"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "HISTORY NAVIGATION",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("Up / Down          Select previous / next time in history"),
-            Line::from("Enter              Open details screen for selected time"),
-            Line::from("Tab                Toggle focus between history and stats"),
-            Line::from("t                  Open detailed stats screen"),
-            Line::from("d                  Delete selected time"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "MAIN STATS FOCUS",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("Up / Down          Select time/mo3/ao5 row"),
-            Line::from("Left / Right       Select current/best column"),
-            Line::from("Enter              Open mean detail for selected mean cell"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "DETAILED STATS",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("Up / Down          Select solve"),
-            Line::from("Left / Right       Switch mo3 / ao5 column"),
-            Line::from("Enter              Open mean detail"),
-            Line::from("Esc                Close detailed stats"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "MEAN DETAIL",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("Up / Down          Select time within mean"),
-            Line::from("Enter              Open details for selected time"),
-            Line::from("Esc                Back to detailed stats"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "DETAILS SCREEN",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("Left / Right       Navigate to previous / next time"),
-            Line::from("Up / Down          Select +2 / DNF modifier"),
-            Line::from("Space              Toggle selected modifier"),
-            Line::from("d                  Delete selected time"),
-            Line::from("Esc                Close details screen"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "INTERFACE",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("?                  Show / Hide this help screen"),
-            Line::from("q                  Quit application"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "ZEN MODE",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("z                  Toggle zen mode (hides UI while timer runs)"),
-            Line::from(""),
-            Line::from(vec![Span::styled(
-                "BLUETOOTH",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            )]),
-            Line::from("b                  Open bluetooth device list"),
-            Line::from("Up / Down          Select bluetooth device"),
-            Line::from("Enter              Connect to selected device"),
-            Line::from("Esc                Close bluetooth device list"),
-            Line::from(""),
-        ]
-    }
-
     pub fn max_scroll_for_height(height: u16) -> u16 {
-        let total_lines = u16::try_from(Self::help_text().len()).unwrap_or(u16::MAX);
+        let total_lines = u16::try_from(HELP_TEXT.len()).unwrap_or(u16::MAX);
         let visible_lines = height.saturating_sub(2);
         total_lines.saturating_sub(visible_lines)
     }
-}
 
-impl Widget for HelpWidget {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
-        let help_text = Self::help_text();
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+        let text_color = theme.text();
+        let help_text: Vec<Line> = HELP_TEXT
+            .iter()
+            .map(|entry| match entry {
+                HelpLine::Header(text) => Line::from(vec![Span::styled(
+                    *text,
+                    Style::default().fg(text_color).add_modifier(Modifier::BOLD),
+                )]),
+                HelpLine::Body(text) => {
+                    Line::from(Span::styled(*text, Style::default().fg(text_color)))
+                }
+                HelpLine::Empty => Line::from(""),
+            })
+            .collect();
 
-        let max_scroll = Self::max_scroll_for_height(area.height);
+        let max_scroll = u16::try_from(help_text.len())
+            .unwrap_or(u16::MAX)
+            .saturating_sub(area.height.saturating_sub(2));
         let scroll = self.scroll.min(max_scroll);
 
         let title = if scroll > 0 && scroll < max_scroll {
@@ -168,7 +123,8 @@ impl Widget for HelpWidget {
         let block = Block::default()
             .title(title)
             .borders(Borders::ALL)
-            .border_type(ratatui::widgets::BorderType::Rounded);
+            .border_type(ratatui::widgets::BorderType::Rounded)
+            .border_style(Style::default().fg(theme.border()));
 
         Paragraph::new(help_text)
             .block(block)

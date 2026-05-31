@@ -23,6 +23,10 @@ impl Settings {
     pub const fn zen(&self) -> bool {
         self.timer.zen
     }
+
+    pub const fn theme(&self) -> &ThemeSettings {
+        &self.theme
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -48,6 +52,32 @@ pub struct ThemeSettings {
     selection: ColorSettings,
     selection_text: ColorSettings,
     text: ColorSettings,
+}
+
+impl ThemeSettings {
+    pub const fn background(&self) -> ratatui::style::Color {
+        self.background.to_color()
+    }
+
+    pub const fn border(&self) -> ratatui::style::Color {
+        self.border.to_color()
+    }
+
+    pub const fn scramble(&self) -> ratatui::style::Color {
+        self.scramble.to_color()
+    }
+
+    pub const fn selection(&self) -> ratatui::style::Color {
+        self.selection.to_color()
+    }
+
+    pub const fn selection_text(&self) -> ratatui::style::Color {
+        self.selection_text.to_color()
+    }
+
+    pub const fn text(&self) -> ratatui::style::Color {
+        self.text.to_color()
+    }
 }
 
 impl Default for ThemeSettings {
@@ -82,6 +112,10 @@ impl ColorSettings {
         g: 153,
         b: 255,
     };
+
+    pub const fn to_color(self) -> ratatui::style::Color {
+        ratatui::style::Color::Rgb(self.r, self.g, self.b)
+    }
 
     pub fn from_hex(s: &str) -> Option<Self> {
         let s = s.strip_prefix('#')?;

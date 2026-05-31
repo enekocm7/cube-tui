@@ -6,6 +6,8 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 
+use crate::model::settings::ThemeSettings;
+
 pub struct BluetoothWidget {
     devices: Vec<DeviceInfo>,
     selected_index: usize,
@@ -27,17 +29,13 @@ impl BluetoothWidget {
             connected_device_id,
         }
     }
-}
 
-impl Widget for BluetoothWidget {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
         let block = Block::default()
             .title("Bluetooth Devices")
             .title_alignment(Alignment::Center)
-            .borders(Borders::ALL);
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.border()));
 
         let mut lines: Vec<Line> = Vec::new();
         if let Some(ref status) = self.status {
@@ -56,7 +54,10 @@ impl Widget for BluetoothWidget {
         }
 
         if self.devices.is_empty() {
-            lines.push(Line::from(Span::raw("No devices found")));
+            lines.push(Line::from(Span::styled(
+                "No devices found",
+                Style::default().fg(theme.text()),
+            )));
         } else {
             lines.extend(self.devices.into_iter().enumerate().map(|(index, device)| {
                 let name = device.name.unwrap_or_else(|| "(unknown)".to_string());
@@ -84,7 +85,7 @@ impl Widget for BluetoothWidget {
                 } else if is_connected {
                     Line::from(Span::styled(line, Style::default().fg(Color::Green)))
                 } else {
-                    Line::from(Span::raw(line))
+                    Line::from(Span::styled(line, Style::default().fg(theme.text())))
                 }
             }));
         }

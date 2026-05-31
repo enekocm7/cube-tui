@@ -1,9 +1,10 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Color, Modifier, Style};
+use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
+use crate::model::settings::ThemeSettings;
 use crate::widgets::history::{History, Time};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -62,13 +63,8 @@ impl MeanDetailWidget {
             selected_index,
         }
     }
-}
 
-impl Widget for MeanDetailWidget {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
         let type_name = match self.mean_type {
             MeanType::Mo3 => "Mean of 3",
             MeanType::Ao5 => "Average of 5",
@@ -80,7 +76,10 @@ impl Widget for MeanDetailWidget {
             self.solve_index + 1
         );
 
-        let block = Block::default().title(title).borders(Borders::ALL);
+        let block = Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.border()));
 
         let mut lines: Vec<Line> = Vec::new();
 
@@ -88,13 +87,13 @@ impl Widget for MeanDetailWidget {
             Span::styled(
                 format!("{type_name}: "),
                 Style::default()
-                    .fg(Color::Cyan)
+                    .fg(theme.text())
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
                 self.mean_value.clone(),
                 Style::default()
-                    .fg(Color::Yellow)
+                    .fg(theme.text())
                     .add_modifier(Modifier::BOLD),
             ),
         ]));
@@ -105,7 +104,7 @@ impl Widget for MeanDetailWidget {
         lines.push(Line::from(Span::styled(
             "Times:",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(theme.text())
                 .add_modifier(Modifier::BOLD),
         )));
 
@@ -140,19 +139,17 @@ impl Widget for MeanDetailWidget {
 
             let style = if is_selected {
                 Style::default()
-                    .bg(Color::Blue)
-                    .fg(Color::Black)
+                    .bg(theme.selection())
+                    .fg(theme.selection_text())
                     .add_modifier(Modifier::BOLD)
-            } else if is_trimmed {
-                Style::default().fg(Color::DarkGray)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(theme.text())
             };
 
-            let annotation_style = Style::default().fg(Color::DarkGray);
+            let annotation_style = Style::default().fg(theme.text());
 
             lines.push(Line::from(vec![
-                Span::styled(format!("  #{num}: "), Style::default().fg(Color::Blue)),
+                Span::styled(format!("  #{num}: "), Style::default().fg(theme.text())),
                 Span::styled(
                     if is_trimmed {
                         format!("({time_display})")
