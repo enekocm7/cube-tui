@@ -8,6 +8,7 @@ pub mod detailed_stats;
 pub mod details;
 pub mod help;
 pub mod main_focus;
+pub mod mean_details;
 pub mod session;
 pub mod settings;
 
@@ -171,5 +172,4 @@ impl Model {
     pub fn history_mut(&mut self) -> &mut History {
         &mut self.get_current_session_mut().history
     }
-
 }

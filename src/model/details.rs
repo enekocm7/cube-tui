@@ -81,31 +81,4 @@ impl Model {
             _ => 0,
         };
     }
-    pub fn open_details_for_selected_mean_time(&mut self) -> bool {
-        let row = self.detailed_stats_state.row;
-        let col = self.detailed_stats_state.col;
-        let selected_index = self.detailed_stats_state.mean_detail_selected_index;
-        let solve_index = if col == 0 {
-            if row < 2 {
-                return false;
-            }
-            row.saturating_sub(2).saturating_add(selected_index)
-        } else {
-            if row < 4 {
-                return false;
-            }
-            row.saturating_sub(4).saturating_add(selected_index)
-        };
-
-        if solve_index >= self.history().len() {
-            return false;
-        }
-
-        self.history_mut().select_index(solve_index);
-        self.detailed_stats_state.show = false;
-        self.detailed_stats_state.show_mean_detail = false;
-        self.detailed_stats_state.mean_detail_selected_index = 0;
-        self.open_details();
-        true
-    }
 }
