@@ -1,61 +1,59 @@
 use crate::model::Model;
-
-#[derive(Default)]
-pub struct DetailedStatsState {
-    pub show: bool,
-    pub row: usize,
-    pub col: usize,
-    pub show_mean_detail: bool,
-    pub mean_detail_selected_index: usize,
-    pub opened_from_stats_column: bool,
-}
+use crate::model::screen::Screen;
 
 impl Model {
     pub const fn show_detailed_stats(&self) -> bool {
-        self.detailed_stats_state.show
+        self.screen.show_detailed_stats()
     }
 
     pub fn open_detailed_stats(&mut self) {
         if self.history().is_empty() {
             return;
         }
-        self.detailed_stats_state.show = true;
-        self.detailed_stats_state.row = self.history().len().saturating_sub(1);
-        self.detailed_stats_state.col = 0;
-        self.detailed_stats_state.show_mean_detail = false;
-        self.detailed_stats_state.mean_detail_selected_index = 0;
-        self.detailed_stats_state.opened_from_stats_column = false;
-    }
-
-    pub const fn close_detailed_stats(&mut self) {
-        self.detailed_stats_state.show = false;
-        self.detailed_stats_state.show_mean_detail = false;
-        self.detailed_stats_state.mean_detail_selected_index = 0;
-        self.detailed_stats_state.opened_from_stats_column = false;
+        self.screen = Screen::DetailedStats {
+            row: self.history().len().saturating_sub(1),
+            col: 0,
+        };
     }
 
     pub const fn detailed_stats_row(&self) -> usize {
-        self.detailed_stats_state.row
+        match &self.screen {
+            Screen::DetailedStats { row, .. } => *row,
+            Screen::MeanDetail { row, .. } => *row,
+            _ => 0,
+        }
     }
 
     pub const fn detailed_stats_col(&self) -> usize {
-        self.detailed_stats_state.col
+        match &self.screen {
+            Screen::DetailedStats { col, .. } => *col,
+            Screen::MeanDetail { col, .. } => *col,
+            _ => 0,
+        }
     }
 
     pub const fn detailed_stats_select_up(&mut self) {
-        self.detailed_stats_state.row = self.detailed_stats_state.row.saturating_sub(1);
+        if let Screen::DetailedStats { row, .. } = &mut self.screen {
+            *row = row.saturating_sub(1);
+        }
     }
 
     pub fn detailed_stats_select_down(&mut self) {
         let max = self.history().len().saturating_sub(1);
-        self.detailed_stats_state.row = (self.detailed_stats_state.row + 1).min(max);
+        if let Screen::DetailedStats { row, .. } = &mut self.screen {
+            *row = (*row + 1).min(max);
+        }
     }
 
     pub const fn detailed_stats_col_left(&mut self) {
-        self.detailed_stats_state.col = 0;
+        if let Screen::DetailedStats { col, .. } = &mut self.screen {
+            *col = 0;
+        }
     }
 
     pub const fn detailed_stats_col_right(&mut self) {
-        self.detailed_stats_state.col = 1;
+        if let Screen::DetailedStats { col, .. } = &mut self.screen {
+            *col = 1;
+        }
     }
 }

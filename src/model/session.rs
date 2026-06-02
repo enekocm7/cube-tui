@@ -2,10 +2,9 @@ use super::MAX_SESSIONS;
 use crate::model::Model;
 #[cfg(feature = "bluetooth")]
 use crate::model::bluetooth::BluetoothState;
-use crate::model::detailed_stats::DetailedStatsState;
-use crate::model::details::DetailsState;
 use crate::model::help::HelpState;
 use crate::model::main_focus::{MainFocus, MainStatsSelection};
+use crate::model::screen::Screen;
 use crate::scramble::{self, Scramble, WcaEvent};
 use crate::widgets::history::History;
 use std::time::Instant;
@@ -151,8 +150,7 @@ impl Model {
             self.session_state.current_session_index = self.session_state.sessions.len() - 1;
         }
 
-        self.details_state = DetailsState::default();
-        self.detailed_stats_state = DetailedStatsState::default();
+        self.screen = Screen::default();
         #[cfg(feature = "bluetooth")]
         {
             self.bluetooth_state = BluetoothState::default();
@@ -205,8 +203,7 @@ impl Model {
         }
         self.session_state.current_session_index = 0;
         self.help_state = HelpState::default();
-        self.details_state = DetailsState::default();
-        self.detailed_stats_state = DetailedStatsState::default();
+        self.screen = Screen::default();
         #[cfg(feature = "bluetooth")]
         {
             self.bluetooth_state = BluetoothState::default();

@@ -406,15 +406,7 @@ fn handle_close_details(model: &mut Model) {
         model.close_bluetooth();
         return;
     }
-    if model.show_details() {
-        model.return_to_mean_detail();
-    } else if model.show_mean_detail() {
-        model.close_mean_detail();
-    } else if model.show_detailed_stats() {
-        model.close_detailed_stats();
-    } else {
-        model.close_details();
-    }
+    model.close_current_screen();
 }
 
 fn handle_delete_time(model: &mut Model) {
@@ -422,7 +414,7 @@ fn handle_delete_time(model: &mut Model) {
         model.history_mut().delete_selected();
         persistence::save(model);
         if model.show_details() && model.history().is_empty() {
-            model.close_details();
+            model.close_current_screen();
         }
     }
 }

@@ -9,15 +9,15 @@ pub mod details;
 pub mod help;
 pub mod main_focus;
 pub mod mean_details;
+pub mod screen;
 pub mod session;
 pub mod settings;
 
 #[cfg(feature = "bluetooth")]
 use bluetooth::BluetoothState;
-use detailed_stats::DetailedStatsState;
-use details::DetailsState;
 use help::HelpState;
 use main_focus::{MainFocus, MainStatsSelection};
+use screen::Screen;
 use session::SessionState;
 pub use session::{InspectionState, TimerState};
 
@@ -27,8 +27,7 @@ pub struct Model {
     pub(crate) session_state: SessionState,
     pub(crate) settings: Settings,
     pub(crate) help_state: HelpState,
-    pub(crate) details_state: DetailsState,
-    pub(crate) detailed_stats_state: DetailedStatsState,
+    pub(crate) screen: Screen,
     #[cfg(feature = "bluetooth")]
     pub(crate) bluetooth_state: BluetoothState,
     pub(crate) main_focus: MainFocus,
@@ -41,8 +40,7 @@ impl Model {
             session_state: SessionState::new(),
             settings: Settings::default(),
             help_state: HelpState::default(),
-            details_state: DetailsState::default(),
-            detailed_stats_state: DetailedStatsState::default(),
+            screen: Screen::default(),
             #[cfg(feature = "bluetooth")]
             bluetooth_state: BluetoothState::default(),
             main_focus: MainFocus::History,
