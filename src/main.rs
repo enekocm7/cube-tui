@@ -1008,11 +1008,11 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     #[cfg(not(feature = "bluetooth"))]
     let bt_label = String::new();
     let timer_title = format!(
-        "Timer - Inspection: {}{}{bt_label}",
+        "Timer{}{}{bt_label}",
         if model.inspection_enabled() {
-            "On"
+            " | Inspection: On"
         } else {
-            "Off"
+            ""
         },
         if model.zen_enabled() {
             " | Zen: On"
