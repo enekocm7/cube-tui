@@ -65,7 +65,7 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
         return;
     }
 
-    if model.show_detailed_stats() && model.show_mean_detail() {
+    if model.show_mean_detail() {
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Fill(1), Constraint::Length(1)])
@@ -82,7 +82,7 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
         let help_text = Line::from(vec![
             Span::styled("↑/↓: select time  ", Style::default().fg(theme.text())),
             Span::styled("Enter: open details  ", Style::default().fg(theme.text())),
-            Span::styled("Esc: back to stats", Style::default().fg(theme.text())),
+            Span::styled("Esc: back", Style::default().fg(theme.text())),
         ]);
         Paragraph::new(help_text)
             .alignment(Alignment::Center)
