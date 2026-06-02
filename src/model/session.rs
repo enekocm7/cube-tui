@@ -1,3 +1,11 @@
+use super::MAX_SESSIONS;
+use crate::model::Model;
+#[cfg(feature = "bluetooth")]
+use crate::model::bluetooth::BluetoothState;
+use crate::model::detailed_stats::DetailedStatsState;
+use crate::model::details::DetailsState;
+use crate::model::help::HelpState;
+use crate::model::main_focus::{MainFocus, MainStatsSelection};
 use crate::scramble::{self, Scramble, WcaEvent};
 use crate::widgets::history::History;
 use std::time::Instant;
@@ -98,5 +106,112 @@ impl SessionState {
             sessions: vec![Session::new()],
             current_session_index: 0,
         }
+    }
+}
+
+impl Model {
+    pub const fn current_session_index(&self) -> usize {
+        self.session_state.current_session_index
+    }
+
+    pub const fn session_count(&self) -> usize {
+        self.session_state.sessions.len()
+    }
+
+    pub const fn is_at_max_sessions(&self) -> bool {
+        self.session_state.sessions.len() >= MAX_SESSIONS
+    }
+
+    pub fn get_current_session(&self) -> &Session {
+        &self.session_state.sessions[self.session_state.current_session_index]
+    }
+
+    pub fn get_current_session_mut(&mut self) -> &mut Session {
+        &mut self.session_state.sessions[self.session_state.current_session_index]
+    }
+
+    pub fn add_session(&mut self) -> bool {
+        if self.is_at_max_sessions() {
+            return false;
+        }
+        self.session_state.sessions.push(Session::new());
+        self.session_state.current_session_index = self.session_state.sessions.len() - 1;
+        true
+    }
+
+    pub fn delete_current_session(&mut self) -> bool {
+        if self.session_state.sessions.len() <= 1 {
+            return false;
+        }
+
+        self.session_state
+            .sessions
+            .remove(self.session_state.current_session_index);
+        if self.session_state.current_session_index >= self.session_state.sessions.len() {
+            self.session_state.current_session_index = self.session_state.sessions.len() - 1;
+        }
+
+        self.details_state = DetailsState::default();
+        self.detailed_stats_state = DetailedStatsState::default();
+        #[cfg(feature = "bluetooth")]
+        {
+            self.bluetooth_state = BluetoothState::default();
+        }
+
+        true
+    }
+
+    pub const fn next_session(&mut self) {
+        if self.session_state.sessions.is_empty() {
+            return;
+        }
+        self.session_state.current_session_index =
+            (self.session_state.current_session_index + 1) % self.session_state.sessions.len();
+    }
+
+    pub const fn prev_session(&mut self) {
+        if self.session_state.sessions.is_empty() {
+            return;
+        }
+        if self.session_state.current_session_index == 0 {
+            self.session_state.current_session_index = self.session_state.sessions.len() - 1;
+        } else {
+            self.session_state.current_session_index -= 1;
+        }
+    }
+
+    pub fn all_sessions_history(&self) -> Vec<History> {
+        self.session_state
+            .sessions
+            .iter()
+            .map(|s| s.history.clone())
+            .collect()
+    }
+
+    pub fn restore_from_history(&mut self, data: Vec<History>) {
+        self.session_state.sessions.clear();
+        for history in data {
+            let mut session = Session::new();
+            if let Some(last_time) = history.last() {
+                session.event = last_time.event();
+                session.scramble = scramble::generate_scramble(session.event);
+            }
+            session.history = history;
+            session.history.select_last();
+            self.session_state.sessions.push(session);
+        }
+        if self.session_state.sessions.is_empty() {
+            self.session_state.sessions.push(Session::new());
+        }
+        self.session_state.current_session_index = 0;
+        self.help_state = HelpState::default();
+        self.details_state = DetailsState::default();
+        self.detailed_stats_state = DetailedStatsState::default();
+        #[cfg(feature = "bluetooth")]
+        {
+            self.bluetooth_state = BluetoothState::default();
+        }
+        self.main_focus = MainFocus::History;
+        self.main_stats_selection = MainStatsSelection::default();
     }
 }

@@ -14,6 +14,8 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 #[cfg(feature = "bluetooth")]
+use crate::model::bluetooth::BluetoothEvent;
+#[cfg(feature = "bluetooth")]
 pub mod bluetooth;
 pub mod cstimer;
 #[cfg(feature = "dashboard")]
@@ -572,7 +574,7 @@ fn handle_toggle_bluetooth(model: &mut Model) {
 
     if let Some(tx) = model.toggle_bluetooth() {
         use crate::bluetooth::timer::{get_adapter, get_devices};
-        use crate::model::BluetoothEvent;
+        use crate::model::bluetooth::BluetoothEvent;
         use futures_util::StreamExt;
 
         std::thread::spawn(move || {
@@ -622,8 +624,8 @@ fn handle_disconnect_bluetooth(model: &mut Model) {
 
 #[cfg(feature = "bluetooth")]
 fn restart_bluetooth_scan(
-    tx: flume::Sender<crate::model::BluetoothEvent>,
-    _rx: flume::Receiver<crate::model::BluetoothEvent>,
+    tx: flume::Sender<BluetoothEvent>,
+    _rx: flume::Receiver<BluetoothEvent>,
     adapter: btleplug::platform::Adapter,
 ) {
     use crate::bluetooth::timer::get_devices;
@@ -640,10 +642,7 @@ fn restart_bluetooth_scan(
             };
 
             while let Some(device) = stream.next().await {
-                if tx
-                    .send(crate::model::BluetoothEvent::Device(device))
-                    .is_err()
-                {
+                if tx.send(BluetoothEvent::Device(device)).is_err() {
                     break;
                 }
             }
@@ -749,7 +748,7 @@ fn handle_close_details(model: &mut Model) {
         model.close_bluetooth();
         return;
     }
-    if model.show_details() && model.can_return_to_mean_detail() {
+    if model.show_details() {
         model.return_to_mean_detail();
     } else if model.show_mean_detail() {
         model.close_mean_detail();
@@ -803,7 +802,8 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
 
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
-        use crate::model::BluetoothScreenState;
+        use crate::model::bluetooth::BluetoothScreenState;
+
         let layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Fill(1), Constraint::Length(1)])
@@ -901,11 +901,6 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         )
         .render_with_theme(details_layout[0], buf, &theme);
 
-        let esc_label = if model.can_return_to_mean_detail() {
-            "Esc: back to mean"
-        } else {
-            "Esc: close"
-        };
         let details_help = Line::from(vec![
             Span::styled(
                 "Space: toggle modifier  ",
@@ -914,7 +909,7 @@ fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
             Span::styled("↑/↓: select modifier  ", Style::default().fg(theme.text())),
             Span::styled("←/→: navigate times  ", Style::default().fg(theme.text())),
             Span::styled("d: delete  ", Style::default().fg(theme.text())),
-            Span::styled(esc_label, Style::default().fg(theme.text())),
+            Span::styled("Esc: close", Style::default().fg(theme.text())),
         ]);
         Paragraph::new(details_help)
             .alignment(Alignment::Center)
