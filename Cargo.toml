@@ -17,7 +17,7 @@ name = "cube"
 path = "src/main.rs"
 
 [dependencies]
-macros = { path = "macros"}
+macros = { path = "macros" }
 anyhow = "1.0.102"
 ratatui = "0.30.0"
 rand = "0.10.1"
@@ -40,3 +40,10 @@ reqwest = { version = "0.13.4", optional = true, default-features = false, featu
     "blocking",
     "json",
 ] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
