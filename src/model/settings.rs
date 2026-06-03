@@ -3,9 +3,10 @@ use serde::{Deserialize, Serialize, de::Error};
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Settings {
-    timer: TimerSettings,
+    pub timer: TimerSettings,
     #[serde(default)]
     theme: ThemeSettings,
+    display: DisplaySettings,
 }
 
 impl Settings {
@@ -23,6 +24,18 @@ impl Settings {
 
     pub const fn zen(&self) -> bool {
         self.timer.zen
+    }
+
+    pub const fn history(&self) -> bool {
+        self.display.history
+    }
+    
+    pub const fn stats(&self) -> bool {
+        self.display.stats
+    }
+    
+    pub const fn scramble(&self) -> bool {
+        self.display.scramble
     }
 
     pub const fn theme(&self) -> &ThemeSettings {
@@ -124,5 +137,22 @@ impl<'de> Deserialize<'de> for ColorSettings {
     {
         let s = String::deserialize(deserializer)?;
         Self::from_hex(&s).ok_or_else(|| Error::custom(format!("Invalid hex color: {s}")))
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct DisplaySettings {
+    history: bool,
+    scramble: bool,
+    stats: bool,
+}
+
+impl Default for DisplaySettings {
+    fn default() -> Self {
+        Self {
+            history: true,
+            scramble: true,
+            stats: true,
+        }
     }
 }

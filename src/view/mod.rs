@@ -164,34 +164,60 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
         return;
     }
 
-    let scramble_lines = get_scramble_lines(model.scramble().as_str(), area.width);
+    let settings = model.settings();
+    let show_scramble = settings.scramble();
+    let show_history = settings.history();
+    let show_stats = settings.stats();
 
-    let scramble_height = (scramble_lines + 2).min(area.height.saturating_sub(1));
-    let constraints = (Constraint::Length(scramble_height), Constraint::Fill(1));
-
+    let outer_constraints = if show_scramble {
+        let scramble_lines = get_scramble_lines(model.scramble().as_str(), area.width);
+        let scramble_height = (scramble_lines + 2).min(area.height.saturating_sub(1));
+        vec![
+            Constraint::Length(scramble_height),
+            Constraint::Fill(1),
+            Constraint::Length(1),
+        ]
+    } else {
+        vec![Constraint::Fill(1), Constraint::Length(1)]
+    };
     let outer_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([constraints.0, constraints.1, Constraint::Length(1)])
+        .constraints(outer_constraints)
         .margin(1)
         .split(area);
 
+    let main_area_index = if show_scramble { 1 } else { 0 };
+    let help_area_index = if show_scramble { 2 } else { 1 };
+
+    let mut main_constraints = Vec::new();
+    let mut history_area_index = None;
+    let mut stats_area_index = None;
+
+    if show_history {
+        history_area_index = Some(main_constraints.len());
+        main_constraints.push(Constraint::Length(24));
+    }
+
+    let timer_area_index = main_constraints.len();
+    main_constraints.push(Constraint::Min(10));
+
+    if show_stats {
+        stats_area_index = Some(main_constraints.len());
+        main_constraints.push(Constraint::Length(30));
+    }
+
     let main_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints(
-            [
-                Constraint::Length(24),
-                Constraint::Min(10),
-                Constraint::Length(30),
-            ]
-            .as_ref(),
-        )
-        .split(outer_layout[1]);
+        .constraints(main_constraints)
+        .split(outer_layout[main_area_index]);
 
-    ScrambleWidget::new(model.scramble().as_str(), model.event().name()).render_with_theme(
-        outer_layout[0],
-        buf,
-        &theme,
-    );
+    if show_scramble {
+        ScrambleWidget::new(model.scramble().as_str(), model.event().name()).render_with_theme(
+            outer_layout[0],
+            buf,
+            &theme,
+        );
+    }
 
     let history_title = format!(
         "Session: {:02}/{:02}{}",
@@ -203,23 +229,25 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
             ""
         }
     );
-    let history_block = Block::default()
-        .title(history_title)
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(theme.border()));
-    history_block.render(main_layout[0], buf);
-    let history_area = inner_area(main_layout[0]);
-    if model.main_focus_is_stats() {
-        model
-            .history()
-            .clone()
-            .without_selection_highlight()
-            .render_with_theme(history_area, buf, &theme);
-    } else {
-        model
-            .history()
-            .clone()
-            .render_with_theme(history_area, buf, &theme);
+    if let Some(index) = history_area_index {
+        let history_block = Block::default()
+            .title(history_title)
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.border()));
+        history_block.render(main_layout[index], buf);
+        let history_area = inner_area(main_layout[index]);
+        if model.main_focus_is_stats() {
+            model
+                .history()
+                .clone()
+                .without_selection_highlight()
+                .render_with_theme(history_area, buf, &theme);
+        } else {
+            model
+                .history()
+                .clone()
+                .render_with_theme(history_area, buf, &theme);
+        }
     }
 
     #[cfg(feature = "bluetooth")]
@@ -250,27 +278,34 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
         .block(timer_block)
         .alignment(Alignment::Center)
         .wrap(Wrap { trim: true })
-        .render(main_layout[1], buf);
+        .render(main_layout[timer_area_index], buf);
 
-    let stats_widget = if model.main_focus_is_stats() {
-        StatsWidget::new(model.history().clone())
-            .with_selection(model.main_stats_row(), model.main_stats_col())
-    } else {
-        StatsWidget::new(model.history().clone())
-    };
-    stats_widget.render_with_theme(main_layout[2], buf, &theme);
+    if let Some(index) = stats_area_index {
+        let stats_widget = if model.main_focus_is_stats() {
+            StatsWidget::new(model.history().clone())
+                .with_selection(model.main_stats_row(), model.main_stats_col())
+        } else {
+            StatsWidget::new(model.history().clone())
+        };
+        stats_widget.render_with_theme(main_layout[index], buf, &theme);
+    }
 
-    let help_text = Line::from(vec![
+    let mut help_spans = vec![
         Span::styled("Space: hold/release  ", Style::default().fg(theme.text())),
         Span::styled("Enter: details  ", Style::default().fg(theme.text())),
-        Span::styled("Tab: history/stats  ", Style::default().fg(theme.text())),
         Span::styled("r: reset  ", Style::default().fg(theme.text())),
         Span::styled("q: quit  ", Style::default().fg(theme.text())),
         Span::styled("?: help", Style::default().fg(theme.text())),
-    ]);
-    Paragraph::new(help_text)
+    ];
+    if show_history && show_stats {
+        help_spans.insert(
+            2,
+            Span::styled("Tab: history/stats  ", Style::default().fg(theme.text())),
+        );
+    }
+    Paragraph::new(Line::from(help_spans))
         .alignment(Alignment::Center)
-        .render(outer_layout[2], buf);
+        .render(outer_layout[help_area_index], buf);
 }
 
 fn set_area_background(area: Rect, buf: &mut ratatui::buffer::Buffer, color: Color) {
