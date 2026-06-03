@@ -8,6 +8,7 @@ fn main() {
     build_scrambles();
 }
 
+#[cfg(feature = "wca-scrambles")]
 fn build_scrambles() {
     println!("cargo:rerun-if-changed=scrambles/index.ts");
     println!("cargo:rerun-if-changed=scrambles/package.json");
@@ -43,6 +44,7 @@ fn build_scrambles() {
     );
 }
 
+#[cfg(feature = "dashboard")]
 fn build_dashboard() {
     if std::env::var("CARGO_FEATURE_DASHBOARD").is_err() {
         return;
