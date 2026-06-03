@@ -1,4 +1,8 @@
+#[cfg(feature = "dashboard")]
+#[cfg(feature = "wca-scrambles")]
 use std::path::Path;
+#[cfg(feature = "dashboard")]
+#[cfg(feature = "wca-scrambles")]
 use std::process::Command;
 
 fn main() {
