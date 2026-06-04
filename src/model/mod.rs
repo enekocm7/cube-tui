@@ -1,5 +1,5 @@
 use crate::model::settings::Settings;
-use crate::scramble::{Scramble, WcaEvent};
+use crate::scramble::WcaEvent;
 use crate::widgets::history::History;
 
 #[cfg(feature = "bluetooth")]
@@ -155,8 +155,12 @@ impl Model {
         self.get_current_session_mut().last_time_ms = ms;
     }
 
-    pub fn scramble(&self) -> &Scramble {
-        &self.get_current_session().scramble
+    pub fn scramble(&self) -> &str {
+        self.get_current_session()
+            .scramble
+            .as_ref()
+            .expect("active session should have a scramble")
+            .as_str()
     }
 
     pub fn event(&self) -> WcaEvent {

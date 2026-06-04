@@ -26,7 +26,7 @@ pub enum InspectionState {
 pub struct Session {
     pub timer_state: TimerState,
     pub history: History,
-    pub scramble: Scramble,
+    pub scramble: Option<Scramble>,
     pub last_time_ms: u64,
     pub event: WcaEvent,
 }
@@ -34,7 +34,7 @@ pub struct Session {
 impl Session {
     pub fn new() -> Self {
         let event = WcaEvent::Cube3x3;
-        let scramble = scramble::generate_scramble(event);
+        let scramble = None;
         Self {
             timer_state: TimerState::Idle,
             history: History::new(),
@@ -80,7 +80,7 @@ impl Session {
     }
 
     pub fn next_scramble(&mut self) {
-        self.scramble = scramble::generate_scramble(self.event);
+        self.scramble = Some(scramble::generate_scramble(self.event));
     }
 
     pub fn next_event(&mut self) {
@@ -188,11 +188,13 @@ impl Model {
 
     pub fn restore_from_history(&mut self, data: Vec<History>) {
         self.session_state.sessions.clear();
-        for history in data {
+        for (index, history) in data.into_iter().enumerate() {
             let mut session = Session::new();
             if let Some(last_time) = history.last() {
                 session.event = last_time.event();
-                session.scramble = scramble::generate_scramble(session.event);
+                if index == 0 {
+                    session.scramble = Some(scramble::generate_scramble(session.event));
+                }
             }
             session.history = history;
             session.history.select_last();

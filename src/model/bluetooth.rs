@@ -246,7 +246,7 @@ impl Model {
                 BtTimerState::Finished(time_ms) => {
                     self.get_current_session_mut().last_time_ms = time_ms;
                     let event = self.event();
-                    let scramble = self.scramble().as_str().to_string();
+                    let scramble = self.scramble().to_string();
                     self.history_mut().add_ms(time_ms, event, scramble);
                     self.get_current_session_mut().timer_state = TimerState::Idle;
                     self.next_scramble();

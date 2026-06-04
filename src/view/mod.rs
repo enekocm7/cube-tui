@@ -170,7 +170,7 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
     let show_stats = settings.stats();
 
     let outer_constraints = if show_scramble {
-        let scramble_lines = get_scramble_lines(model.scramble().as_str(), area.width);
+        let scramble_lines = get_scramble_lines(model.scramble(), area.width);
         let scramble_height = (scramble_lines + 2).min(area.height.saturating_sub(1));
         vec![
             Constraint::Length(scramble_height),
@@ -212,7 +212,7 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
         .split(outer_layout[main_area_index]);
 
     if show_scramble {
-        ScrambleWidget::new(model.scramble().as_str(), model.event().name()).render_with_theme(
+        ScrambleWidget::new(model.scramble(), model.event().name()).render_with_theme(
             outer_layout[0],
             buf,
             &theme,

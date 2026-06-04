@@ -82,7 +82,7 @@ fn handle_press(model: &mut Model) {
             let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
             model.set_last_time_ms(elapsed_ms);
             let event = model.event();
-            let scramble = model.scramble().as_str().to_string();
+            let scramble = model.scramble().to_string();
             model.history_mut().add_ms(elapsed_ms, event, scramble);
             model.stop_timer();
             model.next_scramble();
@@ -193,24 +193,34 @@ fn handle_prev_event(model: &mut Model) {
 fn handle_next_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.next_session();
+        if model.get_current_session().scramble.is_none() {
+            model.next_scramble();
+        }
     }
 }
 
 fn handle_prev_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.prev_session();
+        if model.get_current_session().scramble.is_none() {
+            model.next_scramble();
+        }
     }
 }
 
 fn handle_new_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.add_session();
+        model.next_scramble();
         persistence::save(model);
     }
 }
 
 fn handle_delete_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle && model.delete_current_session() {
+        if model.get_current_session().scramble.is_none() {
+            model.next_scramble();
+        }
         persistence::save(model);
     }
 }
