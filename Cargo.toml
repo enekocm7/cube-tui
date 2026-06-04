@@ -17,8 +17,8 @@ name = "cube"
 path = "src/main.rs"
 
 [dependencies]
-macros = { path = "macros" }
 anyhow = "1.0.102"
+cube-tui-macros = { path = "macros", version = "0.1.0" }
 ratatui = "0.30.0"
 rand = "0.10.1"
 serde = { version = "1.0.228", features = ["derive"] }

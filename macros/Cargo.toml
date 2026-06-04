@@ -1,7 +1,10 @@
 [package]
-name = "macros"
+name = "cube-tui-macros"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/enekocm7/cube-tui"
+license = "MIT"
+description = "Procedural macros for cube-tui"
 
 [lib]
 proc-macro=true

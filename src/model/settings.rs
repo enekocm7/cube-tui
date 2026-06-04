@@ -1,4 +1,4 @@
-use macros::ColorGetters;
+use cube_tui_macros::ColorGetters;
 use serde::{Deserialize, Serialize, de::Error};
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
