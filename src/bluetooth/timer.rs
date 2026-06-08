@@ -49,29 +49,27 @@ pub async fn get_devices(adapter: &Adapter) -> anyhow::Result<impl Stream<Item =
         };
 
         loop {
-            tokio::select! {
-                Some(event) = events.next() => {
-                    match event {
-                        CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id) => {
-                            if let Ok(peripheral) = adapter.peripheral(&id).await {
-                                let props = peripheral.properties().await.unwrap_or(None);
-                                let name = props.as_ref().and_then(|p| p.local_name.clone());
-                                let is_gan = name
-                                    .as_ref()
-                                    .is_some_and(|n| n.to_lowercase().contains("gan"));
-                                if is_gan {
-                                    let device = DeviceInfo {
-                                        id: id.clone(),
-                                        name,
-                                    };
-                                    if tx.send_async(device).await.is_err() {
-                                        break;
-                                    }
+            while let Some(event) = events.next().await {
+                match event {
+                    CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id) => {
+                        if let Ok(peripheral) = adapter.peripheral(&id).await {
+                            let props = peripheral.properties().await.unwrap_or(None);
+                            let name = props.as_ref().and_then(|p| p.local_name.clone());
+                            let is_gan = name
+                                .as_ref()
+                                .is_some_and(|n| n.to_lowercase().contains("gan"));
+                            if is_gan {
+                                let device = DeviceInfo {
+                                    id: id.clone(),
+                                    name,
+                                };
+                                if tx.send_async(device).await.is_err() {
+                                    break;
                                 }
                             }
                         }
-                        _ => {}
                     }
+                    _ => {}
                 }
             }
         }
