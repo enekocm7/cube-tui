@@ -1,31 +1,31 @@
 import { wcaEvents } from "cubing/puzzles";
 import { randomScrambleForEvent } from "cubing/scramble";
-import express from "express";
 
-const app = express();
 const port = 3311;
 
-app.get("/scramble/:id", async (req, res) => {
-    const event = req.params.id;
+Bun.serve({
+  port,
+  routes: {
+    "/events": () => Response.json(Object.keys(wcaEvents)),
+    "/scramble/:id": async (req) => {
+      const event = req.params.id;
 
-    if (!Object.keys(wcaEvents).includes(event)) {
-        res.status(404).json({ error: `Event "${event}" not found` });
-        return;
-    }
+      if (!(event in wcaEvents)) {
+        return Response.json({ error: `Event "${event}" not found` }, { status: 404 });
+      }
 
-    const scramble = await getScramble(event);
-    res.json({ event, scramble });
-});
-
-app.get("/events", (_, res) => {
-    res.json(Object.keys(wcaEvents));
+      const scramble = await getScramble(event);
+      return Response.json({ event, scramble });
+    },
+  },
+  fetch() {
+    return new Response("Not found", { status: 404 });
+  },
 });
 
 async function getScramble(event: string): Promise<string> {
-    const scramble = await randomScrambleForEvent(event);
-    return scramble.toString();
+  const scramble = await randomScrambleForEvent(event);
+  return scramble.toString();
 }
 
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-});
+console.log(`Server running on port ${port}`);

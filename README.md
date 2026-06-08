@@ -13,7 +13,7 @@ your terminal. All your session data is saved locally.
 
 - [Rust & Cargo](https://rustup.rs/)
 - [Bun](https://bun.sh/) (required for the `dashboard` feature)
-- One of [Node.js](https://nodejs.org/), [Bun](https://bun.sh/) (required for the `wca-scrambles` feature)
+- [Bun](https://bun.sh/) (required for the `wca-scrambles` feature)
 
 ## Installation & Features
 
@@ -51,7 +51,7 @@ To install with WCA scrambles support:
 cargo install cube-tui --features wca-scrambles
 ```
 
-When this feature is enabled, cube uses WCA API scrambles by default. If the local scrambles app cannot be started,
+When this feature is enabled, cube uses WCA API scrambles by default. If the local scrambles server cannot be started,
 it automatically falls back to the built-in random generator.
 
 ### Bluetooth
