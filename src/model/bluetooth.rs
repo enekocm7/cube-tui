@@ -6,7 +6,6 @@ use std::time::Instant;
 
 pub type BluetoothConnection = (
     flume::Sender<BtTimerState>,
-    flume::Receiver<()>,
     btleplug::platform::Adapter,
     flume::Sender<()>,
 );
@@ -36,7 +35,6 @@ pub struct BluetoothState {
     pub status: Option<String>,
     pub rx: Option<flume::Receiver<BluetoothEvent>>,
     pub timer_rx: Option<flume::Receiver<BtTimerState>>,
-    pub cancel_tx: Option<flume::Sender<()>>,
     pub connected_rx: Option<flume::Receiver<()>>,
     pub adapter: Option<btleplug::platform::Adapter>,
     pub connected_device_name: Option<String>,
@@ -195,15 +193,13 @@ impl Model {
         self.bluetooth_state.connected_device_id = Some(device.id.clone());
         let (tx, rx) = flume::unbounded();
         self.bluetooth_state.timer_rx = Some(rx);
-        let (cancel_tx, cancel_rx) = flume::bounded(1);
-        self.bluetooth_state.cancel_tx = Some(cancel_tx);
         let (conn_tx, conn_rx) = flume::bounded(1);
         self.bluetooth_state.connected_rx = Some(conn_rx);
         self.bluetooth_state.connected_device_name = device_name;
         self.bluetooth_state.screen_state = BluetoothScreenState::Connecting;
         self.bluetooth_state.status = Some("Connecting...".to_string());
         self.bluetooth_state.rx = None;
-        Some((tx, cancel_rx, adapter, conn_tx))
+        Some((tx, adapter, conn_tx))
     }
 
     pub fn poll_bluetooth_timer(&mut self) {
@@ -309,7 +305,6 @@ impl Model {
         flume::Receiver<BluetoothEvent>,
         btleplug::platform::Adapter,
     )> {
-        self.bluetooth_state.cancel_tx = None;
         self.bluetooth_state.timer_rx = None;
         self.bluetooth_state.connected_rx = None;
         self.bluetooth_state.connected_device_name = None;

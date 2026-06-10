@@ -1,7 +1,10 @@
 #[cfg(feature = "bluetooth")]
+use futures_util::StreamExt;
+
+#[cfg(feature = "bluetooth")]
 use crate::model::bluetooth::BluetoothEvent;
 use crate::model::{InspectionState, Model, TimerState};
-use crate::msg::{allowed_msg, Msg, INSPECTION_LIMIT_MS};
+use crate::msg::{INSPECTION_LIMIT_MS, Msg, allowed_msg};
 use crate::persistence;
 
 pub(crate) fn update(model: &mut Model, msg: Msg) {
@@ -321,13 +324,12 @@ fn restart_bluetooth_scan(
 #[cfg(feature = "bluetooth")]
 fn handle_bluetooth_connect(model: &mut Model) {
     use crate::bluetooth::timer::{TimerState as BtTimerState, connect, disconnect};
-    use futures_util::StreamExt;
 
     let Some(device) = model.bluetooth_selected_device().cloned() else {
         return;
     };
 
-    let Some((tx, cancel_rx, adapter, conn_tx)) = model.connect_bluetooth_device() else {
+    let Some((tx, adapter, conn_tx)) = model.connect_bluetooth_device() else {
         return;
     };
 
@@ -351,12 +353,10 @@ fn handle_bluetooth_connect(model: &mut Model) {
             let _ = conn_tx.send(());
 
             loop {
-                tokio::select! {
-                    state = stream.next() => match state {
-                        Some(state) => { if tx.send(state).is_err() { break; } }
-                        None => break,
-                    },
-                    _ = cancel_rx.recv_async() => break,
+                if let Some(state) = stream.next().await {
+                    if tx.send(state).is_err() {
+                        break;
+                    }
                 }
             }
 
