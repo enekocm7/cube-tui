@@ -2,8 +2,18 @@ import {X} from "lucide-react";
 import {useEffect, useMemo, useState} from "react";
 import type {History, Time, WcaEvent} from "../types/types";
 import {Modifier, WCA_EVENT_NAMES} from "../types/types";
-import {computeAo, computeBest, computeMean, effectiveMs, formatMillis, formatTime} from "../utils/format";
+import {
+    computeAo,
+    computeBest,
+    computeBestAo,
+    computeMean,
+    computePercentile,
+    effectiveMs,
+    formatMillis,
+    formatTime,
+} from "../utils/format";
 import {HistoryModule} from "./modules/HistoryModule";
+import {RecordsModule} from "./modules/RecordsModule";
 import {SessionStatsModule} from "./modules/SessionStatsModule";
 import {TimeTrendModule} from "./modules/TimeTrendModule";
 import {TimerDisplay} from "./TimerDisplay.tsx";
@@ -119,12 +129,33 @@ export default function TimesColumn({history}: TimesColumnProps) {
 
     const times = history.times;
 
-    const {bestMs, ao5, ao12, meanMs, eventLabel, reversed} = useMemo(() => {
+    const {
+        bestMs,
+        ao5,
+        ao12,
+        ao50,
+        ao100,
+        bestAo5,
+        bestAo12,
+        bestAo50,
+        bestAo100,
+        meanMs,
+        lastSolvePercentile,
+        eventLabel,
+        reversed,
+    } = useMemo(() => {
         const reversed = [...times].reverse();
         const bestMs = computeBest(times);
         const ao5 = computeAo(times, 5);
         const ao12 = computeAo(times, 12);
+        const ao50 = computeAo(times, 50);
+        const ao100 = computeAo(times, 100);
+        const bestAo5 = computeBestAo(times, 5);
+        const bestAo12 = computeBestAo(times, 12);
+        const bestAo50 = computeBestAo(times, 50);
+        const bestAo100 = computeBestAo(times, 100);
         const meanMs = computeMean(times);
+        const lastSolvePercentile = computePercentile(times);
 
         const eventCounts = times.reduce<Partial<Record<WcaEvent, number>>>((acc, t) => {
             acc[t.event] = (acc[t.event] ?? 0) + 1;
@@ -133,7 +164,21 @@ export default function TimesColumn({history}: TimesColumnProps) {
         const mainEvent = (Object.entries(eventCounts) as [WcaEvent, number][]).sort((a, b) => b[1] - a[1])[0]?.[0];
         const eventLabel = mainEvent ? WCA_EVENT_NAMES[mainEvent] : "Session";
 
-        return {bestMs, ao5, ao12, meanMs, eventLabel, reversed};
+        return {
+            bestMs,
+            ao5,
+            ao12,
+            ao50,
+            ao100,
+            bestAo5,
+            bestAo12,
+            bestAo50,
+            bestAo100,
+            meanMs,
+            lastSolvePercentile,
+            eventLabel,
+            reversed,
+        };
     }, [times]);
 
     useEffect(() => {
@@ -170,21 +215,37 @@ export default function TimesColumn({history}: TimesColumnProps) {
                             </div>
                             <TimerDisplay ms={bestMs} label="Session best" size="hero" animate={true} />
                         </div>
-                        <div className="mt-6 pt-4 border-t border-border">
+                        <div className="mt-6 pt-4 border-t border-border flex items-center justify-between">
                             <p className="text-xs text-muted">
                                 Last solve: <span className="font-mono tabular-nums text-ink">{times.length > 0 ? formatTime(times[times.length - 1]) : "—"}</span>
                             </p>
+                            {lastSolvePercentile !== null && (
+                                <p className="text-xs text-muted">
+                                    Faster than <span className="font-mono tabular-nums text-accent">{lastSolvePercentile}%</span>
+                                </p>
+                            )}
                         </div>
                     </section>
                 </div>
 
                 {/* Stats grid */}
                 <div className="lg:col-span-7">
-                    <SessionStatsModule eventLabel={eventLabel} timesCount={times.length} bestMs={bestMs} ao5={ao5} ao12={ao12} meanMs={meanMs} />
+                    <SessionStatsModule eventLabel={eventLabel} timesCount={times.length} bestMs={bestMs} ao5={ao5} ao12={ao12} ao50={ao50} ao100={ao100} meanMs={meanMs} />
+                </div>
+
+                {/* Records */}
+                <div className="lg:col-span-4">
+                    <RecordsModule
+                        bestSingle={bestMs}
+                        bestAo5={bestAo5}
+                        bestAo12={bestAo12}
+                        bestAo50={bestAo50}
+                        bestAo100={bestAo100}
+                    />
                 </div>
 
                 {/* Time trend */}
-                <div className="lg:col-span-12">
+                <div className="lg:col-span-8">
                     <TimeTrendModule times={times} />
                 </div>
 

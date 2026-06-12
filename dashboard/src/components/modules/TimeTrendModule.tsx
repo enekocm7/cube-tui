@@ -1,4 +1,5 @@
 import {CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
+import {memo, useMemo} from "react";
 import type {Time} from "../../types/types";
 import {effectiveMs, formatMillis} from "../../utils/format";
 
@@ -6,7 +7,7 @@ interface TimeTrendModuleProps {
     times: Time[];
 }
 
-const MAX_CHART_POINTS = 250;
+const MAX_CHART_POINTS = 100;
 
 function downsample<T>(items: T[], target: number): T[] {
     if (items.length <= target) return items;
@@ -22,40 +23,47 @@ function downsample<T>(items: T[], target: number): T[] {
     return sampled;
 }
 
-export function TimeTrendModule({times}: TimeTrendModuleProps) {
-    const allPoints = times.map((time, index) => ({
-        solve: index + 1,
-        ms: effectiveMs(time),
-    }));
+function TimeTrendModuleInner({times}: TimeTrendModuleProps) {
+    const {chartData, validTimes, dnfCount, minMs, maxMs, yMin, yMax} = useMemo(() => {
+        const allPoints = times.map((time, index) => ({
+            solve: index + 1,
+            ms: effectiveMs(time),
+        }));
 
-    const chartData = downsample(allPoints, MAX_CHART_POINTS);
+        const chartData = downsample(allPoints, MAX_CHART_POINTS);
+        const validTimes = allPoints.map((point) => point.ms).filter((ms): ms is number => ms !== null);
+        const dnfCount = allPoints.length - validTimes.length;
 
-    const validTimes = allPoints.map((point) => point.ms).filter((ms): ms is number => ms !== null);
-    const dnfCount = allPoints.length - validTimes.length;
+        if (validTimes.length === 0) {
+            return {chartData, validTimes, dnfCount, minMs: null, maxMs: null, yMin: 0, yMax: 0};
+        }
+
+        const minMs = Math.min(...validTimes);
+        const maxMs = Math.max(...validTimes);
+        const rangePadding = Math.max(1000, Math.round((maxMs - minMs) * 0.08));
+        const yMin = Math.max(0, minMs - rangePadding);
+        const yMax = maxMs + rangePadding;
+
+        return {chartData, validTimes, dnfCount, minMs, maxMs, yMin, yMax};
+    }, [times]);
 
     if (validTimes.length === 0) {
         return (
-            <section className="border border-border bg-surface animate-fade-in-up p-5">
+            <section className="h-full border border-border bg-surface animate-fade-in-up p-5 flex flex-col">
                 <p className="text-[10px] uppercase tracking-[0.14em] text-muted font-semibold mb-2">Time trend</p>
                 <p className="text-sm text-muted">No valid solves to chart.</p>
             </section>
         );
     }
 
-    const minMs = Math.min(...validTimes);
-    const maxMs = Math.max(...validTimes);
-    const rangePadding = Math.max(1000, Math.round((maxMs - minMs) * 0.08));
-    const yMin = Math.max(0, minMs - rangePadding);
-    const yMax = maxMs + rangePadding;
-
     return (
-        <section className="border border-border bg-surface animate-fade-in-up p-5">
+        <section className="h-full border border-border bg-surface animate-fade-in-up p-5 flex flex-col">
             <div className="flex items-center justify-between mb-3">
                 <p className="text-[10px] uppercase tracking-[0.14em] text-muted font-semibold">Time trend</p>
                 <span className="text-xs text-muted">
-                    <span className="font-mono tabular-nums">{allPoints.length}</span> solve{allPoints.length === 1 ? "" : "s"} ·{" "}
+                    <span className="font-mono tabular-nums">{times.length}</span> solve{times.length === 1 ? "" : "s"} ·{" "}
                     <span className="font-mono tabular-nums">{dnfCount}</span> DNF
-                    {chartData.length < allPoints.length && (
+                    {chartData.length < times.length && (
                         <>
                             {" · "}
                             <span className="font-mono tabular-nums">{chartData.length}</span> shown
@@ -64,7 +72,7 @@ export function TimeTrendModule({times}: TimeTrendModuleProps) {
                 </span>
             </div>
 
-            <div className="h-56">
+            <div className="flex-1 min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{top: 8, right: 8, bottom: 8, left: 8}}>
                         <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -109,17 +117,20 @@ export function TimeTrendModule({times}: TimeTrendModuleProps) {
                             connectNulls={false}
                             stroke="var(--accent)"
                             strokeWidth={2}
-                            dot={{r: 2, fill: "var(--accent)", strokeWidth: 0}}
+                            dot={false}
                             activeDot={{r: 4, fill: "var(--accent)"}}
+                            isAnimationActive={false}
                         />
                     </LineChart>
                 </ResponsiveContainer>
             </div>
 
             <div className="mt-2 flex items-center justify-between text-[10px] text-muted font-mono tabular-nums">
-                <span>{formatMillis(minMs)}</span>
-                <span>{formatMillis(maxMs)}</span>
+                <span>{formatMillis(minMs!)}</span>
+                <span>{formatMillis(maxMs!)}</span>
             </div>
         </section>
     );
 }
+
+export const TimeTrendModule = memo(TimeTrendModuleInner);
