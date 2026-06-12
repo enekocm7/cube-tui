@@ -353,10 +353,10 @@ fn handle_bluetooth_connect(model: &mut Model) {
             let _ = conn_tx.send(());
 
             loop {
-                if let Some(state) = stream.next().await {
-                    if tx.send(state).is_err() {
-                        break;
-                    }
+                if let Some(state) = stream.next().await
+                    && tx.send(state).is_err()
+                {
+                    break;
                 }
             }
 
