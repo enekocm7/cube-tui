@@ -1,15 +1,15 @@
-import { Upload } from "lucide-react";
-import type { ChangeEvent } from "react";
-import { useRef } from "react";
-import type { History } from "../types/types";
-import { parseHistoryFile } from "../utils/parse.ts";
+import {Upload} from "lucide-react";
+import type {ChangeEvent} from "react";
+import {useRef} from "react";
+import type {History} from "../types/types";
+import {parseHistoryFile} from "../utils/parse.ts";
 
 interface ImportButtonProps {
     onImport: (sessions: History[]) => void;
     compact?: boolean;
 }
 
-export function ImportButton({ onImport, compact = false }: ImportButtonProps) {
+export function ImportButton({onImport, compact = false}: ImportButtonProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -34,8 +34,8 @@ export function ImportButton({ onImport, compact = false }: ImportButtonProps) {
                 aria-label="Import history JSON"
                 className={
                     compact
-                        ? "flex items-center justify-center rounded-full w-8 h-8 border border-border text-text-muted hover:text-text hover:border-border-hover transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                        : "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium bg-btn-bg border border-border text-text-muted hover:text-text hover:border-border-hover transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        ? "flex items-center justify-center w-8 h-8 border border-border text-muted hover:text-ink hover:border-border-hover transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        : "flex items-center gap-2 px-4 py-2 text-sm font-medium bg-raised border border-border text-muted hover:text-ink hover:border-border-hover transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 }
             >
                 <Upload size={compact ? 14 : 15} strokeWidth={2} />

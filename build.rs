@@ -1,10 +1,3 @@
-#[cfg(feature = "dashboard")]
-#[cfg(feature = "wca-scrambles")]
-use std::path::Path;
-#[cfg(feature = "dashboard")]
-#[cfg(feature = "wca-scrambles")]
-use std::process::Command;
-
 fn main() {
     #[cfg(feature = "dashboard")]
     build_dashboard();
@@ -14,6 +7,9 @@ fn main() {
 
 #[cfg(feature = "wca-scrambles")]
 fn build_scrambles() {
+    use std::path::Path;
+    use std::process::Command;
+
     println!("cargo:rerun-if-changed=scrambles/index.ts");
     println!("cargo:rerun-if-changed=scrambles/package.json");
 
@@ -50,6 +46,9 @@ fn build_scrambles() {
 
 #[cfg(feature = "dashboard")]
 fn build_dashboard() {
+    use std::path::Path;
+    use std::process::Command;
+
     if std::env::var("CARGO_FEATURE_DASHBOARD").is_err() {
         return;
     }

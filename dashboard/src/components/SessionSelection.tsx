@@ -1,6 +1,6 @@
-import type { ChangeEvent } from "react";
-import type { History, WcaEvent } from "../types/types";
-import { WCA_EVENT_NAMES } from "../types/types";
+import type {ChangeEvent} from "react";
+import type {History, WcaEvent} from "../types/types";
+import {WCA_EVENT_NAMES} from "../types/types";
 
 interface SessionSelectionProps {
     sessions: History[];
@@ -22,19 +22,19 @@ function sessionLabel(history: History, index: number): string {
     return `Session ${index + 1} · ${eventName} · ${solves} solve${solves === 1 ? "" : "s"}`;
 }
 
-export function SessionSelection({ sessions, selectedIndex, onSelect }: SessionSelectionProps) {
+export function SessionSelection({sessions, selectedIndex, onSelect}: SessionSelectionProps) {
     function handleSelect(e: ChangeEvent<HTMLSelectElement>) {
         onSelect(Number(e.target.value));
     }
 
     return (
-        <div className="mb-4 flex justify-end">
-            <label className="flex items-center gap-2 text-sm text-text-muted">
-                <span>Session</span>
+        <div className="mb-5 flex justify-end">
+            <label className="flex items-center gap-2 text-xs sm:text-sm text-muted">
+                <span className="hidden sm:inline">Session</span>
                 <select
                     value={selectedIndex}
                     onChange={handleSelect}
-                    className="rounded-lg bg-btn-bg border border-border px-3 py-1.5 text-text text-sm hover:border-border-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="bg-raised border border-border rounded-none px-3 py-1.5 text-ink text-xs sm:text-sm hover:border-border-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-colors"
                     aria-label="Select session"
                 >
                     {sessions.map((session, index) => {
