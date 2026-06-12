@@ -2,6 +2,8 @@
 use futures_util::StreamExt;
 
 #[cfg(feature = "bluetooth")]
+use crate::bluetooth::runtime::runtime;
+#[cfg(feature = "bluetooth")]
 use crate::model::bluetooth::BluetoothEvent;
 use crate::model::{InspectionState, Model, TimerState};
 use crate::msg::{INSPECTION_LIMIT_MS, Msg, allowed_msg};
@@ -248,38 +250,31 @@ fn handle_toggle_bluetooth(model: &mut Model) {
         use crate::bluetooth::timer::{get_adapter, get_devices};
         use futures_util::StreamExt;
 
-        std::thread::spawn(move || {
-            let Ok(runtime) = tokio::runtime::Runtime::new() else {
-                let _ = tx.send(BluetoothEvent::Error("Failed to create runtime".into()));
-                return;
+        runtime().spawn(async move {
+            let adapter = match get_adapter().await {
+                Ok(adapter) => adapter,
+                Err(err) => {
+                    let _ = tx.send(BluetoothEvent::Error(err.to_string()));
+                    return;
+                }
             };
 
-            runtime.block_on(async move {
-                let adapter = match get_adapter().await {
-                    Ok(adapter) => adapter,
-                    Err(err) => {
-                        let _ = tx.send(BluetoothEvent::Error(err.to_string()));
-                        return;
-                    }
-                };
+            let _ = tx.send(BluetoothEvent::Adapter(adapter.clone()));
+            let _ = tx.send(BluetoothEvent::Status("Scanning for devices...".into()));
 
-                let _ = tx.send(BluetoothEvent::Adapter(adapter.clone()));
-                let _ = tx.send(BluetoothEvent::Status("Scanning for devices...".into()));
-
-                let mut stream = match get_devices(&adapter).await {
-                    Ok(stream) => stream,
-                    Err(err) => {
-                        let _ = tx.send(BluetoothEvent::Error(err.to_string()));
-                        return;
-                    }
-                };
-
-                while let Some(device) = stream.next().await {
-                    if tx.send(BluetoothEvent::Device(device)).is_err() {
-                        break;
-                    }
+            let mut stream = match get_devices(&adapter).await {
+                Ok(stream) => stream,
+                Err(err) => {
+                    let _ = tx.send(BluetoothEvent::Error(err.to_string()));
+                    return;
                 }
-            });
+            };
+
+            while let Some(device) = stream.next().await {
+                if tx.send(BluetoothEvent::Device(device)).is_err() {
+                    break;
+                }
+            }
         });
     }
 }
@@ -302,22 +297,16 @@ fn restart_bluetooth_scan(
     use crate::bluetooth::timer::get_devices;
     use futures_util::StreamExt;
 
-    std::thread::spawn(move || {
-        let Ok(runtime) = tokio::runtime::Runtime::new() else {
+    runtime().spawn(async move {
+        let Ok(mut stream) = get_devices(&adapter).await else {
             return;
         };
 
-        runtime.block_on(async move {
-            let Ok(mut stream) = get_devices(&adapter).await else {
-                return;
-            };
-
-            while let Some(device) = stream.next().await {
-                if tx.send(BluetoothEvent::Device(device)).is_err() {
-                    break;
-                }
+        while let Some(device) = stream.next().await {
+            if tx.send(BluetoothEvent::Device(device)).is_err() {
+                break;
             }
-        });
+        }
     });
 }
 
@@ -334,35 +323,28 @@ fn handle_bluetooth_connect(model: &mut Model) {
     };
 
     let device_id = device.id;
-    std::thread::spawn(move || {
-        let Ok(runtime) = tokio::runtime::Runtime::new() else {
-            let _ = tx.send(BtTimerState::Disconnected);
-            return;
+    runtime().spawn(async move {
+        let mut stream = match connect(&device_id, &adapter).await {
+            Ok(s) => s,
+            Err(e) => {
+                let _ = tx.send(BtTimerState::Error(e.to_string()));
+                let _ = tx.send(BtTimerState::Disconnected);
+                return;
+            }
         };
 
-        runtime.block_on(async move {
-            let mut stream = match connect(&device_id, &adapter).await {
-                Ok(s) => s,
-                Err(e) => {
-                    let _ = tx.send(BtTimerState::Error(e.to_string()));
-                    let _ = tx.send(BtTimerState::Disconnected);
-                    return;
-                }
-            };
+        let _ = conn_tx.send(());
 
-            let _ = conn_tx.send(());
-
-            loop {
-                if let Some(state) = stream.next().await
-                    && tx.send(state).is_err()
-                {
-                    break;
-                }
+        loop {
+            if let Some(state) = stream.next().await
+                && tx.send(state).is_err()
+            {
+                break;
             }
+        }
 
-            let _ = disconnect(&device_id, &adapter).await;
-            let _ = tx.send(BtTimerState::Disconnected);
-        });
+        let _ = disconnect(&device_id, &adapter).await;
+        let _ = tx.send(BtTimerState::Disconnected);
     });
 }
 
