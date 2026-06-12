@@ -227,6 +227,7 @@ impl Model {
                 BtTimerState::Idle | BtTimerState::GetSet | BtTimerState::HandsOn => {
                     self.get_current_session_mut().timer_state =
                         if matches!(bt_state, BtTimerState::Idle) {
+                            self.get_current_session_mut().last_time_ms = 0;
                             TimerState::Idle
                         } else {
                             TimerState::Pulsed
