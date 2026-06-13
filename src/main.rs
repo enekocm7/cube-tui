@@ -98,13 +98,20 @@ fn main() {
         }
         _ => {
             #[cfg(feature = "wca-scrambles")]
-            let _wca_scramble_server = match scramble::start_wca_scramble_server() {
-                Ok(server) => Some(server),
-                Err(error) => {
-                    eprintln!(
-                        "Warning: Could not enable WCA scrambles ({error}). Falling back to built-in random scrambles."
-                    );
-                    None
+            let _wca_server = {
+                let mut settings_model = Model::new();
+                if let Some(settings) = persistence::load_config() {
+                    settings_model.set_settings(settings);
+                }
+                let show_logs = settings_model.settings().show_logs();
+                match scramble::start_wca_scramble_server(&show_logs) {
+                    Ok(server) => Some(server),
+                    Err(error) => {
+                        eprintln!(
+                            "Warning: Could not enable WCA scrambles ({error}). Falling back to built-in random scrambles."
+                        );
+                        None
+                    }
                 }
             };
 
