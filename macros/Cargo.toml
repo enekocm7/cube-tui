@@ -6,6 +6,9 @@ repository = "https://github.com/enekocm7/cube-tui"
 license = "MIT"
 description = "Procedural macros for cube-tui"
 
+[lints.rust]
+unsafe_code = "forbid"
+
 [lib]
 proc-macro=true
 
