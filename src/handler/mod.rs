@@ -87,7 +87,7 @@ fn handle_press(model: &mut Model) {
             let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
             model.set_last_time_ms(elapsed_ms);
             let event = model.event();
-            let scramble = model.scramble().to_string();
+            let scramble = model.take_scramble();
             model.history_mut().add_ms(elapsed_ms, event, scramble);
             model.stop_timer();
             model.next_scramble();
@@ -247,6 +247,8 @@ fn handle_toggle_bluetooth(model: &mut Model) {
     }
 
     if let Some(tx) = model.toggle_bluetooth() {
+        use std::borrow::Cow;
+
         use crate::bluetooth::timer::{get_adapter, get_devices};
         use futures_util::StreamExt;
 
@@ -254,7 +256,7 @@ fn handle_toggle_bluetooth(model: &mut Model) {
             let adapter = match get_adapter().await {
                 Ok(adapter) => adapter,
                 Err(err) => {
-                    let _ = tx.send(BluetoothEvent::Error(err.to_string()));
+                    let _ = tx.send(BluetoothEvent::Error(Cow::Owned(err.to_string())));
                     return;
                 }
             };
@@ -265,7 +267,7 @@ fn handle_toggle_bluetooth(model: &mut Model) {
             let mut stream = match get_devices(&adapter).await {
                 Ok(stream) => stream,
                 Err(err) => {
-                    let _ = tx.send(BluetoothEvent::Error(err.to_string()));
+                    let _ = tx.send(BluetoothEvent::Error(Cow::Owned(err.to_string())));
                     return;
                 }
             };
@@ -312,6 +314,8 @@ fn restart_bluetooth_scan(
 
 #[cfg(feature = "bluetooth")]
 fn handle_bluetooth_connect(model: &mut Model) {
+    use std::borrow::Cow;
+
     use crate::bluetooth::timer::{TimerState as BtTimerState, connect, disconnect};
 
     let Some(device) = model.bluetooth_selected_device().cloned() else {
@@ -327,7 +331,7 @@ fn handle_bluetooth_connect(model: &mut Model) {
         let mut stream = match connect(&device_id, &adapter).await {
             Ok(s) => s,
             Err(e) => {
-                let _ = tx.send(BtTimerState::Error(e.to_string()));
+                let _ = tx.send(BtTimerState::Error(Cow::Owned(e.to_string())));
                 let _ = tx.send(BtTimerState::Disconnected);
                 return;
             }

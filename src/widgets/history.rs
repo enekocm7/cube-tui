@@ -1,9 +1,10 @@
-use ratatui::buffer::Buffer;
-use ratatui::layout::Rect;
-
-use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use serde::{Deserialize, Serialize};
 
 use crate::model::settings::ThemeSettings;
 use crate::scramble::WcaEvent;
@@ -22,7 +23,7 @@ pub enum Modifier {
 pub struct Time {
     timestamp_in_millis: u64,
     event: WcaEvent,
-    scramble: String,
+    scramble: Cow<'static, str>,
     #[serde(default)]
     solved_at_unix_ms: u64,
     #[serde(default)]
@@ -30,11 +31,15 @@ pub struct Time {
 }
 
 impl Time {
-    pub fn new(timestamp_in_millis: u64, event: WcaEvent, scramble: String) -> Self {
+    pub fn new(
+        timestamp_in_millis: u64,
+        event: WcaEvent,
+        scramble: impl Into<Cow<'static, str>>,
+    ) -> Self {
         Self {
             timestamp_in_millis,
             event,
-            scramble,
+            scramble: scramble.into(),
             solved_at_unix_ms: current_unix_ms(),
             modifier: Modifier::None,
         }
@@ -43,7 +48,7 @@ impl Time {
     pub const fn new_with_meta(
         timestamp_in_millis: u64,
         event: WcaEvent,
-        scramble: String,
+        scramble: Cow<'static, str>,
         solved_at_unix_ms: u64,
         modifier: Modifier,
     ) -> Self {
@@ -163,7 +168,12 @@ impl History {
         self
     }
 
-    pub fn add_ms(&mut self, timestamp_in_millis: u64, event: WcaEvent, scramble: String) {
+    pub fn add_ms(
+        &mut self,
+        timestamp_in_millis: u64,
+        event: WcaEvent,
+        scramble: impl Into<Cow<'static, str>>,
+    ) {
         self.add(Time::new(timestamp_in_millis, event, scramble));
     }
 
@@ -247,12 +257,12 @@ impl History {
             .min_by_key(|time| time.timestamp_in_millis)
     }
 
-    pub fn get_latest_mo3(&self) -> Option<String> {
+    pub fn get_latest_mo3(&self) -> Option<Cow<'static, str>> {
         self.get_mo3(self.times.len())
             .map(Self::format_average_value)
     }
 
-    pub fn get_fastest_mo3(&self) -> Option<String> {
+    pub fn get_fastest_mo3(&self) -> Option<Cow<'static, str>> {
         let mut fastest = u64::MAX;
         let mut has_enough_solves_for_average = false;
         for i in 3..=self.times.len() {
@@ -266,20 +276,20 @@ impl History {
         }
 
         if fastest != u64::MAX {
-            return Some(format_millis(fastest));
+            return Some(Cow::Owned(format_millis(fastest)));
         }
         if has_enough_solves_for_average {
-            return Some("DNF".to_string());
+            return Some(Cow::Borrowed("DNF"));
         }
         None
     }
 
-    pub fn get_latest_ao5(&self) -> Option<String> {
+    pub fn get_latest_ao5(&self) -> Option<Cow<'static, str>> {
         self.get_ao5(self.times.len())
             .map(Self::format_average_value)
     }
 
-    pub fn get_fastest_ao5(&self) -> Option<String> {
+    pub fn get_fastest_ao5(&self) -> Option<Cow<'static, str>> {
         let mut fastest = u64::MAX;
         let mut has_enough_solves_for_average = false;
         for i in 5..=self.times.len() {
@@ -293,10 +303,10 @@ impl History {
         }
 
         if fastest != u64::MAX {
-            return Some(format_millis(fastest));
+            return Some(Cow::Owned(format_millis(fastest)));
         }
         if has_enough_solves_for_average {
-            return Some("DNF".to_string());
+            return Some(Cow::Borrowed("DNF"));
         }
         None
     }
@@ -356,10 +366,10 @@ impl History {
         }
     }
 
-    fn format_average_value(value: AverageValue) -> String {
+    fn format_average_value(value: AverageValue) -> Cow<'static, str> {
         match value {
-            AverageValue::Time(ms) => format_millis(ms),
-            AverageValue::Dnf => "DNF".to_string(),
+            AverageValue::Time(ms) => Cow::Owned(format_millis(ms)),
+            AverageValue::Dnf => Cow::Borrowed("DNF"),
         }
     }
 
@@ -371,12 +381,12 @@ impl History {
         self.times.get(index)
     }
 
-    pub fn mo3_at(&self, solve_index: usize) -> Option<String> {
+    pub fn mo3_at(&self, solve_index: usize) -> Option<Cow<'static, str>> {
         self.get_mo3(solve_index + 1)
             .map(Self::format_average_value)
     }
 
-    pub fn ao5_at(&self, solve_index: usize) -> Option<String> {
+    pub fn ao5_at(&self, solve_index: usize) -> Option<Cow<'static, str>> {
         self.get_ao5(solve_index + 1)
             .map(Self::format_average_value)
     }

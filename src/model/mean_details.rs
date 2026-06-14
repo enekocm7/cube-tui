@@ -138,7 +138,10 @@ impl Model {
     }
 
     const fn mean_detail_from_stats_column(&self) -> bool {
-        if let Screen::MeanDetail { from_stats_column, .. } = &self.screen {
+        if let Screen::MeanDetail {
+            from_stats_column, ..
+        } = &self.screen
+        {
             *from_stats_column
         } else {
             false

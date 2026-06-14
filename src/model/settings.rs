@@ -29,11 +29,11 @@ impl Settings {
     pub const fn history(&self) -> bool {
         self.display.history
     }
-    
+
     pub const fn stats(&self) -> bool {
         self.display.stats
     }
-    
+
     pub const fn scramble(&self) -> bool {
         self.display.scramble
     }
@@ -160,7 +160,7 @@ impl Default for DisplaySettings {
         Self {
             history: true,
             scramble: true,
-            stats: true
+            stats: true,
         }
     }
 }

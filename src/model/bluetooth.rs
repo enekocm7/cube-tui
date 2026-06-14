@@ -1,8 +1,11 @@
+use std::borrow::Cow;
+use std::time::Instant;
+
+use btleplug::platform::PeripheralId;
+
 use crate::bluetooth::{BtTimerState, DeviceInfo};
 use crate::model::Model;
 use crate::model::session::TimerState;
-use btleplug::platform::PeripheralId;
-use std::time::Instant;
 
 pub type BluetoothConnection = (
     flume::Sender<BtTimerState>,
@@ -12,8 +15,8 @@ pub type BluetoothConnection = (
 
 #[derive(Debug)]
 pub enum BluetoothEvent {
-    Status(String),
-    Error(String),
+    Status(Cow<'static, str>),
+    Error(Cow<'static, str>),
     Device(DeviceInfo),
     Adapter(btleplug::platform::Adapter),
 }
@@ -32,7 +35,7 @@ pub struct BluetoothState {
     pub screen_state: BluetoothScreenState,
     pub selected_index: usize,
     pub devices: Vec<DeviceInfo>,
-    pub status: Option<String>,
+    pub status: Option<Cow<'static, str>>,
     pub rx: Option<flume::Receiver<BluetoothEvent>>,
     pub timer_rx: Option<flume::Receiver<BtTimerState>>,
     pub connected_rx: Option<flume::Receiver<()>>,
@@ -56,14 +59,14 @@ impl Model {
                     .connected_device_name
                     .as_deref()
                     .unwrap_or("device");
-                self.bluetooth_state.status = Some(format!("✓ Connected to {name}"));
+                self.bluetooth_state.status = Some(Cow::Owned(format!("✓ Connected to {name}")));
                 self.bluetooth_state.rx = None;
                 return None;
             }
 
             self.bluetooth_state.selected_index = 0;
             self.bluetooth_state.devices.clear();
-            self.bluetooth_state.status = Some("Starting scan...".to_string());
+            self.bluetooth_state.status = Some(Cow::Borrowed("Starting scan..."));
             let (tx, rx) = flume::unbounded();
             self.bluetooth_state.rx = Some(rx);
             self.bluetooth_state.screen_state = BluetoothScreenState::Searching;
@@ -104,16 +107,16 @@ impl Model {
                 BluetoothEvent::Error(error) => {
                     if error.contains("No Bluetooth adapters found") {
                         self.bluetooth_state.status =
-                            Some("⚠ No Bluetooth adapters found".to_string());
+                            Some(Cow::Borrowed("⚠ No Bluetooth adapters found"));
                     } else {
-                        self.bluetooth_state.status = Some(format!("Error: {error}"));
+                        self.bluetooth_state.status = Some(Cow::Owned(format!("Error: {error}")));
                     }
                 }
                 BluetoothEvent::Device(device) => {
                     self.upsert_bluetooth_device(device);
                     let count = self.bluetooth_state.devices.len();
                     self.bluetooth_state.status =
-                        Some(format!("Scanning... ({count} device(s) found)"));
+                        Some(Cow::Owned(format!("Scanning... ({count} device(s) found)")));
                 }
                 BluetoothEvent::Adapter(adapter) => {
                     self.bluetooth_state.adapter = Some(adapter);
@@ -197,7 +200,7 @@ impl Model {
         self.bluetooth_state.connected_rx = Some(conn_rx);
         self.bluetooth_state.connected_device_name = device_name;
         self.bluetooth_state.screen_state = BluetoothScreenState::Connecting;
-        self.bluetooth_state.status = Some("Connecting...".to_string());
+        self.bluetooth_state.status = Some(Cow::Borrowed("Connecting..."));
         self.bluetooth_state.rx = None;
         Some((tx, adapter, conn_tx))
     }
@@ -213,7 +216,7 @@ impl Model {
                 .connected_device_name
                 .as_deref()
                 .unwrap_or("device");
-            self.bluetooth_state.status = Some(format!("✓ Connected to {name}"));
+            self.bluetooth_state.status = Some(Cow::Owned(format!("✓ Connected to {name}")));
             self.bluetooth_state.connected_rx = None;
         }
 
@@ -243,7 +246,7 @@ impl Model {
                 BtTimerState::Finished(time_ms) => {
                     self.get_current_session_mut().last_time_ms = time_ms;
                     let event = self.event();
-                    let scramble = self.scramble().to_string();
+                    let scramble = self.take_scramble();
                     self.history_mut().add_ms(time_ms, event, scramble);
                     self.get_current_session_mut().timer_state = TimerState::Idle;
                     self.next_scramble();
@@ -254,7 +257,7 @@ impl Model {
                     break;
                 }
                 BtTimerState::Error(err) => {
-                    self.bluetooth_state.status = Some(format!("Error: {err}"));
+                    self.bluetooth_state.status = Some(Cow::Owned(format!("Error: {err}")));
                     disconnected = true;
                     break;
                 }
@@ -314,7 +317,7 @@ impl Model {
             self.bluetooth_state.screen_state = BluetoothScreenState::Searching;
             self.bluetooth_state.selected_index = 0;
             self.bluetooth_state.devices.clear();
-            self.bluetooth_state.status = Some("Starting scan...".to_string());
+            self.bluetooth_state.status = Some(Cow::Borrowed("Starting scan..."));
             let (tx, rx) = flume::unbounded();
             self.bluetooth_state.rx = Some(rx.clone());
             let adapter = self.bluetooth_state.adapter.clone()?;

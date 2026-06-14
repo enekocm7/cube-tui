@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
@@ -38,7 +40,7 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
         BluetoothWidget::new(
             model.bluetooth_devices().to_vec(),
             model.bluetooth_selected_index(),
-            model.bluetooth_status().map(str::to_string),
+            model.bluetooth_status(),
             model.connected_device_id(),
         )
         .render_with_theme(layout[0], buf, &theme);
@@ -325,7 +327,7 @@ const fn inner_area(area: Rect) -> Rect {
     )
 }
 
-fn timer_display(model: &Model) -> (String, Style) {
+fn timer_display(model: &Model) -> (Cow<'static, str>, Style) {
     let theme = model.settings().theme();
     let style = match model.timer_state() {
         TimerState::Idle => Style::default().fg(theme.text()),
@@ -345,7 +347,7 @@ fn timer_display(model: &Model) -> (String, Style) {
         TimerState::Inspection(_) => {
             let elapsed_ms = model.elapsed_ms();
             let remaining_ms = 15_000_u64.saturating_sub(elapsed_ms);
-            format!("Inspect: {}", format_elapsed(remaining_ms))
+            Cow::Owned(format!("Inspect: {}", format_elapsed(remaining_ms)))
         }
         _ => format_elapsed(model.elapsed_ms()),
     };

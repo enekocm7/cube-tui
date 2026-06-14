@@ -116,7 +116,7 @@ pub fn import(path: &Path) -> anyhow::Result<Vec<History>> {
                 let time = Time::new_with_meta(
                     solve.time_ms,
                     event,
-                    solve.scramble,
+                    solve.scramble.into(),
                     solved_at_ms,
                     modifier,
                 );

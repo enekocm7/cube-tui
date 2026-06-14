@@ -8,18 +8,18 @@ use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 
 use crate::model::settings::ThemeSettings;
 
-pub struct BluetoothWidget {
+pub struct BluetoothWidget<'a> {
     devices: Vec<DeviceInfo>,
     selected_index: usize,
-    status: Option<String>,
+    status: Option<&'a str>,
     connected_device_id: Option<btleplug::platform::PeripheralId>,
 }
 
-impl BluetoothWidget {
+impl<'a> BluetoothWidget<'a> {
     pub const fn new(
         devices: Vec<DeviceInfo>,
         selected_index: usize,
-        status: Option<String>,
+        status: Option<&'a str>,
         connected_device_id: Option<btleplug::platform::PeripheralId>,
     ) -> Self {
         Self {
@@ -38,7 +38,7 @@ impl BluetoothWidget {
             .border_style(Style::default().fg(theme.border()));
 
         let mut lines: Vec<Line> = Vec::new();
-        if let Some(ref status) = self.status {
+        if let Some(status) = self.status {
             let color = if status.contains("✓") {
                 Color::Green
             } else if status.contains("⚠") || status.contains("Error") {
@@ -46,10 +46,7 @@ impl BluetoothWidget {
             } else {
                 Color::Yellow
             };
-            lines.push(Line::from(Span::styled(
-                status.clone(),
-                Style::default().fg(color),
-            )));
+            lines.push(Line::from(Span::styled(status, Style::default().fg(color))));
             lines.push(Line::from(""));
         }
 

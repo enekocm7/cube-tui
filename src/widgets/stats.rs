@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::model::settings::ThemeSettings;
 use crate::widgets::history::History;
 use ratatui::buffer::Buffer;
@@ -29,16 +31,17 @@ impl StatsWidget {
         self
     }
 
-    fn fixed_cell(value: String) -> String {
+    fn fixed_cell(value: Cow<'static, str>) -> Cow<'static, str> {
         const CELL_WIDTH: usize = 10;
 
-        let normalized = if value.starts_with("DNF(") {
-            "DNF".to_string()
-        } else {
-            value
-        };
+        if value.starts_with("DNF(") {
+            return Cow::Borrowed("DNF");
+        }
+        if value.chars().count() <= CELL_WIDTH {
+            return value;
+        }
 
-        normalized.chars().take(CELL_WIDTH).collect()
+        Cow::Owned(value.chars().take(CELL_WIDTH).collect())
     }
 
     pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
@@ -50,27 +53,15 @@ impl StatsWidget {
         let best_time = self
             .history
             .get_fastest_time()
-            .map_or_else(|| "-".to_string(), ToString::to_string);
+            .map_or_else(|| Cow::Borrowed("-"), |t| Cow::Owned(t.to_string()));
         let current_time = self
             .history
             .get_latest_time()
-            .map_or_else(|| "-".to_string(), ToString::to_string);
-        let best_mo3 = self
-            .history
-            .get_fastest_mo3()
-            .unwrap_or_else(|| "-".to_string());
-        let current_mo3 = self
-            .history
-            .get_latest_mo3()
-            .unwrap_or_else(|| "-".to_string());
-        let best_ao5 = self
-            .history
-            .get_fastest_ao5()
-            .unwrap_or_else(|| "-".to_string());
-        let current_ao5 = self
-            .history
-            .get_latest_ao5()
-            .unwrap_or_else(|| "-".to_string());
+            .map_or_else(|| Cow::Borrowed("-"), |t| Cow::Owned(t.to_string()));
+        let best_mo3 = self.history.get_fastest_mo3().unwrap_or(Cow::Borrowed("-"));
+        let current_mo3 = self.history.get_latest_mo3().unwrap_or(Cow::Borrowed("-"));
+        let best_ao5 = self.history.get_fastest_ao5().unwrap_or(Cow::Borrowed("-"));
+        let current_ao5 = self.history.get_latest_ao5().unwrap_or(Cow::Borrowed("-"));
 
         let best_time = Self::fixed_cell(best_time);
         let current_time = Self::fixed_cell(current_time);
@@ -82,44 +73,45 @@ impl StatsWidget {
         let selected_row = self.selected_row;
         let selected_col = self.selected_col;
 
-        let row_line = |label: &str, current: String, best: String, row: usize| {
-            let current_selected = selected_row == Some(row) && selected_col == Some(0);
-            let best_selected = selected_row == Some(row) && selected_col == Some(1);
+        let row_line =
+            |label: &str, current: Cow<'static, str>, best: Cow<'static, str>, row: usize| {
+                let current_selected = selected_row == Some(row) && selected_col == Some(0);
+                let best_selected = selected_row == Some(row) && selected_col == Some(1);
 
-            let mut spans = vec![Span::styled(
-                format!("{label:8}"),
-                Style::default().fg(theme.text()),
-            )];
-            if current_selected {
-                spans.push(Span::styled(
-                    format!("{current:>10}"),
-                    Style::default()
-                        .bg(theme.selection())
-                        .fg(theme.selection_text()),
-                ));
-            } else {
-                spans.push(Span::styled(
-                    format!("{current:>10}"),
+                let mut spans = vec![Span::styled(
+                    format!("{label:8}"),
                     Style::default().fg(theme.text()),
-                ));
-            }
+                )];
+                if current_selected {
+                    spans.push(Span::styled(
+                        format!("{current:>10}"),
+                        Style::default()
+                            .bg(theme.selection())
+                            .fg(theme.selection_text()),
+                    ));
+                } else {
+                    spans.push(Span::styled(
+                        format!("{current:>10}"),
+                        Style::default().fg(theme.text()),
+                    ));
+                }
 
-            if best_selected {
-                spans.push(Span::styled(
-                    format!("{best:>10}"),
-                    Style::default()
-                        .bg(theme.selection())
-                        .fg(theme.selection_text()),
-                ));
-            } else {
-                spans.push(Span::styled(
-                    format!("{best:>10}"),
-                    Style::default().fg(theme.text()),
-                ));
-            }
+                if best_selected {
+                    spans.push(Span::styled(
+                        format!("{best:>10}"),
+                        Style::default()
+                            .bg(theme.selection())
+                            .fg(theme.selection_text()),
+                    ));
+                } else {
+                    spans.push(Span::styled(
+                        format!("{best:>10}"),
+                        Style::default().fg(theme.text()),
+                    ));
+                }
 
-            Line::from(spans)
-        };
+                Line::from(spans)
+            };
 
         let text = vec![
             Line::from(Span::styled(

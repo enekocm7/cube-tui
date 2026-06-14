@@ -13,7 +13,7 @@ pub enum BtTimerState {
     Idle,
     HandsOn,
     Finished(u64),
-    Error(String),
+    Error(std::borrow::Cow<'static, str>),
 }
 
 #[cfg(feature = "bluetooth")]

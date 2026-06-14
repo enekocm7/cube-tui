@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Modifier, Style};
@@ -16,7 +18,7 @@ pub enum MeanType {
 pub struct MeanDetailWidget {
     mean_type: MeanType,
     solve_index: usize,
-    mean_value: String,
+    mean_value: Cow<'static, str>,
     times: Vec<(usize, Time)>,
     selected_index: usize,
 }
@@ -24,9 +26,7 @@ pub struct MeanDetailWidget {
 impl MeanDetailWidget {
     pub fn new(history: &History, solve_index: usize, col: usize, selected_index: usize) -> Self {
         let (mean_type, mean_value, times) = if col == 0 {
-            let val = history
-                .mo3_at(solve_index)
-                .unwrap_or_else(|| "-".to_string());
+            let val = history.mo3_at(solve_index).unwrap_or(Cow::Borrowed("-"));
             let ts = history
                 .mo3_times_at(solve_index)
                 .map_or_else(Vec::new, |slice| {
@@ -39,9 +39,7 @@ impl MeanDetailWidget {
                 });
             (MeanType::Mo3, val, ts)
         } else {
-            let val = history
-                .ao5_at(solve_index)
-                .unwrap_or_else(|| "-".to_string());
+            let val = history.ao5_at(solve_index).unwrap_or(Cow::Borrowed("-"));
             let ts = history
                 .ao5_times_at(solve_index)
                 .map_or_else(Vec::new, |slice| {
@@ -91,7 +89,7 @@ impl MeanDetailWidget {
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
-                self.mean_value.clone(),
+                self.mean_value,
                 Style::default()
                     .fg(theme.text())
                     .add_modifier(Modifier::BOLD),

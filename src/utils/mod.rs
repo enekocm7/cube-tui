@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 pub fn get_scramble_lines(scramble: &str, width: u16) -> u16 {
     //10 is the padding (5 on each side) so the max chars are width - 10
     let chars_per_line = width as usize - 10;
@@ -11,10 +13,13 @@ pub fn print_as_link(path: &std::path::Path) {
     println!("\x1b]8;;{url}\x1b\\{display}\x1b]8;;\x1b\\");
 }
 
-pub fn format_elapsed(ms: u64) -> String {
+pub fn format_elapsed(ms: u64) -> Cow<'static, str> {
+    if ms == 0 {
+        return Cow::Borrowed("00:00.000");
+    }
     let total_seconds = ms / 1000;
     let minutes = total_seconds / 60;
     let seconds = total_seconds % 60;
     let millis = ms % 1000;
-    format!("{minutes:02}:{seconds:02}.{millis:03}")
+    Cow::Owned(format!("{minutes:02}:{seconds:02}.{millis:03}"))
 }

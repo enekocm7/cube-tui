@@ -1,6 +1,7 @@
 use rand::RngExt;
 use rand::prelude::IndexedRandom;
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::fmt;
 
 #[cfg(feature = "wca-scrambles")]
@@ -182,16 +183,26 @@ impl fmt::Display for Modifier {
 }
 
 pub struct Scramble {
-    text: String,
+    text: Cow<'static, str>,
 }
 
 impl Scramble {
-    pub const fn new(text: String) -> Self {
-        Self { text }
+    pub const fn new_borrowed(text: &'static str) -> Self {
+        Self {
+            text: Cow::Borrowed(text),
+        }
+    }
+
+    pub fn new(text: impl Into<Cow<'static, str>>) -> Self {
+        Self { text: text.into() }
     }
 
     pub fn as_str(&self) -> &str {
         &self.text
+    }
+
+    pub fn into_text(self) -> Cow<'static, str> {
+        self.text
     }
 }
 

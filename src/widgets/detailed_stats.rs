@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
@@ -69,15 +71,9 @@ impl DetailedStatsWidget {
             let time_str = self
                 .history
                 .get_time_at(solve_idx)
-                .map_or_else(|| "-".to_string(), ToString::to_string);
-            let mo3_str = self
-                .history
-                .mo3_at(solve_idx)
-                .unwrap_or_else(|| "-".to_string());
-            let ao5_str = self
-                .history
-                .ao5_at(solve_idx)
-                .unwrap_or_else(|| "-".to_string());
+                .map_or_else(|| Cow::Borrowed("-"), |t| Cow::Owned(t.to_string()));
+            let mo3_str = self.history.mo3_at(solve_idx).unwrap_or(Cow::Borrowed("-"));
+            let ao5_str = self.history.ao5_at(solve_idx).unwrap_or(Cow::Borrowed("-"));
 
             let is_selected = solve_idx == self.selected_row;
 
@@ -135,11 +131,7 @@ impl DetailedStatsWidget {
     }
 }
 
-fn row_style(
-    is_row_selected: bool,
-    is_cell_highlighted: bool,
-    theme: &ThemeSettings,
-) -> Style {
+fn row_style(is_row_selected: bool, is_cell_highlighted: bool, theme: &ThemeSettings) -> Style {
     if is_cell_highlighted {
         Style::default()
             .bg(Color::Yellow)

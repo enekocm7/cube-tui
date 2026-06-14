@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::model::settings::Settings;
 use crate::scramble::WcaEvent;
 use crate::widgets::history::History;
@@ -161,6 +163,14 @@ impl Model {
             .as_ref()
             .expect("active session should have a scramble")
             .as_str()
+    }
+
+    pub fn take_scramble(&mut self) -> Cow<'static, str> {
+        self.get_current_session_mut()
+            .scramble
+            .take()
+            .expect("active session should have a scramble")
+            .into_text()
     }
 
     pub fn event(&self) -> WcaEvent {
