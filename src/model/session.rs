@@ -94,6 +94,12 @@ impl Session {
     }
 }
 
+impl Default for Session {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct SessionState {
     pub sessions: Vec<Session>,
     pub current_session_index: usize,
@@ -105,6 +111,12 @@ impl SessionState {
             sessions: vec![Session::new()],
             current_session_index: 0,
         }
+    }
+}
+
+impl Default for SessionState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -121,11 +133,11 @@ impl Model {
         self.session_state.sessions.len() >= MAX_SESSIONS
     }
 
-    pub fn get_current_session(&self) -> &Session {
+    pub fn current_session(&self) -> &Session {
         &self.session_state.sessions[self.session_state.current_session_index]
     }
 
-    pub fn get_current_session_mut(&mut self) -> &mut Session {
+    pub fn current_session_mut(&mut self) -> &mut Session {
         &mut self.session_state.sessions[self.session_state.current_session_index]
     }
 

@@ -1,5 +1,8 @@
 use std::borrow::Cow;
 
+#[cfg(any(feature = "bluetooth", feature = "dashboard"))]
+pub mod runtime;
+
 pub fn get_scramble_lines(scramble: &str, width: u16) -> u16 {
     //10 is the padding (5 on each side) so the max chars are width - 10
     let chars_per_line = width as usize - 10;

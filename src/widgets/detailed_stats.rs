@@ -8,14 +8,14 @@ use ratatui::widgets::{Block, Borders, Widget};
 use crate::model::settings::ThemeSettings;
 use crate::widgets::history::History;
 
-pub struct DetailedStatsWidget {
-    history: History,
+pub struct DetailedStatsWidget<'a> {
+    history: &'a History,
     selected_row: usize,
     selected_col: usize,
 }
 
-impl DetailedStatsWidget {
-    pub const fn new(history: History, selected_row: usize, selected_col: usize) -> Self {
+impl<'a> DetailedStatsWidget<'a> {
+    pub const fn new(history: &'a History, selected_row: usize, selected_col: usize) -> Self {
         Self {
             history,
             selected_row,
@@ -23,7 +23,7 @@ impl DetailedStatsWidget {
         }
     }
 
-    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
         let block = Block::default()
             .title("Detailed Stats (Enter: view mean, ←/→: mo3/ao5, Esc: back)")
             .borders(Borders::ALL)

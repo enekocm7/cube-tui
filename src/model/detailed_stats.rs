@@ -18,16 +18,14 @@ impl Model {
 
     pub const fn detailed_stats_row(&self) -> usize {
         match &self.screen {
-            Screen::DetailedStats { row, .. } => *row,
-            Screen::MeanDetail { row, .. } => *row,
+            Screen::DetailedStats { row, .. } | Screen::MeanDetail { row, .. } => *row,
             _ => 0,
         }
     }
 
     pub const fn detailed_stats_col(&self) -> usize {
         match &self.screen {
-            Screen::DetailedStats { col, .. } => *col,
-            Screen::MeanDetail { col, .. } => *col,
+            Screen::DetailedStats { col, .. } | Screen::MeanDetail { col, .. } => *col,
             _ => 0,
         }
     }

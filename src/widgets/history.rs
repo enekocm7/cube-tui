@@ -146,12 +146,6 @@ pub struct History {
     times: Vec<Time>,
     #[serde(skip)]
     pub selected: Option<usize>,
-    #[serde(skip, default = "default_highlight_selection")]
-    highlight_selection: bool,
-}
-
-const fn default_highlight_selection() -> bool {
-    true
 }
 
 impl History {
@@ -159,13 +153,7 @@ impl History {
         Self {
             times: Vec::new(),
             selected: None,
-            highlight_selection: true,
         }
-    }
-
-    pub const fn without_selection_highlight(mut self) -> Self {
-        self.highlight_selection = false;
-        self
     }
 
     pub fn add_ms(
@@ -264,21 +252,31 @@ impl History {
 
     pub fn get_fastest_mo3(&self) -> Option<Cow<'static, str>> {
         let mut fastest = u64::MAX;
-        let mut has_enough_solves_for_average = false;
-        for i in 3..=self.times.len() {
-            let Some(mo3) = self.get_mo3(i) else {
-                continue;
-            };
-            has_enough_solves_for_average = true;
-            if let AverageValue::Time(value) = mo3 {
-                fastest = fastest.min(value);
+        let mut any_valid = false;
+        let mut any_computable = false;
+
+        for window in self.times.windows(3) {
+            any_computable = true;
+            let mut sum: u64 = 0;
+            let mut all_valid = true;
+            for t in window {
+                if let Some(v) = t.effective_ms() {
+                    sum += v;
+                } else {
+                    all_valid = false;
+                    break;
+                }
+            }
+            if all_valid {
+                any_valid = true;
+                fastest = fastest.min(sum / 3);
             }
         }
 
-        if fastest != u64::MAX {
+        if any_valid {
             return Some(Cow::Owned(format_millis(fastest)));
         }
-        if has_enough_solves_for_average {
+        if any_computable {
             return Some(Cow::Borrowed("DNF"));
         }
         None
@@ -291,21 +289,35 @@ impl History {
 
     pub fn get_fastest_ao5(&self) -> Option<Cow<'static, str>> {
         let mut fastest = u64::MAX;
-        let mut has_enough_solves_for_average = false;
-        for i in 5..=self.times.len() {
-            let Some(ao5) = self.get_ao5(i) else {
-                continue;
-            };
-            has_enough_solves_for_average = true;
-            if let AverageValue::Time(value) = ao5 {
-                fastest = fastest.min(value);
+        let mut any_valid = false;
+        let mut any_computable = false;
+
+        for window in self.times.windows(5) {
+            any_computable = true;
+            let mut vals: [Option<u64>; 5] = [None; 5];
+            for (i, t) in window.iter().enumerate() {
+                vals[i] = t.effective_ms();
             }
+            let dnf_count = vals.iter().filter(|v| v.is_none()).count();
+            if dnf_count >= 2 {
+                continue;
+            }
+
+            let trimmed_sum: u64 = if dnf_count == 1 {
+                vals.iter().flatten().skip(1).sum()
+            } else {
+                let mut sorted: [u64; 5] = vals.map(Option::unwrap);
+                sorted.sort_unstable();
+                sorted[1..4].iter().sum()
+            };
+            any_valid = true;
+            fastest = fastest.min(trimmed_sum / 3);
         }
 
-        if fastest != u64::MAX {
+        if any_valid {
             return Some(Cow::Owned(format_millis(fastest)));
         }
-        if has_enough_solves_for_average {
+        if any_computable {
             return Some(Cow::Borrowed("DNF"));
         }
         None
@@ -318,7 +330,7 @@ impl History {
 
         let times = self.times.get(index.saturating_sub(3)..index)?;
 
-        let mut sum = 0;
+        let mut sum: u64 = 0;
         for time in times {
             let Some(value) = Self::effective_millis(time) else {
                 return Some(AverageValue::Dnf);
@@ -334,27 +346,27 @@ impl History {
             return None;
         }
 
-        let attempts: Vec<Option<u64>> = self
-            .times
-            .get(index.saturating_sub(5)..index)?
-            .iter()
-            .map(Self::effective_millis)
-            .collect();
-
-        let dnf_count = attempts.iter().filter(|attempt| attempt.is_none()).count();
+        let attempts = self.times.get(index.saturating_sub(5)..index)?;
+        let mut vals: [Option<u64>; 5] = [None; 5];
+        let mut dnf_count = 0;
+        for (i, t) in attempts.iter().enumerate() {
+            vals[i] = Self::effective_millis(t);
+            if vals[i].is_none() {
+                dnf_count += 1;
+            }
+        }
         if dnf_count >= 2 {
             return Some(AverageValue::Dnf);
         }
 
-        let mut valid: Vec<u64> = attempts.iter().flatten().copied().collect();
-        valid.sort_unstable();
-
         if dnf_count == 1 {
-            let trimmed_sum: u64 = valid.iter().skip(1).sum();
+            let trimmed_sum: u64 = vals.iter().flatten().skip(1).sum();
             return Some(AverageValue::Time(trimmed_sum / 3));
         }
 
-        let trimmed_sum: u64 = valid[1..4].iter().sum();
+        let mut sorted: [u64; 5] = vals.map(Option::unwrap);
+        sorted.sort_unstable();
+        let trimmed_sum: u64 = sorted[1..4].iter().sum();
         Some(AverageValue::Time(trimmed_sum / 3))
     }
 
@@ -392,16 +404,16 @@ impl History {
     }
 
     pub fn latest_mo3_index(&self) -> Option<usize> {
-        if self.get_mo3(self.times.len()).is_some() {
-            Some(self.times.len().saturating_sub(1))
+        if self.times.len() >= 3 {
+            Some(self.times.len() - 1)
         } else {
             None
         }
     }
 
     pub fn latest_ao5_index(&self) -> Option<usize> {
-        if self.get_ao5(self.times.len()).is_some() {
-            Some(self.times.len().saturating_sub(1))
+        if self.times.len() >= 5 {
+            Some(self.times.len() - 1)
         } else {
             None
         }
@@ -454,7 +466,14 @@ impl History {
         self.times.get(solve_index - 4..=solve_index)
     }
 
-    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render_with_theme(
+        &self,
+        area: Rect,
+        buf: &mut Buffer,
+        theme: &ThemeSettings,
+        highlight: Option<bool>,
+    ) {
+        let highlight = highlight.unwrap_or(true);
         let total = self.times.len();
         let height = area.height as usize;
         let selected = self.selected.unwrap_or(0);
@@ -475,7 +494,7 @@ impl History {
             let Ok(row_offset) = u16::try_from(display_row) else {
                 break;
             };
-            let style = if self.highlight_selection && self.selected.is_some() && i == selected {
+            let style = if highlight && self.selected.is_some() && i == selected {
                 ratatui::style::Style::default()
                     .bg(theme.selection())
                     .fg(theme.selection_text())
@@ -499,5 +518,159 @@ impl History {
                 ratatui::style::Style::default().fg(ratatui::style::Color::DarkGray),
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scramble::WcaEvent::Cube3x3;
+
+    fn time_with_ms(ms: u64) -> Time {
+        Time::new_with_meta(ms, Cube3x3, Cow::Borrowed(""), 0, Modifier::None)
+    }
+
+    fn time_with_modifier(ms: u64, modifier: Modifier) -> Time {
+        Time::new_with_meta(ms, Cube3x3, Cow::Borrowed(""), 0, modifier)
+    }
+
+    fn history(times: Vec<Time>) -> History {
+        let mut h = History::new();
+        for t in times {
+            h.add(t);
+        }
+        h
+    }
+
+    #[test]
+    fn fastest_mo3_returns_smallest_window_sum() {
+        let h = history(vec![
+            time_with_ms(10_000),
+            time_with_ms(9_000),
+            time_with_ms(8_000),
+            time_with_ms(5_000),
+        ]);
+        // Window sums: 27_000, 22_000
+        // 27_000/3 = 9_000, 22_000/3 = 7_333
+        assert_eq!(h.get_fastest_mo3().unwrap(), "00:07.333");
+    }
+
+    #[test]
+    fn fastest_mo3_dnf_when_all_dnf() {
+        let h = history(vec![
+            time_with_modifier(10_000, Modifier::DNF),
+            time_with_modifier(9_000, Modifier::DNF),
+            time_with_modifier(8_000, Modifier::DNF),
+        ]);
+        assert_eq!(h.get_fastest_mo3().unwrap(), "DNF");
+    }
+
+    #[test]
+    fn fastest_mo3_none_when_too_few_solves() {
+        let h = history(vec![time_with_ms(10_000), time_with_ms(9_000)]);
+        assert!(h.get_fastest_mo3().is_none());
+    }
+
+    #[test]
+    fn fastest_ao5_drops_best_and_worst() {
+        // Window: 1, 2, 3, 4, 5 (in 100ms units)
+        let h = history(vec![
+            time_with_ms(100),
+            time_with_ms(200),
+            time_with_ms(300),
+            time_with_ms(400),
+            time_with_ms(500),
+        ]);
+        // trimmed sum: 200 + 300 + 400 = 900, / 3 = 300
+        assert_eq!(h.get_fastest_ao5().unwrap(), "00:00.300");
+    }
+
+    #[test]
+    fn fastest_ao5_handles_one_dnf() {
+        let h = history(vec![
+            time_with_ms(100),
+            time_with_ms(200),
+            time_with_modifier(300, Modifier::DNF),
+            time_with_ms(400),
+            time_with_ms(500),
+        ]);
+        // drop DNF, then drop best (100) => 200 + 400 + 500 = 1100 / 3 = 366
+        assert_eq!(h.get_fastest_ao5().unwrap(), "00:00.366");
+    }
+
+    #[test]
+    fn fastest_ao5_dnf_when_two_dnfs() {
+        let h = history(vec![
+            time_with_modifier(100, Modifier::DNF),
+            time_with_ms(200),
+            time_with_modifier(300, Modifier::DNF),
+            time_with_ms(400),
+            time_with_ms(500),
+        ]);
+        assert_eq!(h.get_fastest_ao5().unwrap(), "DNF");
+    }
+
+    #[test]
+    fn latest_mo3_requires_three_solves() {
+        assert!(history(vec![]).latest_mo3_index().is_none());
+        assert!(history(vec![time_with_ms(1)]).latest_mo3_index().is_none());
+        assert!(
+            history(vec![time_with_ms(1), time_with_ms(2)])
+                .latest_mo3_index()
+                .is_none()
+        );
+        assert_eq!(
+            history(vec![time_with_ms(1), time_with_ms(2), time_with_ms(3)]).latest_mo3_index(),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn latest_ao5_requires_five_solves() {
+        assert!(
+            history(vec![time_with_ms(1); 4])
+                .latest_ao5_index()
+                .is_none()
+        );
+        assert_eq!(
+            history(vec![time_with_ms(1); 5]).latest_ao5_index(),
+            Some(4)
+        );
+    }
+
+    #[test]
+    fn mo3_times_at_returns_correct_slice() {
+        let h = history(vec![
+            time_with_ms(1),
+            time_with_ms(2),
+            time_with_ms(3),
+            time_with_ms(4),
+            time_with_ms(5),
+        ]);
+        // mo3_at(3) uses indices 1..=3 (raw_ms 2, 3, 4)
+        let times = h.mo3_times_at(3).unwrap();
+        assert_eq!(times.len(), 3);
+        assert_eq!(times[0].raw_ms(), 2);
+        assert_eq!(times[2].raw_ms(), 4);
+    }
+
+    #[test]
+    fn ao5_times_at_returns_correct_slice() {
+        let h = history(vec![time_with_ms(1), time_with_ms(2), time_with_ms(3)]);
+        // ao5 at index 2 -> 5 is required
+        assert!(h.ao5_times_at(2).is_none());
+        let h = history(vec![
+            time_with_ms(1),
+            time_with_ms(2),
+            time_with_ms(3),
+            time_with_ms(4),
+            time_with_ms(5),
+            time_with_ms(6),
+        ]);
+        // ao5_at(4) uses indices 0..=4 (raw_ms 1..=5)
+        let times = h.ao5_times_at(4).unwrap();
+        assert_eq!(times.len(), 5);
+        assert_eq!(times[0].raw_ms(), 1);
+        assert_eq!(times[4].raw_ms(), 5);
     }
 }

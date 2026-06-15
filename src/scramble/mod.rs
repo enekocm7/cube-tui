@@ -187,12 +187,6 @@ pub struct Scramble {
 }
 
 impl Scramble {
-    pub const fn new_borrowed(text: &'static str) -> Self {
-        Self {
-            text: Cow::Borrowed(text),
-        }
-    }
-
     pub fn new(text: impl Into<Cow<'static, str>>) -> Self {
         Self { text: text.into() }
     }
@@ -200,15 +194,17 @@ impl Scramble {
     pub fn as_str(&self) -> &str {
         &self.text
     }
-
-    pub fn into_text(self) -> Cow<'static, str> {
-        self.text
-    }
 }
 
 impl fmt::Display for Scramble {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.text)
+    }
+}
+
+impl From<Scramble> for Cow<'static, str> {
+    fn from(scramble: Scramble) -> Self {
+        scramble.text
     }
 }
 

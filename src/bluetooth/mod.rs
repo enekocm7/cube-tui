@@ -1,6 +1,4 @@
 #[cfg(feature = "bluetooth")]
-pub mod runtime;
-#[cfg(feature = "bluetooth")]
 pub mod timer;
 
 #[cfg(feature = "bluetooth")]

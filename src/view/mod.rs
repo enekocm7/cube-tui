@@ -79,7 +79,7 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
             model.detailed_stats_col(),
             model.mean_detail_selected_index(),
         );
-        widget.render_with_theme(layout[0], buf, &theme);
+        widget.render(layout[0], buf, &theme);
 
         let help_text = Line::from(vec![
             Span::styled("↑/↓: select time  ", Style::default().fg(theme.text())),
@@ -99,11 +99,11 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
             .split(area);
 
         DetailedStatsWidget::new(
-            model.history().clone(),
+            model.history(),
             model.detailed_stats_row(),
             model.detailed_stats_col(),
         )
-        .render_with_theme(layout[0], buf, &theme);
+        .render(layout[0], buf, &theme);
 
         let help_text = Line::from(vec![
             Span::styled("↑/↓: navigate  ", Style::default().fg(theme.text())),
@@ -188,8 +188,8 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
         .margin(1)
         .split(area);
 
-    let main_area_index = if show_scramble { 1 } else { 0 };
-    let help_area_index = if show_scramble { 2 } else { 1 };
+    let main_area_index = usize::from(show_scramble);
+    let help_area_index = main_area_index + 1;
 
     let mut main_constraints = Vec::new();
     let mut history_area_index = None;
@@ -238,18 +238,9 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
             .border_style(Style::default().fg(theme.border()));
         history_block.render(main_layout[index], buf);
         let history_area = inner_area(main_layout[index]);
-        if model.main_focus_is_stats() {
-            model
-                .history()
-                .clone()
-                .without_selection_highlight()
-                .render_with_theme(history_area, buf, &theme);
-        } else {
-            model
-                .history()
-                .clone()
-                .render_with_theme(history_area, buf, &theme);
-        }
+        let history = model.history();
+        let highlight = !model.main_focus_is_stats();
+        history.render_with_theme(history_area, buf, &theme, Some(highlight));
     }
 
     #[cfg(feature = "bluetooth")]
@@ -283,13 +274,13 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
         .render(main_layout[timer_area_index], buf);
 
     if let Some(index) = stats_area_index {
+        let history = model.history();
         let stats_widget = if model.main_focus_is_stats() {
-            StatsWidget::new(model.history().clone())
-                .with_selection(model.main_stats_row(), model.main_stats_col())
+            StatsWidget::new(history).with_selection(model.main_stats_row(), model.main_stats_col())
         } else {
-            StatsWidget::new(model.history().clone())
+            StatsWidget::new(history)
         };
-        stats_widget.render_with_theme(main_layout[index], buf, &theme);
+        stats_widget.render(main_layout[index], buf, &theme);
     }
 
     let mut help_spans = vec![

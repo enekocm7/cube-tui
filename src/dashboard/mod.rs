@@ -44,30 +44,43 @@ fn api_sessions() -> Response {
 }
 
 #[cfg(feature = "dashboard")]
-pub fn run_dashboard(port: u16) {
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-    rt.block_on(async {
-        let app = Router::new()
-            .route("/api/sessions", get(|| async { api_sessions() }))
-            .route("/", get(|| async { serve_asset("index.html") }))
-            .route(
-                "/{*path}",
-                get(|Path(path): Path<String>| async move { serve_asset(&path) }),
-            );
-
-        let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
-        let url = format!("http://localhost:{port}");
-
-        println!("Dashboard running at {url}");
-
-        if let Err(e) = open::that(&url) {
-            eprintln!("Could not open browser automatically: {e}");
+pub fn run_dashboard(port: u16) -> ! {
+    let rt = crate::utils::runtime::runtime();
+    let result = rt.block_on(async move { run_dashboard_async(port).await });
+    match result {
+        Ok(()) => std::process::exit(0),
+        Err(err) => {
+            eprintln!("Dashboard error: {err}");
+            std::process::exit(1);
         }
+    }
+}
 
-        let listener = tokio::net::TcpListener::bind(addr)
-            .await
-            .expect("Failed to bind to address");
+#[cfg(feature = "dashboard")]
+async fn run_dashboard_async(port: u16) -> anyhow::Result<()> {
+    let app = Router::new()
+        .route("/api/sessions", get(|| async { api_sessions() }))
+        .route("/", get(|| async { serve_asset("index.html") }))
+        .route(
+            "/{*path}",
+            get(|Path(path): Path<String>| async move { serve_asset(&path) }),
+        );
 
-        axum::serve(listener, app).await.expect("Server error");
-    });
+    let addr = std::net::SocketAddr::from(([127, 0, 0, 1], port));
+    let url = format!("http://localhost:{port}");
+
+    println!("Dashboard running at {url}");
+
+    if let Err(e) = open::that(&url) {
+        eprintln!("Could not open browser automatically: {e}");
+    }
+
+    let listener = tokio::net::TcpListener::bind(addr)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to bind to address: {e}"))?;
+
+    axum::serve(listener, app)
+        .await
+        .map_err(|e| anyhow::anyhow!("Server error: {e}"))?;
+    Ok(())
 }

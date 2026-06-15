@@ -7,17 +7,15 @@ use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget};
-use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct StatsWidget {
-    history: History,
+pub struct StatsWidget<'a> {
+    history: &'a History,
     selected_row: Option<usize>,
     selected_col: Option<usize>,
 }
 
-impl StatsWidget {
-    pub const fn new(history: History) -> Self {
+impl<'a> StatsWidget<'a> {
+    pub const fn new(history: &'a History) -> Self {
         Self {
             history,
             selected_row: None,
@@ -44,7 +42,7 @@ impl StatsWidget {
         Cow::Owned(value.chars().take(CELL_WIDTH).collect())
     }
 
-    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
         let block = Block::default()
             .title("Stats")
             .borders(Borders::ALL)

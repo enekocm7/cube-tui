@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use crate::model::settings::Settings;
 use crate::scramble::WcaEvent;
 use crate::widgets::history::History;
@@ -98,23 +96,23 @@ impl Model {
     }
 
     pub fn reset_timer(&mut self) {
-        self.get_current_session_mut().reset_timer();
+        self.current_session_mut().reset_timer();
     }
 
     pub fn start_inspection(&mut self) {
-        self.get_current_session_mut().start_inspection();
+        self.current_session_mut().start_inspection();
     }
 
     pub fn start_timer(&mut self) {
-        self.get_current_session_mut().start_timer();
+        self.current_session_mut().start_timer();
     }
 
     pub fn stop_timer(&mut self) {
-        self.get_current_session_mut().stop_timer();
+        self.current_session_mut().stop_timer();
     }
 
     pub fn pulse_timer(&mut self) {
-        self.get_current_session_mut().pulse_timer();
+        self.current_session_mut().pulse_timer();
     }
 
     pub const fn toggle_inspection(&mut self) {
@@ -130,58 +128,59 @@ impl Model {
     }
 
     pub fn elapsed_ms(&self) -> u64 {
-        self.get_current_session().elapsed_ms()
+        self.current_session().elapsed_ms()
     }
 
     pub fn next_scramble(&mut self) {
-        self.get_current_session_mut().next_scramble();
+        self.current_session_mut().next_scramble();
+    }
+
+    pub fn record_solve(&mut self, time_ms: u64) {
+        let session = self.current_session_mut();
+        let event = session.event;
+        let scramble = session.scramble.take().expect("active session should have a scramble");
+        session.last_time_ms = time_ms;
+        session.history.add_ms(time_ms, event, scramble);
+        session.stop_timer();
     }
 
     pub fn next_event(&mut self) {
-        self.get_current_session_mut().next_event();
+        self.current_session_mut().next_event();
     }
 
     pub fn prev_event(&mut self) {
-        self.get_current_session_mut().prev_event();
+        self.current_session_mut().prev_event();
     }
 
     pub fn timer_state(&self) -> TimerState {
-        self.get_current_session().timer_state
+        self.current_session().timer_state
     }
 
     pub fn set_timer_state(&mut self, timer_state: TimerState) {
-        self.get_current_session_mut().timer_state = timer_state;
+        self.current_session_mut().timer_state = timer_state;
     }
 
     pub fn set_last_time_ms(&mut self, ms: u64) {
-        self.get_current_session_mut().last_time_ms = ms;
+        self.current_session_mut().last_time_ms = ms;
     }
 
     pub fn scramble(&self) -> &str {
-        self.get_current_session()
+        self.current_session()
             .scramble
             .as_ref()
             .expect("active session should have a scramble")
             .as_str()
     }
 
-    pub fn take_scramble(&mut self) -> Cow<'static, str> {
-        self.get_current_session_mut()
-            .scramble
-            .take()
-            .expect("active session should have a scramble")
-            .into_text()
-    }
-
     pub fn event(&self) -> WcaEvent {
-        self.get_current_session().event
+        self.current_session().event
     }
 
     pub fn history(&self) -> &History {
-        &self.get_current_session().history
+        &self.current_session().history
     }
 
     pub fn history_mut(&mut self) -> &mut History {
-        &mut self.get_current_session_mut().history
+        &mut self.current_session_mut().history
     }
 }

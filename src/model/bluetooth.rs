@@ -228,27 +228,22 @@ impl Model {
         while let Ok(bt_state) = rx.try_recv() {
             match bt_state {
                 BtTimerState::Idle | BtTimerState::GetSet | BtTimerState::HandsOn => {
-                    self.get_current_session_mut().timer_state =
+                    self.current_session_mut().timer_state =
                         if matches!(bt_state, BtTimerState::Idle) {
-                            self.get_current_session_mut().last_time_ms = 0;
+                            self.current_session_mut().last_time_ms = 0;
                             TimerState::Idle
                         } else {
                             TimerState::Pulsed
                         };
                 }
                 BtTimerState::HandsOff => {
-                    self.get_current_session_mut().timer_state = TimerState::Idle;
+                    self.current_session_mut().timer_state = TimerState::Idle;
                 }
                 BtTimerState::Running => {
-                    self.get_current_session_mut().timer_state =
-                        TimerState::Running(Instant::now());
+                    self.current_session_mut().timer_state = TimerState::Running(Instant::now());
                 }
                 BtTimerState::Finished(time_ms) => {
-                    self.get_current_session_mut().last_time_ms = time_ms;
-                    let event = self.event();
-                    let scramble = self.take_scramble();
-                    self.history_mut().add_ms(time_ms, event, scramble);
-                    self.get_current_session_mut().timer_state = TimerState::Idle;
+                    self.record_solve(time_ms);
                     self.next_scramble();
                     crate::persistence::save(self);
                 }

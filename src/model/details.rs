@@ -20,7 +20,6 @@ impl Model {
 
     pub fn close_current_screen(&mut self) {
         let new_screen = match &self.screen {
-            Screen::Main => Screen::Main,
             Screen::Details { return_to, .. } => match return_to {
                 DetailsReturn::Main => Screen::Main,
                 DetailsReturn::MeanDetail {
@@ -35,7 +34,7 @@ impl Model {
                     from_stats_column: *from_stats_column,
                 },
             },
-            Screen::DetailedStats { .. } => Screen::Main,
+            Screen::Main | Screen::DetailedStats { .. } => Screen::Main,
             Screen::MeanDetail {
                 row,
                 col,

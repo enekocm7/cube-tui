@@ -2,12 +2,12 @@
 use futures_util::StreamExt;
 
 #[cfg(feature = "bluetooth")]
-use crate::bluetooth::runtime::runtime;
-#[cfg(feature = "bluetooth")]
 use crate::model::bluetooth::BluetoothEvent;
 use crate::model::{InspectionState, Model, TimerState};
 use crate::msg::{INSPECTION_LIMIT_MS, Msg, allowed_msg};
 use crate::persistence;
+#[cfg(feature = "bluetooth")]
+use crate::utils::runtime::runtime;
 
 pub(crate) fn update(model: &mut Model, msg: Msg) {
     if matches!(msg, Msg::Tick) {
@@ -26,35 +26,41 @@ pub(crate) fn update(model: &mut Model, msg: Msg) {
         return;
     }
 
-    match msg {
-        Msg::Press => handle_press(model),
-        Msg::Release => handle_release(model),
-        Msg::Reset => handle_reset(model),
-        Msg::Tick => handle_tick(model),
-        Msg::SelectUp => handle_select_up(model),
-        Msg::SelectDown => handle_select_down(model),
-        Msg::NextEvent => handle_next_event(model),
-        Msg::PrevEvent => handle_prev_event(model),
-        Msg::NextSession => handle_next_session(model),
-        Msg::PrevSession => handle_prev_session(model),
-        Msg::NewSession => handle_new_session(model),
-        Msg::DeleteSession => handle_delete_session(model),
-        Msg::NextScramble => handle_next_scramble(model),
-        Msg::Help => handle_help(model),
-        Msg::ToggleInspection => handle_toggle_inspection(model),
-        Msg::OpenDetails => handle_open_details(model),
-        Msg::CloseDetails => handle_close_details(model),
-        Msg::OpenDetailedStats => handle_open_detailed_stats(model),
-        Msg::DeleteTime => handle_delete_time(model),
-        Msg::NavLeft => handle_nav_left(model),
-        Msg::NavRight => handle_nav_right(model),
-        Msg::ToggleFocus => handle_toggle_focus(model),
-        #[cfg(feature = "bluetooth")]
-        Msg::ToggleBluetooth => handle_toggle_bluetooth(model),
-        #[cfg(feature = "bluetooth")]
-        Msg::DisconnectBluetooth => handle_disconnect_bluetooth(model),
-        Msg::ToggleZen => handle_toggle_zen(model),
-        Msg::Quit => {}
+    msg.apply(model);
+}
+
+impl Msg {
+    fn apply(self, model: &mut Model) {
+        match self {
+            Msg::Press => handle_press(model),
+            Msg::Release => handle_release(model),
+            Msg::Reset => handle_reset(model),
+            Msg::Tick => handle_tick(model),
+            Msg::SelectUp => handle_select_up(model),
+            Msg::SelectDown => handle_select_down(model),
+            Msg::NextEvent => handle_next_event(model),
+            Msg::PrevEvent => handle_prev_event(model),
+            Msg::NextSession => handle_next_session(model),
+            Msg::PrevSession => handle_prev_session(model),
+            Msg::NewSession => handle_new_session(model),
+            Msg::DeleteSession => handle_delete_session(model),
+            Msg::NextScramble => handle_next_scramble(model),
+            Msg::Help => handle_help(model),
+            Msg::ToggleInspection => handle_toggle_inspection(model),
+            Msg::OpenDetails => handle_open_details(model),
+            Msg::CloseDetails => handle_close_details(model),
+            Msg::OpenDetailedStats => handle_open_detailed_stats(model),
+            Msg::DeleteTime => handle_delete_time(model),
+            Msg::NavLeft => handle_nav_left(model),
+            Msg::NavRight => handle_nav_right(model),
+            Msg::ToggleFocus => handle_toggle_focus(model),
+            #[cfg(feature = "bluetooth")]
+            Msg::ToggleBluetooth => handle_toggle_bluetooth(model),
+            #[cfg(feature = "bluetooth")]
+            Msg::DisconnectBluetooth => handle_disconnect_bluetooth(model),
+            Msg::ToggleZen => handle_toggle_zen(model),
+            Msg::Quit => {}
+        }
     }
 }
 
@@ -85,11 +91,7 @@ fn handle_press(model: &mut Model) {
         TimerState::Inspection(InspectionState::Running(_)) => model.pulse_timer(),
         TimerState::Running(start) => {
             let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
-            model.set_last_time_ms(elapsed_ms);
-            let event = model.event();
-            let scramble = model.take_scramble();
-            model.history_mut().add_ms(elapsed_ms, event, scramble);
-            model.stop_timer();
+            model.record_solve(elapsed_ms);
             model.next_scramble();
             persistence::save(model);
         }
@@ -198,7 +200,7 @@ fn handle_prev_event(model: &mut Model) {
 fn handle_next_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.next_session();
-        if model.get_current_session().scramble.is_none() {
+        if model.current_session().scramble.is_none() {
             model.next_scramble();
         }
     }
@@ -207,7 +209,7 @@ fn handle_next_session(model: &mut Model) {
 fn handle_prev_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.prev_session();
-        if model.get_current_session().scramble.is_none() {
+        if model.current_session().scramble.is_none() {
             model.next_scramble();
         }
     }
@@ -223,7 +225,7 @@ fn handle_new_session(model: &mut Model) {
 
 fn handle_delete_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle && model.delete_current_session() {
-        if model.get_current_session().scramble.is_none() {
+        if model.current_session().scramble.is_none() {
             model.next_scramble();
         }
         persistence::save(model);
@@ -250,7 +252,6 @@ fn handle_toggle_bluetooth(model: &mut Model) {
         use std::borrow::Cow;
 
         use crate::bluetooth::timer::{get_adapter, get_devices};
-        use futures_util::StreamExt;
 
         runtime().spawn(async move {
             let adapter = match get_adapter().await {
@@ -297,7 +298,6 @@ fn restart_bluetooth_scan(
     adapter: btleplug::platform::Adapter,
 ) {
     use crate::bluetooth::timer::get_devices;
-    use futures_util::StreamExt;
 
     runtime().spawn(async move {
         let Ok(mut stream) = get_devices(&adapter).await else {

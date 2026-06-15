@@ -28,7 +28,7 @@ impl Drop for WcaScrambleServer {
     }
 }
 
-pub fn start_wca_scramble_server(logging: &bool) -> Result<WcaScrambleServer, String> {
+pub fn start_wca_scramble_server(logging: bool) -> Result<WcaScrambleServer, String> {
     if is_server_ready() {
         WCA_ENABLED.store(true, Ordering::Relaxed);
         return Ok(WcaScrambleServer { child: None });
@@ -38,16 +38,16 @@ pub fn start_wca_scramble_server(logging: &bool) -> Result<WcaScrambleServer, St
         return Err("Missing scrambles directory next to Cargo.toml".to_string());
     }
     for Runtime { name, run } in runtimes() {
-        if *logging {
+        if logging {
             eprintln!("Trying runtime: {name}");
         }
         if !runtime_exists(name) {
-            if *logging {
+            if logging {
                 eprintln!("  {name} not found, skipping");
             }
             continue;
         }
-        if *logging {
+        if logging {
             eprintln!("  Starting {name} server...");
         }
         let Ok(mut child) = Command::new(name)
@@ -58,28 +58,28 @@ pub fn start_wca_scramble_server(logging: &bool) -> Result<WcaScrambleServer, St
             .stderr(Stdio::null())
             .spawn()
         else {
-            if *logging {
+            if logging {
                 eprintln!("  Failed to spawn {name}");
             }
             continue;
         };
         for _ in 0..STARTUP_RETRIES {
             if is_server_ready() {
-                if *logging {
+                if logging {
                     eprintln!("  Server ready!");
                 }
                 WCA_ENABLED.store(true, Ordering::Relaxed);
                 return Ok(WcaScrambleServer { child: Some(child) });
             }
             if let Ok(Some(_)) = child.try_wait() {
-                if *logging {
+                if logging {
                     eprintln!("  Server exited early");
                 }
                 break;
             }
             thread::sleep(STARTUP_WAIT);
         }
-        if *logging {
+        if logging {
             eprintln!("  Server failed to start, killing...");
         }
         let _ = child.kill();

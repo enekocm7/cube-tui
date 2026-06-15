@@ -15,54 +15,42 @@ pub enum MeanType {
     Ao5,
 }
 
-pub struct MeanDetailWidget {
+pub struct MeanDetailWidget<'a> {
     mean_type: MeanType,
     solve_index: usize,
     mean_value: Cow<'static, str>,
-    times: Vec<(usize, Time)>,
+    times: &'a [Time],
+    times_start_index: usize,
     selected_index: usize,
 }
 
-impl MeanDetailWidget {
-    pub fn new(history: &History, solve_index: usize, col: usize, selected_index: usize) -> Self {
-        let (mean_type, mean_value, times) = if col == 0 {
+impl<'a> MeanDetailWidget<'a> {
+    pub fn new(
+        history: &'a History,
+        solve_index: usize,
+        col: usize,
+        selected_index: usize,
+    ) -> Self {
+        let (mean_type, mean_value, times, times_start_index) = if col == 0 {
             let val = history.mo3_at(solve_index).unwrap_or(Cow::Borrowed("-"));
-            let ts = history
-                .mo3_times_at(solve_index)
-                .map_or_else(Vec::new, |slice| {
-                    let start = solve_index.saturating_sub(2);
-                    slice
-                        .iter()
-                        .enumerate()
-                        .map(|(i, t)| (start + i + 1, t.clone()))
-                        .collect()
-                });
-            (MeanType::Mo3, val, ts)
+            let times = history.mo3_times_at(solve_index).unwrap_or(&[]);
+            (MeanType::Mo3, val, times, solve_index.saturating_sub(2))
         } else {
             let val = history.ao5_at(solve_index).unwrap_or(Cow::Borrowed("-"));
-            let ts = history
-                .ao5_times_at(solve_index)
-                .map_or_else(Vec::new, |slice| {
-                    let start = solve_index.saturating_sub(4);
-                    slice
-                        .iter()
-                        .enumerate()
-                        .map(|(i, t)| (start + i + 1, t.clone()))
-                        .collect()
-                });
-            (MeanType::Ao5, val, ts)
+            let times = history.ao5_times_at(solve_index).unwrap_or(&[]);
+            (MeanType::Ao5, val, times, solve_index.saturating_sub(4))
         };
-
         Self {
             mean_type,
             solve_index,
             mean_value,
             times,
+            times_start_index,
             selected_index,
         }
     }
 
-    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
         let type_name = match self.mean_type {
             MeanType::Mo3 => "Mean of 3",
             MeanType::Ao5 => "Average of 5",
@@ -89,7 +77,7 @@ impl MeanDetailWidget {
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
-                self.mean_value,
+                self.mean_value.clone(),
                 Style::default()
                     .fg(theme.text())
                     .add_modifier(Modifier::BOLD),
@@ -97,7 +85,7 @@ impl MeanDetailWidget {
         ]));
         lines.push(Line::from(""));
 
-        let trimmed = compute_trimmed_indices(&self.times, self.mean_type);
+        let trimmed = compute_trimmed_indices(self.times, self.mean_type);
 
         lines.push(Line::from(Span::styled(
             "Times:",
@@ -106,33 +94,24 @@ impl MeanDetailWidget {
                 .add_modifier(Modifier::BOLD),
         )));
 
-        for (i, (num, time)) in self.times.iter().enumerate() {
-            let is_trimmed = trimmed.contains(&i);
-            let is_selected = i == self.selected_index;
+        let best_ms = self.times.iter().filter_map(Time::effective_ms).min();
+
+        for (window_idx, time) in self.times.iter().enumerate() {
+            let history_index = self.times_start_index + window_idx + 1;
+            let is_trimmed = trimmed.contains(&window_idx);
+            let is_selected = window_idx == self.selected_index;
             let time_display = time.to_string();
 
             let annotation = if is_trimmed {
                 if time.effective_ms().is_none() {
-                    " ← worst (trimmed)"
+                    Cow::Borrowed(" ← worst (trimmed)")
+                } else if best_ms.is_some_and(|min| time.effective_ms() == Some(min)) {
+                    Cow::Borrowed("  best")
                 } else {
-                    let effective = time.effective_ms().unwrap_or(u64::MAX);
-                    let all_effective: Vec<u64> = self
-                        .times
-                        .iter()
-                        .filter_map(|(_, t)| t.effective_ms())
-                        .collect();
-                    if let Some(&min) = all_effective.iter().min() {
-                        if effective == min {
-                            "  best"
-                        } else {
-                            "  worst"
-                        }
-                    } else {
-                        ""
-                    }
+                    Cow::Borrowed("  worst")
                 }
             } else {
-                ""
+                Cow::Borrowed("")
             };
 
             let style = if is_selected {
@@ -147,7 +126,10 @@ impl MeanDetailWidget {
             let annotation_style = Style::default().fg(theme.text());
 
             lines.push(Line::from(vec![
-                Span::styled(format!("  #{num}: "), Style::default().fg(theme.text())),
+                Span::styled(
+                    format!("  #{history_index}: "),
+                    Style::default().fg(theme.text()),
+                ),
                 Span::styled(
                     if is_trimmed {
                         format!("({time_display})")
@@ -156,7 +138,7 @@ impl MeanDetailWidget {
                     },
                     style,
                 ),
-                Span::styled(annotation.to_string(), annotation_style),
+                Span::styled(annotation, annotation_style),
             ]));
         }
 
@@ -167,12 +149,18 @@ impl MeanDetailWidget {
     }
 }
 
-fn compute_trimmed_indices(times: &[(usize, Time)], mean_type: MeanType) -> Vec<usize> {
+fn compute_trimmed_indices(times: &[Time], mean_type: MeanType) -> Vec<usize> {
     if mean_type != MeanType::Ao5 || times.len() != 5 {
         return vec![];
     }
 
-    let effective: Vec<Option<u64>> = times.iter().map(|(_, t)| t.effective_ms()).collect();
+    let effective: [Option<u64>; 5] = [
+        times[0].effective_ms(),
+        times[1].effective_ms(),
+        times[2].effective_ms(),
+        times[3].effective_ms(),
+        times[4].effective_ms(),
+    ];
     let dnf_count = effective.iter().filter(|e| e.is_none()).count();
 
     if dnf_count >= 2 {
