@@ -20,7 +20,11 @@ use crate::widgets::bluetooth::BluetoothWidget;
 #[allow(clippy::too_many_lines)]
 pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     let theme = *model.settings().theme();
-    set_area_background(area, buf, theme.background());
+
+    Block::default()
+        .style(Style::new().bg(theme.background()))
+        .render(area, buf);
+
     if model.show_help() {
         let help_widget = HelpWidget::new(model.help_scroll());
         model.set_help_max_scroll(HelpWidget::max_scroll_for_height(area.height));
@@ -299,14 +303,6 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
     Paragraph::new(Line::from(help_spans))
         .alignment(Alignment::Center)
         .render(outer_layout[help_area_index], buf);
-}
-
-fn set_area_background(area: Rect, buf: &mut ratatui::buffer::Buffer, color: Color) {
-    let style = Style::default().bg(color);
-    let spaces = " ".repeat(area.width as usize);
-    for y in area.top()..area.bottom() {
-        buf.set_string(area.x, y, &spaces, style);
-    }
 }
 
 const fn inner_area(area: Rect) -> Rect {
