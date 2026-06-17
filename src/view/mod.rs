@@ -250,7 +250,7 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
     #[cfg(feature = "bluetooth")]
     let bt_label = model
         .connected_device_name()
-        .map_or_else(String::new, |name| format!(" | 🔗 {name}"));
+        .map_or_else(String::new, |name| format!(" | {name}"));
     #[cfg(not(feature = "bluetooth"))]
     let bt_label = String::new();
     let timer_title = format!(
