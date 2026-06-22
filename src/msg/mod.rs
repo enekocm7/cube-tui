@@ -20,8 +20,8 @@ pub(crate) enum Msg {
     DeleteSession,
     ToggleInspection,
     NextScramble,
-    OpenDetails,
-    CloseDetails,
+    Enter,
+    Esc,
     OpenDetailedStats,
     DeleteTime,
     NavLeft,
@@ -61,8 +61,8 @@ pub(crate) const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<
         #[cfg(feature = "bluetooth")]
         (KeyCode::Char('x'), KeyEventKind::Press) => Some(Msg::DisconnectBluetooth),
         (KeyCode::Char('z'), KeyEventKind::Press) => Some(Msg::ToggleZen),
-        (KeyCode::Enter, KeyEventKind::Press) => Some(Msg::OpenDetails),
-        (KeyCode::Esc, KeyEventKind::Press) => Some(Msg::CloseDetails),
+        (KeyCode::Enter, KeyEventKind::Press) => Some(Msg::Enter),
+        (KeyCode::Esc, KeyEventKind::Press) => Some(Msg::Esc),
         _ => None,
     }
 }
@@ -76,8 +76,8 @@ pub(crate) const fn allowed_msg(model: &Model, msg: Msg) -> bool {
             msg,
             Msg::SelectUp
                 | Msg::SelectDown
-                | Msg::OpenDetails
-                | Msg::CloseDetails
+                | Msg::Enter
+                | Msg::Esc
                 | Msg::ToggleBluetooth
                 | Msg::DisconnectBluetooth
                 | Msg::Tick
@@ -90,6 +90,12 @@ pub(crate) const fn allowed_msg(model: &Model, msg: Msg) -> bool {
             Msg::SelectUp | Msg::SelectDown | Msg::Help | Msg::Tick | Msg::Quit
         );
     }
+    if model.screen.show_confirm_delete_session() {
+        return matches!(
+            msg,
+            Msg::NavLeft | Msg::NavRight | Msg::Enter | Msg::Esc | Msg::Tick | Msg::Quit
+        );
+    }
     if model.show_details() {
         return matches!(
             msg,
@@ -100,7 +106,7 @@ pub(crate) const fn allowed_msg(model: &Model, msg: Msg) -> bool {
                 | Msg::Press
                 | Msg::Release
                 | Msg::DeleteTime
-                | Msg::CloseDetails
+                | Msg::Esc
                 | Msg::Tick
                 | Msg::Quit
         );
@@ -108,12 +114,7 @@ pub(crate) const fn allowed_msg(model: &Model, msg: Msg) -> bool {
     if model.show_mean_detail() {
         return matches!(
             msg,
-            Msg::SelectUp
-                | Msg::SelectDown
-                | Msg::OpenDetails
-                | Msg::CloseDetails
-                | Msg::Tick
-                | Msg::Quit
+            Msg::SelectUp | Msg::SelectDown | Msg::Enter | Msg::Esc | Msg::Tick | Msg::Quit
         );
     }
     if model.show_detailed_stats() {
@@ -123,8 +124,8 @@ pub(crate) const fn allowed_msg(model: &Model, msg: Msg) -> bool {
                 | Msg::SelectDown
                 | Msg::NavLeft
                 | Msg::NavRight
-                | Msg::OpenDetails
-                | Msg::CloseDetails
+                | Msg::Enter
+                | Msg::Esc
                 | Msg::Tick
                 | Msg::Quit
         );

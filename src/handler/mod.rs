@@ -47,8 +47,8 @@ impl Msg {
             Msg::NextScramble => handle_next_scramble(model),
             Msg::Help => handle_help(model),
             Msg::ToggleInspection => handle_toggle_inspection(model),
-            Msg::OpenDetails => handle_open_details(model),
-            Msg::CloseDetails => handle_close_details(model),
+            Msg::Enter => handle_enter(model),
+            Msg::Esc => handle_esc(model),
             Msg::OpenDetailedStats => handle_open_detailed_stats(model),
             Msg::DeleteTime => handle_delete_time(model),
             Msg::NavLeft => handle_nav_left(model),
@@ -224,11 +224,8 @@ fn handle_new_session(model: &mut Model) {
 }
 
 fn handle_delete_session(model: &mut Model) {
-    if model.timer_state() == TimerState::Idle && model.delete_current_session() {
-        if model.current_session().scramble.is_none() {
-            model.next_scramble();
-        }
-        persistence::save(model);
+    if model.timer_state() == TimerState::Idle && model.session_count() > 1 {
+        model.open_confirm_delete_session();
     }
 }
 
@@ -362,7 +359,7 @@ fn handle_toggle_zen(model: &mut Model) {
     persistence::save_config(*model.settings());
 }
 
-fn handle_open_details(model: &mut Model) {
+fn handle_enter(model: &mut Model) {
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
         if model.bluetooth_connected() {
@@ -370,6 +367,20 @@ fn handle_open_details(model: &mut Model) {
         } else {
             handle_bluetooth_connect(model);
         }
+        return;
+    }
+    if model.screen.show_confirm_delete_session() {
+        let confirmed = model.get_confirm_delete_session_selection()
+            == crate::widgets::confirmation::Selection::Yes;
+
+        if confirmed && model.delete_current_session() {
+            if model.current_session().scramble.is_none() {
+                model.next_scramble();
+            }
+            persistence::save(model);
+        }
+
+        model.close_confirm_delete_session();
         return;
     }
     if model.show_mean_detail() {
@@ -396,10 +407,14 @@ fn handle_open_detailed_stats(model: &mut Model) {
 }
 
 #[allow(clippy::missing_const_for_fn)]
-fn handle_close_details(model: &mut Model) {
+fn handle_esc(model: &mut Model) {
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
         model.close_bluetooth();
+        return;
+    }
+    if model.screen.show_confirm_delete_session() {
+        model.close_confirm_delete_session();
         return;
     }
     model.close_current_screen();
@@ -416,7 +431,9 @@ fn handle_delete_time(model: &mut Model) {
 }
 
 fn handle_nav_left(model: &mut Model) {
-    if model.show_detailed_stats() && !model.show_mean_detail() {
+    if model.screen.show_confirm_delete_session() {
+        model.confirm_delete_session_left();
+    } else if model.show_detailed_stats() && !model.show_mean_detail() {
         model.detailed_stats_col_left();
     } else if model.main_focus_is_stats() {
         model.main_stats_col_left();
@@ -426,7 +443,9 @@ fn handle_nav_left(model: &mut Model) {
 }
 
 fn handle_nav_right(model: &mut Model) {
-    if model.show_detailed_stats() && !model.show_mean_detail() {
+    if model.screen.show_confirm_delete_session() {
+        model.confirm_delete_session_right();
+    } else if model.show_detailed_stats() && !model.show_mean_detail() {
         model.detailed_stats_col_right();
     } else if model.main_focus_is_stats() {
         model.main_stats_col_right();

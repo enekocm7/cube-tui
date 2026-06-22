@@ -7,6 +7,7 @@ use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
 use crate::model::{InspectionState, Model, TimerState};
 use crate::utils::{format_elapsed, get_scramble_lines};
+use crate::widgets::confirmation::ConfirmationWidget;
 use crate::widgets::detailed_stats::DetailedStatsWidget;
 use crate::widgets::details::DetailsWidget;
 use crate::widgets::help::HelpWidget;
@@ -303,6 +304,15 @@ pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mo
     Paragraph::new(Line::from(help_spans))
         .alignment(Alignment::Center)
         .render(outer_layout[help_area_index], buf);
+
+    if model.screen.show_confirm_delete_session() {
+        let widget = ConfirmationWidget::new(
+            "Delete this session?",
+            model.get_confirm_delete_session_selection(),
+        );
+
+        widget.render_with_theme(area, buf, &theme);
+    }
 }
 
 const fn inner_area(area: Rect) -> Rect {

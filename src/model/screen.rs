@@ -1,3 +1,5 @@
+use crate::widgets::confirmation::Selection;
+
 #[derive(Clone, Debug, Default)]
 pub enum Screen {
     #[default]
@@ -15,6 +17,9 @@ pub enum Screen {
     Details {
         modifier_index: usize,
         return_to: DetailsReturn,
+    },
+    ConfirmDeleteSession {
+        selection: Selection,
     },
 }
 
@@ -40,5 +45,9 @@ impl Screen {
 
     pub const fn show_mean_detail(&self) -> bool {
         matches!(self, Screen::MeanDetail { .. })
+    }
+
+    pub const fn show_confirm_delete_session(&self) -> bool {
+        matches!(self, Screen::ConfirmDeleteSession { .. })
     }
 }

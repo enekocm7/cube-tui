@@ -1,5 +1,6 @@
 #[cfg(feature = "bluetooth")]
 pub mod bluetooth;
+pub mod confirmation;
 pub mod detailed_stats;
 pub mod details;
 pub mod help;
