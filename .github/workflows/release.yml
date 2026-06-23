@@ -54,7 +54,13 @@ jobs:
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Build release executable (dashboard embedded via build.rs)
+      - name: Install JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: Build release executable
         run: cargo build --release --all-features --locked --target ${{ matrix.target }}
 
       - name: Prepare executable (unix)

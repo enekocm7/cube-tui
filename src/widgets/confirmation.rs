@@ -7,7 +7,7 @@ use ratatui::{
 
 use crate::model::settings::ThemeSettings;
 
-#[derive(Debug, Default, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Selection {
     #[default]
     No,
@@ -20,7 +20,7 @@ pub struct ConfirmationWidget<'a> {
 }
 
 impl<'a> ConfirmationWidget<'a> {
-    pub fn new(message: &'a str, selection: Selection) -> Self {
+    pub const fn new(message: &'a str, selection: Selection) -> Self {
         Self { message, selection }
     }
 
@@ -67,20 +67,22 @@ impl<'a> ConfirmationWidget<'a> {
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(button_area);
 
+        let selected_style = Style::default()
+            .bg(theme.selection())
+            .fg(theme.selection_text());
+
+        let unselected_style = Style::default().fg(theme.text());
+
         let no_style = if self.selection == Selection::No {
-            Style::default()
-                .bg(theme.selection())
-                .fg(theme.selection_text())
+            selected_style
         } else {
-            Style::default().fg(theme.text())
+            unselected_style
         };
 
         let yes_style = if self.selection == Selection::Yes {
-            Style::default()
-                .bg(theme.selection())
-                .fg(theme.selection_text())
+            selected_style
         } else {
-            Style::default().fg(theme.text())
+            unselected_style
         };
 
         let no_paragraph = Paragraph::new("No")

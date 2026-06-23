@@ -3,7 +3,7 @@ use ratatui::crossterm::event::{KeyCode, KeyEventKind};
 use crate::model::Model;
 
 #[derive(Copy, Clone, Debug)]
-pub(crate) enum Msg {
+pub enum Msg {
     Press,
     Release,
     Reset,
@@ -34,7 +34,7 @@ pub(crate) enum Msg {
     ToggleZen,
 }
 
-pub(crate) const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
+pub const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
     match (code, kind) {
         (KeyCode::Char('q'), KeyEventKind::Press) => Some(Msg::Quit),
         (KeyCode::Char('r'), KeyEventKind::Press) => Some(Msg::Reset),
@@ -67,9 +67,9 @@ pub(crate) const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<
     }
 }
 
-pub(crate) const INSPECTION_LIMIT_MS: u64 = 15_000;
+pub const INSPECTION_LIMIT_MS: u64 = 15_000;
 
-pub(crate) const fn allowed_msg(model: &Model, msg: Msg) -> bool {
+pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
         return matches!(

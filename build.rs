@@ -7,41 +7,43 @@ fn main() {
 
 #[cfg(feature = "wca-scrambles")]
 fn build_scrambles() {
-    use std::path::Path;
+    use std::fs;
+    use std::path::{Path, PathBuf};
     use std::process::Command;
 
-    println!("cargo:rerun-if-changed=scrambles/index.ts");
-    println!("cargo:rerun-if-changed=scrambles/package.json");
+    println!("cargo:rerun-if-changed=scrambles/lib/src/main/java/org/example/Library.java");
+    println!("cargo:rerun-if-changed=scrambles/lib/src/test/java/org/example/LibraryTest.java");
+    println!("cargo:rerun-if-changed=scrambles/lib/build.gradle.kts");
 
     let scrambles_dir = Path::new("scrambles");
 
-    let bun = if cfg!(target_os = "windows") {
-        "bun.exe"
+    let gradle = if cfg!(target_os = "windows") {
+        "./gradlew.bat"
     } else {
-        "bun"
+        "./gradlew"
     };
 
-    let status = Command::new(bun)
-        .args(["install"])
+    let status = Command::new(gradle)
+        .args(["shadowJar"])
         .current_dir(scrambles_dir)
         .status()
-        .unwrap_or_else(|e| panic!("Failed to run `bun install`: {e}"));
+        .unwrap_or_else(|e| panic!("Failed to run `gradle shadowJar`: {e}"));
 
     assert!(
         status.success(),
-        "`bun install` exited with status {status}"
+        "`gradle shadowJar` exited with status {status}"
     );
 
-    let status = Command::new(bun)
-        .args(["run", "build"])
-        .current_dir(scrambles_dir)
-        .status()
-        .unwrap_or_else(|e| panic!("Failed to run `bun run build`: {e}"));
-
-    assert!(
-        status.success(),
-        "`bun run build` exited with status {status}"
-    );
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR not set"));
+    let src_jar = scrambles_dir.join("lib/build/libs/lib-all.jar");
+    let dst_jar = out_dir.join("lib-all.jar");
+    fs::copy(&src_jar, &dst_jar).unwrap_or_else(|e| {
+        panic!(
+            "Failed to copy {} to {}: {e}",
+            src_jar.display(),
+            dst_jar.display()
+        )
+    });
 }
 
 #[cfg(feature = "dashboard")]

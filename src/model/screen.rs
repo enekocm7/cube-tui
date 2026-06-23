@@ -36,18 +36,18 @@ pub enum DetailsReturn {
 
 impl Screen {
     pub const fn show_details(&self) -> bool {
-        matches!(self, Screen::Details { .. })
+        matches!(self, Self::Details { .. })
     }
 
     pub const fn show_detailed_stats(&self) -> bool {
-        matches!(self, Screen::DetailedStats { .. })
+        matches!(self, Self::DetailedStats { .. })
     }
 
     pub const fn show_mean_detail(&self) -> bool {
-        matches!(self, Screen::MeanDetail { .. })
+        matches!(self, Self::MeanDetail { .. })
     }
 
     pub const fn show_confirm_delete_session(&self) -> bool {
-        matches!(self, Screen::ConfirmDeleteSession { .. })
+        matches!(self, Self::ConfirmDeleteSession { .. })
     }
 }

@@ -7,9 +7,6 @@ use std::fmt;
 #[cfg(feature = "wca-scrambles")]
 mod wca;
 
-#[cfg(feature = "wca-scrambles")]
-pub use wca::start_wca_scramble_server;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WcaEvent {
     Cube2x2,
@@ -210,7 +207,7 @@ impl From<Scramble> for Cow<'static, str> {
 
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
     #[cfg(feature = "wca-scrambles")]
-    if let Some(text) = wca::fetch_wca_scramble(event) {
+    if let Some(text) = wca::get_wca_scramble(event) {
         return Scramble::new(text);
     }
 
