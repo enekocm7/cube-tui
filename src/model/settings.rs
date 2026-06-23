@@ -45,7 +45,9 @@ impl Settings {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct TimerSettings {
+    #[serde(default)]
     inspection: bool,
+    #[serde(default)]
     zen: bool,
 }
 
@@ -143,8 +145,11 @@ impl<'de> Deserialize<'de> for ColorSettings {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct DisplaySettings {
+    #[serde(default)]
     history: bool,
+    #[serde(default)]
     scramble: bool,
+    #[serde(default)]
     stats: bool,
 }
 
