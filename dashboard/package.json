@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bunx --bun vite",
     "build": "tsc -b && bunx --bun vite build",
-    "lint": "eslint .",
+    "lint": "biome check .",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -28,7 +28,6 @@
     "@types/react-dom": "^19.2.3",
     "@types/react-window": "^1.8.8",
     "@vitejs/plugin-react-swc": "^4.2.2",
-    "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "vite": "^8.0.0-beta.13"
   },
