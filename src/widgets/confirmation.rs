@@ -72,7 +72,7 @@ impl<'a> ConfirmationWidget<'a> {
             .fg(theme.selection_text());
 
         let unselected_style = Style::default().fg(theme.text());
-        
+
         let no_style = if self.selection == Selection::No {
             selected_style
         } else {
