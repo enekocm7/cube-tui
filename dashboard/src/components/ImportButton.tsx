@@ -1,46 +1,52 @@
-import {Upload} from "lucide-react";
-import type {ChangeEvent} from "react";
-import {useRef} from "react";
-import type {History} from "../types/types";
-import {parseHistoryFile} from "../utils/parse.ts";
+import { Upload } from "lucide-react";
+import type { ChangeEvent } from "react";
+import { useRef } from "react";
+import type { History } from "../types/types";
+import { parseHistoryFile } from "../utils/parse.ts";
 
 interface ImportButtonProps {
-    onImport: (sessions: History[]) => void;
-    compact?: boolean;
+	onImport: (sessions: History[]) => void;
+	compact?: boolean;
 }
 
-export function ImportButton({onImport, compact = false}: ImportButtonProps) {
-    const fileInputRef = useRef<HTMLInputElement>(null);
+export function ImportButton({ onImport, compact = false }: ImportButtonProps) {
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
-    function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-            const sessions = parseHistoryFile(reader.result as string);
-            onImport(sessions);
+	function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		const reader = new FileReader();
+		reader.onload = () => {
+			const sessions = parseHistoryFile(reader.result as string);
+			onImport(sessions);
 
-            e.target.value = "";
-        };
-        reader.readAsText(file);
-    }
+			e.target.value = "";
+		};
+		reader.readAsText(file);
+	}
 
-    return (
-        <>
-            <input ref={fileInputRef} type="file" accept=".json,application/json" className="hidden" onChange={handleFileChange} />
-            <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                aria-label="Import history JSON"
-                className={
-                    compact
-                        ? "flex items-center justify-center w-8 h-8 border border-border text-muted hover:text-ink hover:border-border-hover transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                        : "flex items-center gap-2 px-4 py-2 text-sm font-medium bg-raised border border-border text-muted hover:text-ink hover:border-border-hover transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                }
-            >
-                <Upload size={compact ? 14 : 15} strokeWidth={2} />
-                {!compact && "Import times.json"}
-            </button>
-        </>
-    );
+	return (
+		<>
+			<input
+				ref={fileInputRef}
+				type="file"
+				accept=".json,application/json"
+				className="hidden"
+				onChange={handleFileChange}
+			/>
+			<button
+				type="button"
+				onClick={() => fileInputRef.current?.click()}
+				aria-label="Import history JSON"
+				className={
+					compact
+						? "flex items-center justify-center w-8 h-8 border border-border text-muted hover:text-ink hover:border-border-hover transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+						: "flex items-center gap-2 px-4 py-2 text-sm font-medium bg-raised border border-border text-muted hover:text-ink hover:border-border-hover transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+				}
+			>
+				<Upload size={compact ? 14 : 15} strokeWidth={2} />
+				{!compact && "Import times.json"}
+			</button>
+		</>
+	);
 }
