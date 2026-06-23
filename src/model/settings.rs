@@ -145,6 +145,7 @@ impl<'de> Deserialize<'de> for ColorSettings {
     }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 pub struct DisplaySettings {
     history: bool,
