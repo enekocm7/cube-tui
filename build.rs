@@ -37,8 +37,13 @@ fn build_scrambles() {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR not set"));
     let src_jar = scrambles_dir.join("lib/build/libs/lib-all.jar");
     let dst_jar = out_dir.join("lib-all.jar");
-    fs::copy(&src_jar, &dst_jar)
-        .unwrap_or_else(|e| panic!("Failed to copy {} to {}: {e}", src_jar.display(), dst_jar.display()));
+    fs::copy(&src_jar, &dst_jar).unwrap_or_else(|e| {
+        panic!(
+            "Failed to copy {} to {}: {e}",
+            src_jar.display(),
+            dst_jar.display()
+        )
+    });
 }
 
 #[cfg(feature = "dashboard")]

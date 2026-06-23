@@ -138,7 +138,10 @@ impl Model {
     pub fn record_solve(&mut self, time_ms: u64) {
         let session = self.current_session_mut();
         let event = session.event;
-        let scramble = session.scramble.take().expect("active session should have a scramble");
+        let scramble = session
+            .scramble
+            .take()
+            .expect("active session should have a scramble");
         session.last_time_ms = time_ms;
         session.history.add_ms(time_ms, event, scramble);
         session.stop_timer();
