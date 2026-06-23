@@ -13,7 +13,7 @@ your terminal. All your session data is saved locally.
 
 - [Rust & Cargo](https://rustup.rs/)
 - [Bun](https://bun.sh/) (required for the `dashboard` feature)
-- [Bun](https://bun.sh/) (required for the `wca-scrambles` feature)
+- [Java](https://www.oracle.com/es/java/technologies/downloads/) (required for the `wca-scrambles` feature)
 
 ## Installation & Features
 
@@ -42,7 +42,7 @@ directly into the executable.*
 
 ### WCA Scrambles
 
-Uses [cubing.js](https://github.com/cubing/cubing.js) scramble generation for WCA events (instead of the built-in
+Uses [tnoodle-lib](https://github.com/thewca/tnoodle-lib) scramble generation for WCA events (instead of the built-in
 random generator).
 
 To install with WCA scrambles support:
@@ -51,8 +51,7 @@ To install with WCA scrambles support:
 cargo install cube-tui --features wca-scrambles
 ```
 
-When this feature is enabled, cube uses WCA API scrambles by default. If the local scrambles server cannot be started,
-it automatically falls back to the built-in random generator.
+It uses [JNI](https://github.com/jni-rs/jni-rs) to call the official WCA scramble library, which is written in Java.
 
 ### Bluetooth
 

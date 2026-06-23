@@ -38,11 +38,6 @@ impl Settings {
         self.display.scramble
     }
 
-    #[cfg(feature = "wca-scrambles")]
-    pub const fn show_logs(&self) -> bool {
-        self.display.show_logs
-    }
-
     pub const fn theme(&self) -> &ThemeSettings {
         &self.theme
     }
@@ -151,29 +146,14 @@ pub struct DisplaySettings {
     history: bool,
     scramble: bool,
     stats: bool,
-    #[cfg(feature = "wca-scrambles")]
-    show_logs: bool,
 }
 
-#[cfg(not(feature = "wca-scrambles"))]
 impl Default for DisplaySettings {
     fn default() -> Self {
         Self {
             history: true,
             scramble: true,
             stats: true,
-        }
-    }
-}
-
-#[cfg(feature = "wca-scrambles")]
-impl Default for DisplaySettings {
-    fn default() -> Self {
-        Self {
-            history: true,
-            scramble: true,
-            stats: true,
-            show_logs: true,
         }
     }
 }
