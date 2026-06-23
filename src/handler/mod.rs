@@ -9,7 +9,7 @@ use crate::persistence;
 #[cfg(feature = "bluetooth")]
 use crate::utils::runtime::runtime;
 
-pub(crate) fn update(model: &mut Model, msg: Msg) {
+pub fn update(model: &mut Model, msg: Msg) {
     if matches!(msg, Msg::Tick) {
         #[cfg(feature = "bluetooth")]
         {
@@ -32,34 +32,34 @@ pub(crate) fn update(model: &mut Model, msg: Msg) {
 impl Msg {
     fn apply(self, model: &mut Model) {
         match self {
-            Msg::Press => handle_press(model),
-            Msg::Release => handle_release(model),
-            Msg::Reset => handle_reset(model),
-            Msg::Tick => handle_tick(model),
-            Msg::SelectUp => handle_select_up(model),
-            Msg::SelectDown => handle_select_down(model),
-            Msg::NextEvent => handle_next_event(model),
-            Msg::PrevEvent => handle_prev_event(model),
-            Msg::NextSession => handle_next_session(model),
-            Msg::PrevSession => handle_prev_session(model),
-            Msg::NewSession => handle_new_session(model),
-            Msg::DeleteSession => handle_delete_session(model),
-            Msg::NextScramble => handle_next_scramble(model),
-            Msg::Help => handle_help(model),
-            Msg::ToggleInspection => handle_toggle_inspection(model),
-            Msg::Enter => handle_enter(model),
-            Msg::Esc => handle_esc(model),
-            Msg::OpenDetailedStats => handle_open_detailed_stats(model),
-            Msg::DeleteTime => handle_delete_time(model),
-            Msg::NavLeft => handle_nav_left(model),
-            Msg::NavRight => handle_nav_right(model),
-            Msg::ToggleFocus => handle_toggle_focus(model),
+            Self::Press => handle_press(model),
+            Self::Release => handle_release(model),
+            Self::Reset => handle_reset(model),
+            Self::Tick => handle_tick(model),
+            Self::SelectUp => handle_select_up(model),
+            Self::SelectDown => handle_select_down(model),
+            Self::NextEvent => handle_next_event(model),
+            Self::PrevEvent => handle_prev_event(model),
+            Self::NextSession => handle_next_session(model),
+            Self::PrevSession => handle_prev_session(model),
+            Self::NewSession => handle_new_session(model),
+            Self::DeleteSession => handle_delete_session(model),
+            Self::NextScramble => handle_next_scramble(model),
+            Self::Help => handle_help(model),
+            Self::ToggleInspection => handle_toggle_inspection(model),
+            Self::Enter => handle_enter(model),
+            Self::Esc => handle_esc(model),
+            Self::OpenDetailedStats => handle_open_detailed_stats(model),
+            Self::DeleteTime => handle_delete_time(model),
+            Self::NavLeft => handle_nav_left(model),
+            Self::NavRight => handle_nav_right(model),
+            Self::ToggleFocus => handle_toggle_focus(model),
             #[cfg(feature = "bluetooth")]
-            Msg::ToggleBluetooth => handle_toggle_bluetooth(model),
+            Self::ToggleBluetooth => handle_toggle_bluetooth(model),
             #[cfg(feature = "bluetooth")]
-            Msg::DisconnectBluetooth => handle_disconnect_bluetooth(model),
-            Msg::ToggleZen => handle_toggle_zen(model),
-            Msg::Quit => {}
+            Self::DisconnectBluetooth => handle_disconnect_bluetooth(model),
+            Self::ToggleZen => handle_toggle_zen(model),
+            Self::Quit => {}
         }
     }
 }
@@ -174,7 +174,7 @@ fn handle_select_down(model: &mut Model) {
     }
 }
 
-fn handle_toggle_focus(model: &mut Model) {
+const fn handle_toggle_focus(model: &mut Model) {
     if model.show_help() || model.show_details() || model.show_detailed_stats() {
         return;
     }
@@ -235,7 +235,7 @@ fn handle_next_scramble(model: &mut Model) {
     }
 }
 
-fn handle_help(model: &mut Model) {
+const fn handle_help(model: &mut Model) {
     model.toggle_help();
 }
 

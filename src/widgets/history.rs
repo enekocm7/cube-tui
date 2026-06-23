@@ -403,7 +403,7 @@ impl History {
             .map(Self::format_average_value)
     }
 
-    pub fn latest_mo3_index(&self) -> Option<usize> {
+    pub const fn latest_mo3_index(&self) -> Option<usize> {
         if self.times.len() >= 3 {
             Some(self.times.len() - 1)
         } else {
@@ -411,7 +411,7 @@ impl History {
         }
     }
 
-    pub fn latest_ao5_index(&self) -> Option<usize> {
+    pub const fn latest_ao5_index(&self) -> Option<usize> {
         if self.times.len() >= 5 {
             Some(self.times.len() - 1)
         } else {

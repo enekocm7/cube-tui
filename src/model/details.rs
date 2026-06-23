@@ -18,7 +18,7 @@ impl Model {
         };
     }
 
-    pub fn close_current_screen(&mut self) {
+    pub const fn close_current_screen(&mut self) {
         let new_screen = match &self.screen {
             Screen::Details { return_to, .. } => match return_to {
                 DetailsReturn::Main => Screen::Main,

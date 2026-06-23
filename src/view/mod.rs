@@ -19,7 +19,7 @@ use crate::widgets::stats::StatsWidget;
 use crate::widgets::bluetooth::BluetoothWidget;
 
 #[allow(clippy::too_many_lines)]
-pub(crate) fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
+pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     let theme = *model.settings().theme();
 
     Block::default()

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(name = "cube", version, about = "A Rubik's Cube timer TUI application", long_about = None)]
-pub(crate) struct Cli {
+pub struct Cli {
     #[arg(
         short,
         long,
@@ -18,7 +18,7 @@ pub(crate) struct Cli {
 }
 
 #[derive(Subcommand, Debug)]
-pub(crate) enum Command {
+pub enum Command {
     #[command(
         name = "import",
         alias = "i",

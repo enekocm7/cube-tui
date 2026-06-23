@@ -33,7 +33,7 @@ pub struct Session {
 }
 
 impl Session {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         let event = WcaEvent::Cube3x3;
         let scramble = None;
         Self {
@@ -151,7 +151,7 @@ impl Model {
         true
     }
 
-    pub fn open_confirm_delete_session(&mut self) {
+    pub const fn open_confirm_delete_session(&mut self) {
         if self.session_state.sessions.len() > 1 {
             self.screen = Screen::ConfirmDeleteSession {
                 selection: Selection::No,
@@ -159,25 +159,25 @@ impl Model {
         }
     }
 
-    pub fn close_confirm_delete_session(&mut self) {
+    pub const fn close_confirm_delete_session(&mut self) {
         if self.screen.show_confirm_delete_session() {
             self.screen = Screen::Main;
         }
     }
 
-    pub fn confirm_delete_session_left(&mut self) {
+    pub const fn confirm_delete_session_left(&mut self) {
         if let Screen::ConfirmDeleteSession { selection } = &mut self.screen {
             *selection = Selection::No;
         }
     }
 
-    pub fn confirm_delete_session_right(&mut self) {
+    pub const fn confirm_delete_session_right(&mut self) {
         if let Screen::ConfirmDeleteSession { selection } = &mut self.screen {
             *selection = Selection::Yes;
         }
     }
 
-    pub fn get_confirm_delete_session_selection(&self) -> Selection {
+    pub const fn get_confirm_delete_session_selection(&self) -> Selection {
         if let Screen::ConfirmDeleteSession { selection } = self.screen {
             selection
         } else {

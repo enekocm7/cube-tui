@@ -42,6 +42,7 @@ impl<'a> StatsWidget<'a> {
         Cow::Owned(value.chars().take(CELL_WIDTH).collect())
     }
 
+    #[allow(clippy::similar_names)]
     pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
         let block = Block::default()
             .title("Stats")
