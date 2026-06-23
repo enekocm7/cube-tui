@@ -17,14 +17,20 @@ fn build_scrambles() {
 
     let scrambles_dir = Path::new("scrambles");
 
-    let gradle = if cfg!(target_os = "windows") {
-        "./gradlew.bat"
+    let command = if cfg!(target_os = "windows") {
+        "cmd"
     } else {
         "./gradlew"
     };
 
-    let status = Command::new(gradle)
-        .args(["shadowJar"])
+    let args: &[&str] = if cfg!(target_os = "windows") {
+        &["gradlew.bat", "shadowJar", "--no-daemon"]
+    } else {
+        &["shadowJar", "--no-daemon"]
+    };
+
+    let status = Command::new(command)
+        .args(args)
         .current_dir(scrambles_dir)
         .status()
         .unwrap_or_else(|e| panic!("Failed to run `gradle shadowJar`: {e}"));
