@@ -12,8 +12,8 @@ your terminal. All your session data is saved locally.
 ## Requirements
 
 - [Rust & Cargo](https://rustup.rs/)
-- [Bun](https://bun.sh/) (required for the `dashboard` feature)
 - [Java](https://www.oracle.com/es/java/technologies/downloads/) (required for the `wca-scrambles` feature)
+- [Bun](https://bun.sh/) (required for the `dashboard` feature)
 
 ## Installation & Features
 
@@ -25,6 +25,19 @@ cargo install cube-tui
 ```
 
 If you want extra functionality, you can enable specific features during installation depending on your setup.
+
+### WCA Scrambles
+
+Uses [tnoodle-lib](https://github.com/thewca/tnoodle-lib) scramble generation for WCA events (instead of the built-in
+random generator).
+
+To install with WCA scrambles support:
+
+```sh
+cargo install cube-tui --features wca-scrambles
+```
+
+It uses [JNI](https://github.com/jni-rs/jni-rs) to call the official WCA scramble library, which is written in Java.
 
 ### Dashboard
 
@@ -39,19 +52,6 @@ cargo install cube-tui --features dashboard
 
 *Note: The build script will automatically use Bun to install dependencies and build the web frontend, embedding it
 directly into the executable.*
-
-### WCA Scrambles
-
-Uses [tnoodle-lib](https://github.com/thewca/tnoodle-lib) scramble generation for WCA events (instead of the built-in
-random generator).
-
-To install with WCA scrambles support:
-
-```sh
-cargo install cube-tui --features wca-scrambles
-```
-
-It uses [JNI](https://github.com/jni-rs/jni-rs) to call the official WCA scramble library, which is written in Java.
 
 ### Bluetooth
 
@@ -71,6 +71,14 @@ If you want dashboard, Bluetooth timer support, and WCA scramble API support:
 cargo install cube-tui --all-features
 ```
 
+### Build from Source
+
+If you installed from source, you can also run it directly from the project root:
+
+```sh
+cargo run --release
+```
+
 ## Usage
 
 Run the terminal app:
@@ -84,26 +92,3 @@ To see all the commands run
 ```sh
 cube --help
 ```
-
-If you installed from source, you can also run it directly from the project root:
-
-```sh
-cargo run --release
-```
-
-If you installed with the `dashboard` feature, the command:
-
-```sh 
-cube dashboard
-``` 
-
-will start the app with dashboard support
-enabled.
-
-Use a custom port if needed:
-
-```sh
-cube dashboard --port 8080
-```
-
-The default port is `7799`.
