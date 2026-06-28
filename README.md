@@ -12,7 +12,7 @@ your terminal. All your session data is saved locally.
 ## Requirements
 
 - [Rust & Cargo](https://rustup.rs/)
-- [Java](https://www.oracle.com/es/java/technologies/downloads/) (required for the `wca-scrambles` feature)
+- [Java (Version 21 or newer)](https://www.oracle.com/es/java/technologies/downloads/) (required for the `wca-scrambles` feature)
 - [Bun](https://bun.sh/) (required for the `dashboard` feature)
 
 ## Installation & Features
