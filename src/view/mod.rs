@@ -219,11 +219,12 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         .split(outer_layout[main_area_index]);
 
     if show_scramble {
-        ScrambleWidget::new(model.scramble(), model.event().name()).render_with_theme(
-            outer_layout[0],
-            buf,
-            &theme,
-        );
+        ScrambleWidget::new(
+            model.scramble(),
+            model.event().name(),
+            model.scramble_is_wca(),
+        )
+        .render_with_theme(outer_layout[0], buf, &theme);
     }
 
     let history_title = format!(

@@ -175,6 +175,14 @@ impl Model {
             .as_str()
     }
 
+    pub fn scramble_is_wca(&self) -> bool {
+        self.current_session()
+            .scramble
+            .as_ref()
+            .expect("active session should have a scramble")
+            .is_wca()
+    }
+
     pub fn event(&self) -> WcaEvent {
         self.current_session().event
     }

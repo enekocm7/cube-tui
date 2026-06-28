@@ -181,15 +181,30 @@ impl fmt::Display for Modifier {
 
 pub struct Scramble {
     text: Cow<'static, str>,
+    wca: bool,
 }
 
 impl Scramble {
     pub fn new(text: impl Into<Cow<'static, str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            wca: false,
+        }
+    }
+
+    pub fn new_wca(text: impl Into<Cow<'static, str>>) -> Self {
+        Self {
+            text: text.into(),
+            wca: true,
+        }
     }
 
     pub fn as_str(&self) -> &str {
         &self.text
+    }
+
+    pub fn is_wca(&self) -> bool {
+        self.wca
     }
 }
 
@@ -208,7 +223,7 @@ impl From<Scramble> for Cow<'static, str> {
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
     #[cfg(feature = "wca-scrambles")]
     if let Some(text) = wca::get_wca_scramble(event) {
-        return Scramble::new(text);
+        return Scramble::new_wca(text);
     }
 
     let text = random_scramble(event);

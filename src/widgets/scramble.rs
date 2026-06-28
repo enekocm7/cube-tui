@@ -14,10 +14,11 @@ pub struct ScrambleWidget<'a> {
 }
 
 impl<'a> ScrambleWidget<'a> {
-    pub fn new(text: &'a str, event_name: &str) -> Self {
+    pub fn new(text: &'a str, event_name: &str, is_wca: bool) -> Self {
+        let prefix = if is_wca { "WCA Scramble" } else { "Scramble" };
         Self {
             text,
-            title: format!("Scramble ({event_name})"),
+            title: format!("{prefix} ({event_name})"),
         }
     }
 
