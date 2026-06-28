@@ -2,7 +2,10 @@ use super::WcaEvent;
 use jni::objects::{JString, JValue};
 use jni::vm::{InitArgsBuilder, JavaVM};
 use jni::{JNIVersion, errors, jni_sig, jni_str};
+use std::io::Write;
 use std::sync::OnceLock;
+
+const SCRAMBLE_JAR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/lib-all.jar"));
 
 static JVM: OnceLock<Result<JavaVM, String>> = OnceLock::new();
 
@@ -31,16 +34,24 @@ pub fn get_wca_scramble(event: WcaEvent) -> Option<String> {
 }
 
 fn get_or_init_jvm() -> &'static Result<JavaVM, String> {
-    JVM.get_or_init(|| {
-        let classpath = concat!(env!("OUT_DIR"), "/lib-all.jar");
+    JVM.get_or_init(|| -> Result<JavaVM, String> {
+        let jar_path = extract_jar_to_temp().map_err(|e| format!("failed to extract jar: {e}"))?;
         let jvm_args = InitArgsBuilder::new()
             .version(JNIVersion::V21)
-            .option(format!("-Djava.class.path={classpath}"))
+            .option(format!("-Djava.class.path={}", jar_path.display()))
             .build()
             .map_err(|e| format!("failed to build JVM init args: {e}"))?;
 
         JavaVM::new(jvm_args).map_err(|e| format!("failed to create JVM: {e}"))
     })
+}
+
+fn extract_jar_to_temp() -> std::io::Result<std::path::PathBuf> {
+    let mut path = std::env::temp_dir();
+    path.push(format!("cube-tui-scrambles-{}.jar", std::process::id()));
+    let mut file = std::fs::File::create(&path)?;
+    file.write_all(SCRAMBLE_JAR)?;
+    Ok(path)
 }
 
 const fn event_to_string(event: WcaEvent) -> &'static str {
