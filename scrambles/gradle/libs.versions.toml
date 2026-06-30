@@ -4,7 +4,9 @@
 [versions]
 junit-jupiter = "6.0.1"
 tnoodle-lib = "0.19.2"
+slf4j = "2.0.13"
 
 [libraries]
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
-tnoodle-lib = { module = "org.worldcubeassociation.tnoodle:lib-scrambles", version.ref = "tnoodle-lib"}
+tnoodle-lib = { module = "org.worldcubeassociation.tnoodle:lib-scrambles", version.ref = "tnoodle-lib" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }

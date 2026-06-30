@@ -20,6 +20,7 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation(libs.tnoodle.lib)
+    implementation(libs.slf4j.nop)
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
