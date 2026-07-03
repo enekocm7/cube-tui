@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+
 fn main() {
     #[cfg(feature = "dashboard")]
     build_dashboard();
@@ -22,6 +24,7 @@ fn build_scrambles() {
         cmd.args(["/C", "gradlew.bat", "shadowJar", "--no-daemon"]);
         cmd
     } else {
+        add_execution_permission("scrambles/gradlew");
         let mut cmd = Command::new("./gradlew");
         cmd.args(["shadowJar", "--no-daemon"]);
         cmd
@@ -95,4 +98,27 @@ fn build_dashboard() {
         status.success(),
         "`bun run build` exited with status {status}"
     );
+}
+
+#[cfg(unix)]
+fn add_execution_permission<P: AsRef<OsStr>>(path: P) {
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+
+    let path = path.as_ref();
+    let mut permissions = fs::metadata(path)
+        .unwrap_or_else(|e| {
+            panic!(
+                "Failed to read metadata for {}: {e}",
+                path.to_string_lossy()
+            )
+        })
+        .permissions();
+    permissions.set_mode(permissions.mode() | 0o111);
+    fs::set_permissions(path, permissions).unwrap_or_else(|e| {
+        panic!(
+            "Failed to set executable permissions for {}: {e}",
+            path.to_string_lossy()
+        )
+    });
 }
