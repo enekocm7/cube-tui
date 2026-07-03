@@ -1,3 +1,4 @@
+#[cfg(unix)]
 use std::ffi::OsStr;
 
 fn main() {
@@ -24,6 +25,7 @@ fn build_scrambles() {
         cmd.args(["/C", "gradlew.bat", "shadowJar", "--no-daemon"]);
         cmd
     } else {
+        #[cfg(unix)]
         add_execution_permission("scrambles/gradlew");
         let mut cmd = Command::new("./gradlew");
         cmd.args(["shadowJar", "--no-daemon"]);
