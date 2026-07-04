@@ -34,9 +34,7 @@ impl Model {
                     from_stats_column: *from_stats_column,
                 },
             },
-            Screen::Main | Screen::DetailedStats { .. } | Screen::ConfirmDeleteSession { .. } => {
-                Screen::Main
-            }
+            Screen::Main | Screen::DetailedStats { .. } => Screen::Main,
             Screen::MeanDetail {
                 row,
                 col,

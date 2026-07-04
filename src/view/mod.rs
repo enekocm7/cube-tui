@@ -306,12 +306,8 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         .alignment(Alignment::Center)
         .render(outer_layout[help_area_index], buf);
 
-    if model.screen.show_confirm_delete_session() {
-        let widget = ConfirmationWidget::new(
-            "Delete this session?",
-            model.get_confirm_delete_session_selection(),
-        );
-
+    if let Some(confirmation) = model.confirmation() {
+        let widget = ConfirmationWidget::new(&confirmation.message, confirmation.selection);
         widget.render_with_theme(area, buf, &theme);
     }
 }

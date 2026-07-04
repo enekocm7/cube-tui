@@ -90,7 +90,7 @@ pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
             Msg::SelectUp | Msg::SelectDown | Msg::Help | Msg::Tick | Msg::Quit
         );
     }
-    if model.screen.show_confirm_delete_session() {
+    if model.confirmation().is_some() {
         return matches!(
             msg,
             Msg::NavLeft | Msg::NavRight | Msg::Enter | Msg::Esc | Msg::Tick | Msg::Quit

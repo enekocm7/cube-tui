@@ -4,6 +4,7 @@ use crate::widgets::history::History;
 
 #[cfg(feature = "bluetooth")]
 pub mod bluetooth;
+pub mod confirmation;
 pub mod detailed_stats;
 pub mod details;
 pub mod help;
@@ -15,6 +16,7 @@ pub mod settings;
 
 #[cfg(feature = "bluetooth")]
 use bluetooth::BluetoothState;
+use confirmation::Confirmation;
 use help::HelpState;
 use main_focus::{MainFocus, MainStatsSelection};
 use screen::Screen;
@@ -28,6 +30,7 @@ pub struct Model {
     pub(crate) settings: Settings,
     pub(crate) help_state: HelpState,
     pub(crate) screen: Screen,
+    pub(crate) confirmation: Option<Confirmation>,
     #[cfg(feature = "bluetooth")]
     pub(crate) bluetooth_state: BluetoothState,
     pub(crate) main_focus: MainFocus,
@@ -41,6 +44,7 @@ impl Model {
             settings: Settings::default(),
             help_state: HelpState::default(),
             screen: Screen::default(),
+            confirmation: None,
             #[cfg(feature = "bluetooth")]
             bluetooth_state: BluetoothState::default(),
             main_focus: MainFocus::History,

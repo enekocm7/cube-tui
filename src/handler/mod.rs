@@ -3,6 +3,7 @@ use futures_util::StreamExt;
 
 #[cfg(feature = "bluetooth")]
 use crate::model::bluetooth::BluetoothEvent;
+use crate::model::confirmation::ConfirmationAction;
 use crate::model::{InspectionState, Model, TimerState};
 use crate::msg::{INSPECTION_LIMIT_MS, Msg, allowed_msg};
 use crate::persistence;
@@ -225,7 +226,7 @@ fn handle_new_session(model: &mut Model) {
 
 fn handle_delete_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle && model.session_count() > 1 {
-        model.open_confirm_delete_session();
+        model.open_confirmation(ConfirmationAction::DeleteSession);
     }
 }
 
@@ -369,18 +370,30 @@ fn handle_enter(model: &mut Model) {
         }
         return;
     }
-    if model.screen.show_confirm_delete_session() {
-        let confirmed = model.get_confirm_delete_session_selection()
-            == crate::widgets::confirmation::Selection::Yes;
+    if let Some(confirmation) = model.confirmation() {
+        let confirmed = confirmation.selection == crate::widgets::confirmation::Selection::Yes;
+        let action = confirmation.action;
+        model.close_confirmation();
 
-        if confirmed && model.delete_current_session() {
-            if model.current_session().scramble.is_none() {
-                model.next_scramble();
+        if confirmed {
+            match action {
+                ConfirmationAction::DeleteSession => {
+                    if model.delete_current_session() {
+                        if model.current_session().scramble.is_none() {
+                            model.next_scramble();
+                        }
+                        persistence::save(model);
+                    }
+                }
+                ConfirmationAction::DeleteTime => {
+                    model.history_mut().delete_selected();
+                    persistence::save(model);
+                    if model.show_details() && model.history().is_empty() {
+                        model.close_current_screen();
+                    }
+                }
             }
-            persistence::save(model);
         }
-
-        model.close_confirm_delete_session();
         return;
     }
     if model.show_mean_detail() {
@@ -413,8 +426,8 @@ fn handle_esc(model: &mut Model) {
         model.close_bluetooth();
         return;
     }
-    if model.screen.show_confirm_delete_session() {
-        model.close_confirm_delete_session();
+    if model.confirmation().is_some() {
+        model.close_confirmation();
         return;
     }
     model.close_current_screen();
@@ -422,17 +435,13 @@ fn handle_esc(model: &mut Model) {
 
 fn handle_delete_time(model: &mut Model) {
     if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
-        model.history_mut().delete_selected();
-        persistence::save(model);
-        if model.show_details() && model.history().is_empty() {
-            model.close_current_screen();
-        }
+        model.open_confirmation(ConfirmationAction::DeleteTime);
     }
 }
 
 fn handle_nav_left(model: &mut Model) {
-    if model.screen.show_confirm_delete_session() {
-        model.confirm_delete_session_left();
+    if model.confirmation().is_some() {
+        model.confirmation_selection_left();
     } else if model.show_detailed_stats() && !model.show_mean_detail() {
         model.detailed_stats_col_left();
     } else if model.main_focus_is_stats() {
@@ -443,8 +452,8 @@ fn handle_nav_left(model: &mut Model) {
 }
 
 fn handle_nav_right(model: &mut Model) {
-    if model.screen.show_confirm_delete_session() {
-        model.confirm_delete_session_right();
+    if model.confirmation().is_some() {
+        model.confirmation_selection_right();
     } else if model.show_detailed_stats() && !model.show_mean_detail() {
         model.detailed_stats_col_right();
     } else if model.main_focus_is_stats() {

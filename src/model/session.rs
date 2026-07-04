@@ -6,7 +6,6 @@ use crate::model::help::HelpState;
 use crate::model::main_focus::{MainFocus, MainStatsSelection};
 use crate::model::screen::Screen;
 use crate::scramble::{self, Scramble, WcaEvent};
-use crate::widgets::confirmation::Selection;
 use crate::widgets::history::History;
 use std::time::Instant;
 
@@ -149,40 +148,6 @@ impl Model {
         self.session_state.sessions.push(Session::new());
         self.session_state.current_session_index = self.session_state.sessions.len() - 1;
         true
-    }
-
-    pub const fn open_confirm_delete_session(&mut self) {
-        if self.session_state.sessions.len() > 1 {
-            self.screen = Screen::ConfirmDeleteSession {
-                selection: Selection::No,
-            };
-        }
-    }
-
-    pub const fn close_confirm_delete_session(&mut self) {
-        if self.screen.show_confirm_delete_session() {
-            self.screen = Screen::Main;
-        }
-    }
-
-    pub const fn confirm_delete_session_left(&mut self) {
-        if let Screen::ConfirmDeleteSession { selection } = &mut self.screen {
-            *selection = Selection::No;
-        }
-    }
-
-    pub const fn confirm_delete_session_right(&mut self) {
-        if let Screen::ConfirmDeleteSession { selection } = &mut self.screen {
-            *selection = Selection::Yes;
-        }
-    }
-
-    pub const fn get_confirm_delete_session_selection(&self) -> Selection {
-        if let Screen::ConfirmDeleteSession { selection } = self.screen {
-            selection
-        } else {
-            Selection::No
-        }
     }
 
     pub fn delete_current_session(&mut self) -> bool {
