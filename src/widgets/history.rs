@@ -251,35 +251,7 @@ impl History {
     }
 
     pub fn get_fastest_mo3(&self) -> Option<Cow<'static, str>> {
-        let mut fastest = u64::MAX;
-        let mut any_valid = false;
-        let mut any_computable = false;
-
-        for window in self.times.windows(3) {
-            any_computable = true;
-            let mut sum: u64 = 0;
-            let mut all_valid = true;
-            for t in window {
-                if let Some(v) = t.effective_ms() {
-                    sum += v;
-                } else {
-                    all_valid = false;
-                    break;
-                }
-            }
-            if all_valid {
-                any_valid = true;
-                fastest = fastest.min(sum / 3);
-            }
-        }
-
-        if any_valid {
-            return Some(Cow::Owned(format_millis(fastest)));
-        }
-        if any_computable {
-            return Some(Cow::Borrowed("DNF"));
-        }
-        None
+        self.fastest_average_value(3)
     }
 
     pub fn get_latest_ao5(&self) -> Option<Cow<'static, str>> {
@@ -288,30 +260,47 @@ impl History {
     }
 
     pub fn get_fastest_ao5(&self) -> Option<Cow<'static, str>> {
+        self.fastest_average_value(5)
+    }
+
+    pub fn get_latest_ao12(&self) -> Option<Cow<'static, str>> {
+        self.get_ao12(self.times.len())
+            .map(Self::format_average_value)
+    }
+
+    pub fn get_fastest_ao12(&self) -> Option<Cow<'static, str>> {
+        self.fastest_average_value(12)
+    }
+
+    pub fn get_latest_ao50(&self) -> Option<Cow<'static, str>> {
+        self.get_ao50(self.times.len())
+            .map(Self::format_average_value)
+    }
+
+    pub fn get_fastest_ao50(&self) -> Option<Cow<'static, str>> {
+        self.fastest_average_value(50)
+    }
+
+    pub fn get_latest_ao100(&self) -> Option<Cow<'static, str>> {
+        self.get_ao100(self.times.len())
+            .map(Self::format_average_value)
+    }
+
+    pub fn get_fastest_ao100(&self) -> Option<Cow<'static, str>> {
+        self.fastest_average_value(100)
+    }
+
+    fn fastest_average_value(&self, n: usize) -> Option<Cow<'static, str>> {
         let mut fastest = u64::MAX;
         let mut any_valid = false;
         let mut any_computable = false;
 
-        for window in self.times.windows(5) {
+        for index in n..=self.times.len() {
             any_computable = true;
-            let mut vals: [Option<u64>; 5] = [None; 5];
-            for (i, t) in window.iter().enumerate() {
-                vals[i] = t.effective_ms();
+            if let Some(AverageValue::Time(value)) = self.get_avg(index, n) {
+                any_valid = true;
+                fastest = fastest.min(value);
             }
-            let dnf_count = vals.iter().filter(|v| v.is_none()).count();
-            if dnf_count >= 2 {
-                continue;
-            }
-
-            let trimmed_sum: u64 = if dnf_count == 1 {
-                vals.iter().flatten().skip(1).sum()
-            } else {
-                let mut sorted: [u64; 5] = vals.map(Option::unwrap);
-                sorted.sort_unstable();
-                sorted[1..4].iter().sum()
-            };
-            any_valid = true;
-            fastest = fastest.min(trimmed_sum / 3);
         }
 
         if any_valid {
@@ -324,30 +313,32 @@ impl History {
     }
 
     fn get_mo3(&self, index: usize) -> Option<AverageValue> {
-        if index <= 2 {
-            return None;
-        }
-
-        let times = self.times.get(index.saturating_sub(3)..index)?;
-
-        let mut sum: u64 = 0;
-        for time in times {
-            let Some(value) = Self::effective_millis(time) else {
-                return Some(AverageValue::Dnf);
-            };
-            sum += value;
-        }
-
-        Some(AverageValue::Time(sum / 3))
+        self.get_avg(index, 3)
     }
 
     fn get_ao5(&self, index: usize) -> Option<AverageValue> {
-        if index <= 4 {
+        self.get_avg(index, 5)
+    }
+
+    fn get_ao12(&self, index: usize) -> Option<AverageValue> {
+        self.get_avg(index, 12)
+    }
+
+    fn get_ao50(&self, index: usize) -> Option<AverageValue> {
+        self.get_avg(index, 50)
+    }
+
+    fn get_ao100(&self, index: usize) -> Option<AverageValue> {
+        self.get_avg(index, 100)
+    }
+
+    fn get_avg(&self, index: usize, n: usize) -> Option<AverageValue> {
+        if index < n {
             return None;
         }
 
-        let attempts = self.times.get(index.saturating_sub(5)..index)?;
-        let mut vals: [Option<u64>; 5] = [None; 5];
+        let attempts = self.times.get(index.saturating_sub(n)..index)?;
+        let mut vals: Vec<Option<u64>> = vec![None; n];
         let mut dnf_count = 0;
         for (i, t) in attempts.iter().enumerate() {
             vals[i] = Self::effective_millis(t);
@@ -355,19 +346,32 @@ impl History {
                 dnf_count += 1;
             }
         }
+
+        if n == 3 {
+            if dnf_count > 0 {
+                return Some(AverageValue::Dnf);
+            }
+            let sum: u64 = vals.iter().map(|v| v.unwrap()).sum();
+            return Some(AverageValue::Time(sum / 3));
+        }
+
         if dnf_count >= 2 {
             return Some(AverageValue::Dnf);
         }
 
+        let valid: Vec<u64> = vals.iter().flatten().copied().collect();
+        let count = u64::try_from(n - 2).expect("n is small");
+
         if dnf_count == 1 {
-            let trimmed_sum: u64 = vals.iter().flatten().skip(1).sum();
-            return Some(AverageValue::Time(trimmed_sum / 3));
+            let best = valid.iter().min().copied().unwrap_or(0);
+            let sum: u64 = valid.iter().sum::<u64>() - best;
+            return Some(AverageValue::Time(sum / count));
         }
 
-        let mut sorted: [u64; 5] = vals.map(Option::unwrap);
+        let mut sorted = valid;
         sorted.sort_unstable();
-        let trimmed_sum: u64 = sorted[1..4].iter().sum();
-        Some(AverageValue::Time(trimmed_sum / 3))
+        let sum: u64 = sorted[1..n - 1].iter().sum();
+        Some(AverageValue::Time(sum / count))
     }
 
     const fn effective_millis(time: &Time) -> Option<u64> {
@@ -403,6 +407,21 @@ impl History {
             .map(Self::format_average_value)
     }
 
+    pub fn ao12_at(&self, solve_index: usize) -> Option<Cow<'static, str>> {
+        self.get_ao12(solve_index + 1)
+            .map(Self::format_average_value)
+    }
+
+    pub fn ao50_at(&self, solve_index: usize) -> Option<Cow<'static, str>> {
+        self.get_ao50(solve_index + 1)
+            .map(Self::format_average_value)
+    }
+
+    pub fn ao100_at(&self, solve_index: usize) -> Option<Cow<'static, str>> {
+        self.get_ao100(solve_index + 1)
+            .map(Self::format_average_value)
+    }
+
     pub const fn latest_mo3_index(&self) -> Option<usize> {
         if self.times.len() >= 3 {
             Some(self.times.len() - 1)
@@ -413,6 +432,30 @@ impl History {
 
     pub const fn latest_ao5_index(&self) -> Option<usize> {
         if self.times.len() >= 5 {
+            Some(self.times.len() - 1)
+        } else {
+            None
+        }
+    }
+
+    pub const fn latest_ao12_index(&self) -> Option<usize> {
+        if self.times.len() >= 12 {
+            Some(self.times.len() - 1)
+        } else {
+            None
+        }
+    }
+
+    pub const fn latest_ao50_index(&self) -> Option<usize> {
+        if self.times.len() >= 50 {
+            Some(self.times.len() - 1)
+        } else {
+            None
+        }
+    }
+
+    pub const fn latest_ao100_index(&self) -> Option<usize> {
+        if self.times.len() >= 100 {
             Some(self.times.len() - 1)
         } else {
             None
@@ -450,6 +493,18 @@ impl History {
         self.fastest_average_index(5, Self::get_ao5)
     }
 
+    pub fn fastest_ao12_index(&self) -> Option<usize> {
+        self.fastest_average_index(12, Self::get_ao12)
+    }
+
+    pub fn fastest_ao50_index(&self) -> Option<usize> {
+        self.fastest_average_index(50, Self::get_ao50)
+    }
+
+    pub fn fastest_ao100_index(&self) -> Option<usize> {
+        self.fastest_average_index(100, Self::get_ao100)
+    }
+
     pub fn mo3_times_at(&self, solve_index: usize) -> Option<&[Time]> {
         if solve_index < 2 || solve_index >= self.times.len() {
             return None;
@@ -464,6 +519,30 @@ impl History {
         }
         self.get_ao5(solve_index + 1)?;
         self.times.get(solve_index - 4..=solve_index)
+    }
+
+    pub fn ao12_times_at(&self, solve_index: usize) -> Option<&[Time]> {
+        if solve_index < 11 || solve_index >= self.times.len() {
+            return None;
+        }
+        self.get_ao12(solve_index + 1)?;
+        self.times.get(solve_index - 11..=solve_index)
+    }
+
+    pub fn ao50_times_at(&self, solve_index: usize) -> Option<&[Time]> {
+        if solve_index < 49 || solve_index >= self.times.len() {
+            return None;
+        }
+        self.get_ao50(solve_index + 1)?;
+        self.times.get(solve_index - 49..=solve_index)
+    }
+
+    pub fn ao100_times_at(&self, solve_index: usize) -> Option<&[Time]> {
+        if solve_index < 99 || solve_index >= self.times.len() {
+            return None;
+        }
+        self.get_ao100(solve_index + 1)?;
+        self.times.get(solve_index - 99..=solve_index)
     }
 
     pub fn render_with_theme(
@@ -672,5 +751,37 @@ mod tests {
         assert_eq!(times.len(), 5);
         assert_eq!(times[0].raw_ms(), 1);
         assert_eq!(times[4].raw_ms(), 5);
+    }
+
+    #[test]
+    fn fastest_ao12_drops_best_and_worst() {
+        // 12 times from 100 to 1200 (in ms)
+        let times: Vec<Time> = (1..=12).map(|i| time_with_ms(i * 100)).collect();
+        let h = history(times);
+        // trimmed sum: 200 + 300 + ... + 1100 = 6500, / 10 = 650
+        assert_eq!(h.get_fastest_ao12().unwrap(), "00:00.650");
+    }
+
+    #[test]
+    fn latest_ao12_requires_twelve_solves() {
+        assert!(
+            history(vec![time_with_ms(1); 11])
+                .latest_ao12_index()
+                .is_none()
+        );
+        assert_eq!(
+            history(vec![time_with_ms(1); 12]).latest_ao12_index(),
+            Some(11)
+        );
+    }
+
+    #[test]
+    fn ao12_times_at_returns_correct_slice() {
+        let h = history((1..=15).map(time_with_ms).collect());
+        // ao12_at(14) uses indices 3..=14 (raw_ms 4..=15)
+        let times = h.ao12_times_at(14).unwrap();
+        assert_eq!(times.len(), 12);
+        assert_eq!(times[0].raw_ms(), 4);
+        assert_eq!(times[11].raw_ms(), 15);
     }
 }

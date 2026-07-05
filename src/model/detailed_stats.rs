@@ -45,13 +45,15 @@ impl Model {
 
     pub const fn detailed_stats_col_left(&mut self) {
         if let Screen::DetailedStats { col, .. } = &mut self.screen {
-            *col = 0;
+            *col = col.saturating_sub(1);
         }
     }
 
     pub const fn detailed_stats_col_right(&mut self) {
-        if let Screen::DetailedStats { col, .. } = &mut self.screen {
-            *col = 1;
+        if let Screen::DetailedStats { col, .. } = &mut self.screen
+            && *col < 4
+        {
+            *col += 1;
         }
     }
 }

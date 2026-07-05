@@ -88,7 +88,7 @@ impl Model {
     }
 
     pub fn main_stats_select_down(&mut self) {
-        self.main_stats_selection.row = (self.main_stats_selection.row + 1).min(2);
+        self.main_stats_selection.row = (self.main_stats_selection.row + 1).min(5);
     }
 
     pub const fn main_stats_col_left(&mut self) {

@@ -61,6 +61,24 @@ impl<'a> StatsWidget<'a> {
         let current_mo3 = self.history.get_latest_mo3().unwrap_or(Cow::Borrowed("-"));
         let best_ao5 = self.history.get_fastest_ao5().unwrap_or(Cow::Borrowed("-"));
         let current_ao5 = self.history.get_latest_ao5().unwrap_or(Cow::Borrowed("-"));
+        let best_ao12 = self
+            .history
+            .get_fastest_ao12()
+            .unwrap_or(Cow::Borrowed("-"));
+        let current_ao12 = self.history.get_latest_ao12().unwrap_or(Cow::Borrowed("-"));
+        let best_ao50 = self
+            .history
+            .get_fastest_ao50()
+            .unwrap_or(Cow::Borrowed("-"));
+        let current_ao50 = self.history.get_latest_ao50().unwrap_or(Cow::Borrowed("-"));
+        let best_ao100 = self
+            .history
+            .get_fastest_ao100()
+            .unwrap_or(Cow::Borrowed("-"));
+        let current_ao100 = self
+            .history
+            .get_latest_ao100()
+            .unwrap_or(Cow::Borrowed("-"));
 
         let best_time = Self::fixed_cell(best_time);
         let current_time = Self::fixed_cell(current_time);
@@ -68,6 +86,12 @@ impl<'a> StatsWidget<'a> {
         let current_mo3 = Self::fixed_cell(current_mo3);
         let best_ao5 = Self::fixed_cell(best_ao5);
         let current_ao5 = Self::fixed_cell(current_ao5);
+        let best_ao12 = Self::fixed_cell(best_ao12);
+        let current_ao12 = Self::fixed_cell(current_ao12);
+        let best_ao50 = Self::fixed_cell(best_ao50);
+        let current_ao50 = Self::fixed_cell(current_ao50);
+        let best_ao100 = Self::fixed_cell(best_ao100);
+        let current_ao100 = Self::fixed_cell(current_ao100);
 
         let selected_row = self.selected_row;
         let selected_col = self.selected_col;
@@ -120,6 +144,9 @@ impl<'a> StatsWidget<'a> {
             row_line("time", current_time, best_time, 0),
             row_line("mo3", current_mo3, best_mo3, 1),
             row_line("ao5", current_ao5, best_ao5, 2),
+            row_line("ao12", current_ao12, best_ao12, 3),
+            row_line("ao50", current_ao50, best_ao50, 4),
+            row_line("ao100", current_ao100, best_ao100, 5),
         ];
 
         Paragraph::new(text).block(block).render(area, buf);

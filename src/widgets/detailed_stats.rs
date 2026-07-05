@@ -25,7 +25,7 @@ impl<'a> DetailedStatsWidget<'a> {
 
     pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
         let block = Block::default()
-            .title("Detailed Stats (Enter: view mean, ←/→: mo3/ao5, Esc: back)")
+            .title("Detailed Stats (Enter: view mean, ←/→: navigate, Esc: back)")
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.border()));
 
@@ -42,7 +42,10 @@ impl<'a> DetailedStatsWidget<'a> {
             return;
         }
 
-        let header = format!(" {:>6}  {:>12}  {:>12}  {:>12}", "#", "Time", "mo3", "ao5");
+        let header = format!(
+            " {:>6}  {:>12}  {:>12}  {:>12}  {:>12}  {:>12}  {:>12}",
+            "#", "Time", "mo3", "ao5", "ao12", "ao50", "ao100"
+        );
         let header_style = Style::default()
             .fg(theme.text())
             .add_modifier(Modifier::BOLD);
@@ -74,6 +77,18 @@ impl<'a> DetailedStatsWidget<'a> {
                 .map_or_else(|| Cow::Borrowed("-"), |t| Cow::Owned(t.to_string()));
             let mo3_str = self.history.mo3_at(solve_idx).unwrap_or(Cow::Borrowed("-"));
             let ao5_str = self.history.ao5_at(solve_idx).unwrap_or(Cow::Borrowed("-"));
+            let ao12_str = self
+                .history
+                .ao12_at(solve_idx)
+                .unwrap_or(Cow::Borrowed("-"));
+            let ao50_str = self
+                .history
+                .ao50_at(solve_idx)
+                .unwrap_or(Cow::Borrowed("-"));
+            let ao100_str = self
+                .history
+                .ao100_at(solve_idx)
+                .unwrap_or(Cow::Borrowed("-"));
 
             let is_selected = solve_idx == self.selected_row;
 
@@ -107,6 +122,30 @@ impl<'a> DetailedStatsWidget<'a> {
                 inner.y + row_offset,
                 &ao5_col,
                 row_style(is_selected, is_selected && self.selected_col == 1, theme),
+            );
+
+            let ao12_col = format!("  {:>12}", truncate(&ao12_str, 12));
+            buf.set_string(
+                inner.x + 50,
+                inner.y + row_offset,
+                &ao12_col,
+                row_style(is_selected, is_selected && self.selected_col == 2, theme),
+            );
+
+            let ao50_col = format!("  {:>12}", truncate(&ao50_str, 12));
+            buf.set_string(
+                inner.x + 64,
+                inner.y + row_offset,
+                &ao50_col,
+                row_style(is_selected, is_selected && self.selected_col == 3, theme),
+            );
+
+            let ao100_col = format!("  {:>12}", truncate(&ao100_str, 12));
+            buf.set_string(
+                inner.x + 78,
+                inner.y + row_offset,
+                &ao100_col,
+                row_style(is_selected, is_selected && self.selected_col == 4, theme),
             );
         }
 

@@ -112,7 +112,7 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
 
         let help_text = Line::from(vec![
             Span::styled("↑/↓: navigate  ", Style::default().fg(theme.text())),
-            Span::styled("←/→: mo3/ao5  ", Style::default().fg(theme.text())),
+            Span::styled("←/→: column  ", Style::default().fg(theme.text())),
             Span::styled("Enter: view mean  ", Style::default().fg(theme.text())),
             Span::styled("Esc: back", Style::default().fg(theme.text())),
         ]);

@@ -9,10 +9,13 @@ impl Model {
 
     pub fn open_mean_detail(&mut self) {
         let (row, col) = self.detailed_stats_row_col();
-        let has_mean = if col == 0 {
-            self.history().mo3_at(row).is_some()
-        } else {
-            self.history().ao5_at(row).is_some()
+        let has_mean = match col {
+            0 => self.history().mo3_at(row).is_some(),
+            1 => self.history().ao5_at(row).is_some(),
+            2 => self.history().ao12_at(row).is_some(),
+            3 => self.history().ao50_at(row).is_some(),
+            4 => self.history().ao100_at(row).is_some(),
+            _ => false,
         };
         if has_mean {
             self.screen = Screen::MeanDetail {
@@ -54,6 +57,12 @@ impl Model {
             (1, 1) => self.history().fastest_mo3_index(),
             (2, 0) => self.history().latest_ao5_index(),
             (2, 1) => self.history().fastest_ao5_index(),
+            (3, 0) => self.history().latest_ao12_index(),
+            (3, 1) => self.history().fastest_ao12_index(),
+            (4, 0) => self.history().latest_ao50_index(),
+            (4, 1) => self.history().fastest_ao50_index(),
+            (5, 0) => self.history().latest_ao100_index(),
+            (5, 1) => self.history().fastest_ao100_index(),
             _ => None,
         };
 
@@ -61,9 +70,17 @@ impl Model {
             return false;
         };
 
+        let mean_col = match row {
+            2 => 1,
+            3 => 2,
+            4 => 3,
+            5 => 4,
+            _ => 0,
+        };
+
         self.screen = Screen::MeanDetail {
             row: solve_index,
-            col: usize::from(row != 1),
+            col: mean_col,
             selected_index: 0,
             from_stats_column: true,
         };
@@ -72,11 +89,15 @@ impl Model {
 
     pub fn mean_detail_times_len(&self) -> usize {
         let row = self.detailed_stats_row();
-        if self.detailed_stats_col() == 0 {
-            self.history().mo3_times_at(row).map_or(0, <[Time]>::len)
-        } else {
-            self.history().ao5_times_at(row).map_or(0, <[Time]>::len)
-        }
+        let times = match self.detailed_stats_col() {
+            0 => self.history().mo3_times_at(row),
+            1 => self.history().ao5_times_at(row),
+            2 => self.history().ao12_times_at(row),
+            3 => self.history().ao50_times_at(row),
+            4 => self.history().ao100_times_at(row),
+            _ => None,
+        };
+        times.map_or(0, <[Time]>::len)
     }
 
     pub const fn mean_detail_selected_index(&self) -> usize {
@@ -104,17 +125,19 @@ impl Model {
         let row = self.detailed_stats_row();
         let col = self.detailed_stats_col();
         let selected_index = self.mean_detail_selected_index();
-        let solve_index = if col == 0 {
-            if row < 2 {
-                return false;
-            }
-            row.saturating_sub(2).saturating_add(selected_index)
-        } else {
-            if row < 4 {
-                return false;
-            }
-            row.saturating_sub(4).saturating_add(selected_index)
+        let window_size = match col {
+            0 => 3,
+            1 => 5,
+            2 => 12,
+            3 => 50,
+            4 => 100,
+            _ => return false,
         };
+        let min_row = window_size - 1;
+        if row < min_row {
+            return false;
+        }
+        let solve_index = row.saturating_sub(min_row).saturating_add(selected_index);
 
         if solve_index >= self.history().len() {
             return false;
