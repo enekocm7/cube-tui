@@ -8,7 +8,7 @@ pub enum ConfirmationAction {
 }
 
 impl ConfirmationAction {
-    pub fn message(self) -> &'static str {
+    pub const fn message(self) -> &'static str {
         match self {
             Self::DeleteSession => "Delete this session?",
             Self::DeleteTime => "Delete this time?",

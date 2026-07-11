@@ -203,7 +203,7 @@ impl Scramble {
         &self.text
     }
 
-    pub fn is_wca(&self) -> bool {
+    pub const fn is_wca(&self) -> bool {
         self.wca
     }
 }
