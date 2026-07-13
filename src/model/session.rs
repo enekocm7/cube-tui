@@ -1,12 +1,14 @@
 use super::MAX_SESSIONS;
-use crate::model::Model;
 #[cfg(feature = "bluetooth")]
 use crate::model::bluetooth::BluetoothState;
 use crate::model::help::HelpState;
 use crate::model::main_focus::{MainFocus, MainStatsSelection};
 use crate::model::screen::Screen;
-use crate::scramble::{self, Scramble, WcaEvent};
+use crate::model::Model;
+use crate::scramble::{generate_scramble, Scramble, WcaEvent};
+use crate::utils::runtime::runtime;
 use crate::widgets::history::History;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -27,20 +29,25 @@ pub struct Session {
     pub timer_state: TimerState,
     pub history: History,
     pub scramble: Option<Scramble>,
+    next_scramble: Arc<Mutex<Option<Scramble>>>,
+    next_scramble_tx: flume::Sender<Scramble>,
+    next_scramble_rx: flume::Receiver<Scramble>,
     pub last_time_ms: u64,
     pub event: WcaEvent,
 }
 
 impl Session {
-    pub const fn new() -> Self {
-        let event = WcaEvent::Cube3x3;
-        let scramble = None;
+    pub fn new() -> Self {
+        let (tx, rx) = flume::bounded(1);
         Self {
             timer_state: TimerState::Idle,
             history: History::new(),
-            scramble,
+            scramble: None,
+            next_scramble: Arc::new(Mutex::new(None)),
+            next_scramble_tx: tx,
+            next_scramble_rx: rx,
             last_time_ms: 0,
-            event,
+            event: WcaEvent::Cube3x3,
         }
     }
 
@@ -80,7 +87,13 @@ impl Session {
     }
 
     pub fn next_scramble(&mut self) {
-        self.scramble = Some(scramble::generate_scramble(self.event));
+        let mut next = self.next_scramble.lock().unwrap();
+        if next.is_some() {
+            self.scramble = next.take();
+        } else {
+            let event = self.event;
+            self.scramble = Some(generate_scramble(event));
+        }
     }
 
     pub fn next_event(&mut self) {
@@ -92,11 +105,31 @@ impl Session {
         self.event = self.event.prev();
         self.next_scramble();
     }
-}
 
-impl Default for Session {
-    fn default() -> Self {
-        Self::new()
+    pub fn spawn_scramble_receiver(&mut self) {
+        let next_scramble = Arc::clone(&self.next_scramble);
+        let rx = self.next_scramble_rx.clone();
+        runtime().spawn_blocking(move || {
+            while let Ok(scramble) = rx.recv() {
+                *next_scramble.lock().unwrap() = Some(scramble);
+            }
+        });
+    }
+
+    pub fn spawn_scramble_generator(&mut self) {
+        let tx = self.next_scramble_tx.clone();
+        let next_scramble = Arc::clone(&self.next_scramble);
+        let event = self.event;
+        runtime().spawn_blocking(move || {
+            loop {
+                if next_scramble.lock().unwrap().is_none() {
+                    let scramble = generate_scramble(event);
+                    if tx.send(scramble).is_err() {
+                        break;
+                    }
+                }
+            }
+        });
     }
 }
 
@@ -203,10 +236,12 @@ impl Model {
         for (index, history) in data.into_iter().enumerate() {
             let mut session = Session::new();
             if let Some(last_time) = history.last() {
-                session.event = last_time.event();
+                let event = last_time.event();
                 if index == 0 {
-                    session.scramble = Some(scramble::generate_scramble(session.event));
+                    session.scramble = Some(generate_scramble(event));
                 }
+                session.spawn_scramble_generator();
+                session.spawn_scramble_receiver();
             }
             session.history = history;
             session.history.select_last();
