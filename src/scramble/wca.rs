@@ -2,7 +2,11 @@ use super::WcaEvent;
 use jni::objects::{JString, JValue};
 use jni::vm::{InitArgsBuilder, JavaVM};
 use jni::{JNIVersion, errors, jni_sig, jni_str};
+use std::env::temp_dir;
+use std::fs::File;
 use std::io::Write;
+use std::path::PathBuf;
+use std::process::id;
 use std::sync::OnceLock;
 
 const SCRAMBLE_JAR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/lib-all.jar"));
@@ -46,10 +50,10 @@ fn get_or_init_jvm() -> &'static Result<JavaVM, String> {
     })
 }
 
-fn extract_jar_to_temp() -> std::io::Result<std::path::PathBuf> {
-    let mut path = std::env::temp_dir();
-    path.push(format!("cube-tui-scrambles-{}.jar", std::process::id()));
-    let mut file = std::fs::File::create(&path)?;
+fn extract_jar_to_temp() -> std::io::Result<PathBuf> {
+    let mut path = temp_dir();
+    path.push(format!("cube-tui-scrambles-{}.jar", id()));
+    let mut file = File::create(&path)?;
     file.write_all(SCRAMBLE_JAR)?;
     Ok(path)
 }
