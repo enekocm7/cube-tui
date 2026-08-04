@@ -1,11 +1,13 @@
 use cube_tui_macros::ColorGetters;
 use serde::{Deserialize, Serialize, de::Error};
 
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+use crate::persistence;
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Settings {
     pub timer: TimerSettings,
     #[serde(default)]
-    theme: ThemeSettings,
+    theme: Theme,
     display: DisplaySettings,
 }
 
@@ -38,8 +40,8 @@ impl Settings {
         self.display.scramble
     }
 
-    pub const fn theme(&self) -> &ThemeSettings {
-        &self.theme
+    pub const fn theme(&self) -> &ThemeColors {
+        &self.theme.theme
     }
 }
 
@@ -60,8 +62,44 @@ impl Default for TimerSettings {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct Theme {
+    path: String,
+    #[serde(skip)]
+    theme: ThemeColors,
+}
+
+impl<'de> Deserialize<'de> for Theme {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct ThemeDeserializer {
+            path: Option<String>,
+        }
+
+        let path = ThemeDeserializer::deserialize(deserializer)?
+            .path
+            .filter(|p| !p.trim().is_empty())
+            .unwrap_or("default.toml".to_owned());
+        let theme = persistence::load_theme(&path).unwrap_or_default();
+        Ok(Self { path, theme })
+    }
+}
+
+impl Default for Theme {
+    fn default() -> Self {
+        let theme = persistence::load_theme("default.toml").unwrap_or_default();
+        Self {
+            path: "default.toml".to_owned(),
+            theme,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ColorGetters)]
-pub struct ThemeSettings {
+pub struct ThemeColors {
     background: ColorSettings,
     border: ColorSettings,
     scramble: ColorSettings,
@@ -70,7 +108,7 @@ pub struct ThemeSettings {
     text: ColorSettings,
 }
 
-impl Default for ThemeSettings {
+impl Default for ThemeColors {
     fn default() -> Self {
         Self {
             background: ColorSettings::BLACK,

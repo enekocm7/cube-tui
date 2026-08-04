@@ -6,7 +6,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 
-use crate::model::settings::ThemeSettings;
+use crate::model::settings::ThemeColors;
 
 pub struct BluetoothWidget<'a> {
     devices: Vec<DeviceInfo>,
@@ -30,7 +30,7 @@ impl<'a> BluetoothWidget<'a> {
         }
     }
 
-    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
             .title("Bluetooth Devices")
             .title_alignment(Alignment::Center)

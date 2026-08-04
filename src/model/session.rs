@@ -1,11 +1,11 @@
 use super::MAX_SESSIONS;
+use crate::model::Model;
 #[cfg(feature = "bluetooth")]
 use crate::model::bluetooth::BluetoothState;
 use crate::model::help::HelpState;
 use crate::model::main_focus::{MainFocus, MainStatsSelection};
 use crate::model::screen::Screen;
-use crate::model::Model;
-use crate::scramble::{generate_scramble, Scramble, WcaEvent};
+use crate::scramble::{Scramble, WcaEvent, generate_scramble};
 use crate::utils::runtime::runtime;
 use crate::widgets::history::History;
 use std::sync::{Arc, Mutex};

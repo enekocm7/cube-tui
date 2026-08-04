@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::model::settings::ThemeSettings;
+use crate::model::settings::ThemeColors;
 use crate::widgets::history::History;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -43,7 +43,7 @@ impl<'a> StatsWidget<'a> {
     }
 
     #[allow(clippy::similar_names)]
-    pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
             .title("Stats")
             .borders(Borders::ALL)

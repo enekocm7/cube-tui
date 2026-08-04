@@ -6,7 +6,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Padding, Paragraph, Widget, Wrap};
 
-use crate::model::settings::ThemeSettings;
+use crate::model::settings::ThemeColors;
 
 pub struct ScrambleWidget<'a> {
     text: &'a str,
@@ -22,7 +22,7 @@ impl<'a> ScrambleWidget<'a> {
         }
     }
 
-    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
             .title(self.title.as_str())
             .borders(Borders::ALL)

@@ -5,7 +5,7 @@ use ratatui::{
     widgets::{Block, Borders, Clear, Padding, Paragraph, Widget},
 };
 
-use crate::model::settings::ThemeSettings;
+use crate::model::settings::ThemeColors;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Selection {
@@ -24,7 +24,7 @@ impl<'a> ConfirmationWidget<'a> {
         Self { message, selection }
     }
 
-    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let popup_width = u16::max(area.width / 4, 30);
         let popup_height = u16::max(area.height / 5, 7);
 

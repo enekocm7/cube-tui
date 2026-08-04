@@ -5,7 +5,7 @@ use ratatui::style::{Modifier as StyleModifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
-use crate::model::settings::ThemeSettings;
+use crate::model::settings::ThemeColors;
 use crate::widgets::history::{Modifier, Time};
 
 pub struct DetailsWidget<'a> {
@@ -21,7 +21,7 @@ impl<'a> DetailsWidget<'a> {
         }
     }
 
-    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
             .title("Time Details")
             .borders(Borders::ALL)
@@ -86,12 +86,7 @@ impl<'a> DetailsWidget<'a> {
     }
 }
 
-fn checkbox_line(
-    label: &str,
-    checked: bool,
-    selected: bool,
-    theme: &ThemeSettings,
-) -> Line<'static> {
+fn checkbox_line(label: &str, checked: bool, selected: bool, theme: &ThemeColors) -> Line<'static> {
     let check = if checked { "x" } else { " " };
     let style = if selected {
         Style::default()

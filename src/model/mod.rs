@@ -56,7 +56,7 @@ impl Model {
         &self.settings
     }
 
-    pub const fn set_settings(&mut self, settings: Settings) {
+    pub fn set_settings(&mut self, settings: Settings) {
         self.settings = settings;
     }
 

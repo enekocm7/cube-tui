@@ -352,12 +352,12 @@ fn handle_bluetooth_connect(model: &mut Model) {
 
 fn handle_toggle_inspection(model: &mut Model) {
     model.toggle_inspection();
-    persistence::save_config(*model.settings());
+    persistence::save_config(model.settings());
 }
 
 fn handle_toggle_zen(model: &mut Model) {
     model.toggle_zen();
-    persistence::save_config(*model.settings());
+    persistence::save_config(model.settings());
 }
 
 fn handle_enter(model: &mut Model) {
