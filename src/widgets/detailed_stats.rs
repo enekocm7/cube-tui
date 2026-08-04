@@ -5,7 +5,7 @@ use ratatui::layout::Rect;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::widgets::{Block, Borders, Widget};
 
-use crate::model::settings::ThemeSettings;
+use crate::model::settings::ThemeColors;
 use crate::widgets::history::History;
 
 pub struct DetailedStatsWidget<'a> {
@@ -23,7 +23,7 @@ impl<'a> DetailedStatsWidget<'a> {
         }
     }
 
-    pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
             .title("Detailed Stats (Enter: view mean, ←/→: navigate, Esc: back)")
             .borders(Borders::ALL)
@@ -170,7 +170,7 @@ impl<'a> DetailedStatsWidget<'a> {
     }
 }
 
-fn row_style(is_row_selected: bool, is_cell_highlighted: bool, theme: &ThemeSettings) -> Style {
+fn row_style(is_row_selected: bool, is_cell_highlighted: bool, theme: &ThemeColors) -> Style {
     if is_cell_highlighted {
         Style::default()
             .bg(Color::Yellow)

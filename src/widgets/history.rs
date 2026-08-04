@@ -6,7 +6,7 @@ use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use serde::{Deserialize, Serialize};
 
-use crate::model::settings::ThemeSettings;
+use crate::model::settings::ThemeColors;
 use crate::scramble::WcaEvent;
 use crate::scramble::WcaEvent::Cube3x3;
 
@@ -549,7 +549,7 @@ impl History {
         &self,
         area: Rect,
         buf: &mut Buffer,
-        theme: &ThemeSettings,
+        theme: &ThemeColors,
         highlight: Option<bool>,
     ) {
         let highlight = highlight.unwrap_or(true);

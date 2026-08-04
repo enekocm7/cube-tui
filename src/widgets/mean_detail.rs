@@ -6,7 +6,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Widget};
 
-use crate::model::settings::ThemeSettings;
+use crate::model::settings::ThemeColors;
 use crate::widgets::history::{History, Time};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -77,7 +77,7 @@ impl<'a> MeanDetailWidget<'a> {
         }
     }
 
-    pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let type_name = match self.mean_type {
             MeanType::Mo3 => "Mean of 3",
             MeanType::Ao5 => "Average of 5",

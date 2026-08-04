@@ -4,7 +4,7 @@ use ratatui::style::{Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
-use crate::model::settings::ThemeSettings;
+use crate::model::settings::ThemeColors;
 
 enum HelpLine {
     Header(&'static str),
@@ -89,7 +89,7 @@ impl HelpWidget {
         total_lines.saturating_sub(visible_lines)
     }
 
-    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeSettings) {
+    pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let text_color = theme.text();
         let help_text: Vec<Line> = HELP_TEXT
             .iter()
