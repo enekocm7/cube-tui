@@ -25,7 +25,7 @@ pub fn load_theme(name: &str) -> Option<ThemeColors> {
     let mut name = name.to_owned();
     let has_toml_ext = std::path::Path::new(&name)
         .extension()
-        .is_none_or(|ext| ext.eq_ignore_ascii_case("toml"));
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"));
     if !has_toml_ext {
         name.push_str(".toml");
     }

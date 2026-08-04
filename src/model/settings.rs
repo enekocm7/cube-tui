@@ -76,10 +76,13 @@ impl<'de> Deserialize<'de> for Theme {
     {
         #[derive(Deserialize)]
         struct ThemeDeserializer {
-            path: String,
+            path: Option<String>,
         }
 
-        let path = ThemeDeserializer::deserialize(deserializer)?.path;
+        let path = ThemeDeserializer::deserialize(deserializer)?
+            .path
+            .filter(|p| !p.trim().is_empty())
+            .unwrap_or("default.toml".to_owned());
         let theme = persistence::load_theme(&path).unwrap_or_default();
         Ok(Self { path, theme })
     }
