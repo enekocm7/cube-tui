@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 
-#[cfg(any(feature = "bluetooth", feature = "dashboard"))]
 pub mod runtime;
 
 pub fn get_scramble_lines(scramble: &str, width: u16) -> u16 {
