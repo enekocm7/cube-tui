@@ -86,12 +86,7 @@ impl<'a> DetailsWidget<'a> {
     }
 }
 
-fn checkbox_line(
-    label: &str,
-    checked: bool,
-    selected: bool,
-    theme: &ThemeColors,
-) -> Line<'static> {
+fn checkbox_line(label: &str, checked: bool, selected: bool, theme: &ThemeColors) -> Line<'static> {
     let check = if checked { "x" } else { " " };
     let style = if selected {
         Style::default()
