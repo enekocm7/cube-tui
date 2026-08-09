@@ -1,4 +1,5 @@
 #[cfg(unix)]
+#[cfg(feature = "wca-scrambles")]
 use std::ffi::OsStr;
 
 fn main() {
@@ -103,6 +104,7 @@ fn build_dashboard() {
 }
 
 #[cfg(unix)]
+#[cfg(feature = "wca-scrambles")]
 fn add_execution_permission<P: AsRef<OsStr>>(path: P) {
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
