@@ -1,0 +1,29 @@
+[tasks.run]
+description = "Run the app without features"
+run = "cargo run"
+alias = "r"
+
+[tasks.dashboard]
+description = "Run the dashboard"
+run = "cargo run --features dashboard -- dashboard"
+alias = "dash"
+
+[tasks.build]
+description = "Build the app without features"
+run = "cargo build"
+alias = "b"
+
+[tasks.bluetooth]
+description = "Run the app with Bluetooth support"
+run = "cargo run --features bluetooth"
+alias = "bt"
+
+[tasks.build-all]
+description = "Build the app with all features"
+run = "cargo build --all-features"
+alias = "ba"
+
+[tasks.run-all]
+description = "Run the app with all features"
+run = "cargo run --all-features"
+alias = "ra"

@@ -1,4 +1,0 @@
-[alias]
-dashboard = "run --features dashboard -- dashboard"
-bd = "build --features dashboard"
-ble = "run --features bluetooth"
