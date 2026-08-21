@@ -27,3 +27,28 @@ alias = "ba"
 description = "Run the app with all features"
 run = "cargo run --all-features"
 alias = "ra"
+
+[tasks.test]
+description = "Run tests without features"
+run = "cargo test"
+alias = "t"
+
+[tasks.test-all]
+description = "Run tests with all features"
+run = "cargo test --all-features"
+alias = "ta"
+
+[tasks.test-java]
+description = "Test the scrambles Java code"
+dir = "scrambles"
+run = "./gradlew :lib:test --no-daemon"
+run_windows = "gradlew.bat :lib:test --no-daemon"
+alias = "tj"
+
+[tasks.test-scrambles]
+description = "Run Rust and scrambles Java tests"
+run = [
+    "mise run test-java",
+    "cargo test --features wca-scrambles"
+]
+alias = "ts"
