@@ -572,44 +572,32 @@ mod tests {
 
     #[test]
     fn cube_scramble_lengths() {
-        for _ in 0..10 {
-            let s2 = generate_scramble(WcaEvent::Cube2x2);
-            let s3 = generate_scramble(WcaEvent::Cube3x3);
-            let s4 = generate_scramble(WcaEvent::Cube4x4);
-            let s5 = generate_scramble(WcaEvent::Cube5x5);
-            let s6 = generate_scramble(WcaEvent::Cube6x6);
-            let s7 = generate_scramble(WcaEvent::Cube7x7);
+        // (event, built-in exact length, WCA min/max move count)
+        let cases: [(WcaEvent, usize, usize, usize); 6] = [
+            (WcaEvent::Cube2x2, 10, 4, 14),
+            (WcaEvent::Cube3x3, 20, 4, 25),
+            (WcaEvent::Cube4x4, 40, 30, 55),
+            (WcaEvent::Cube5x5, 60, 40, 75),
+            (WcaEvent::Cube6x6, 80, 50, 100),
+            (WcaEvent::Cube7x7, 100, 60, 120),
+        ];
 
-            assert_eq!(
-                s2.as_str().split_whitespace().count(),
-                10,
-                "2x2 should have 10 moves"
-            );
-            assert_eq!(
-                s3.as_str().split_whitespace().count(),
-                20,
-                "3x3 should have 20 moves"
-            );
-            assert_eq!(
-                s4.as_str().split_whitespace().count(),
-                40,
-                "4x4 should have 40 moves"
-            );
-            assert_eq!(
-                s5.as_str().split_whitespace().count(),
-                60,
-                "5x5 should have 60 moves"
-            );
-            assert_eq!(
-                s6.as_str().split_whitespace().count(),
-                80,
-                "6x6 should have 80 moves"
-            );
-            assert_eq!(
-                s7.as_str().split_whitespace().count(),
-                100,
-                "7x7 should have 100 moves"
-            );
+        for _ in 0..10 {
+            for (event, internal_len, wca_min, wca_max) in cases {
+                let scramble = generate_scramble(event);
+                let count = scramble.as_str().split_whitespace().count();
+                if scramble.is_wca() {
+                    assert!(
+                        (wca_min..=wca_max).contains(&count),
+                        "{event:?} WCA length {count} outside {wca_min}-{wca_max}"
+                    );
+                } else {
+                    assert_eq!(
+                        count, internal_len,
+                        "{event:?} should have {internal_len} moves"
+                    );
+                }
+            }
         }
     }
 
@@ -689,7 +677,14 @@ mod tests {
         for _ in 0..10 {
             let scramble = generate_scramble(WcaEvent::Skewb);
             let count = scramble.as_str().split_whitespace().count();
-            assert_eq!(count, 9, "Skewb should have 9 moves, got {count}");
+            if scramble.is_wca() {
+                assert!(
+                    (4..=20).contains(&count),
+                    "WCA skewb length {count} outside 4-20"
+                );
+            } else {
+                assert_eq!(count, 9, "Skewb should have 9 moves, got {count}");
+            }
         }
     }
 
@@ -703,12 +698,21 @@ mod tests {
             assert!(text.contains('('), "Square-1 should have parentheses");
             assert!(text.contains('/'), "Square-1 should have slashes");
 
-            // Count slashes - should be 15
             let slash_count = text.matches('/').count();
-            assert_eq!(
-                slash_count, 15,
-                "Square-1 should have 15 slashes, got {slash_count}"
-            );
+            if scramble.is_wca() {
+                // WCA Square-1 scrambles vary in length
+                let token_count = text.split_whitespace().count();
+                assert!(
+                    (4..=30).contains(&token_count),
+                    "WCA Square-1 token count {token_count} outside 4-30"
+                );
+            } else {
+                // Built-in generator emits exactly 15 twist/slash pairs
+                assert_eq!(
+                    slash_count, 15,
+                    "Square-1 should have 15 slashes, got {slash_count}"
+                );
+            }
         }
     }
 
@@ -718,14 +722,26 @@ mod tests {
             let scramble = generate_scramble(WcaEvent::Clock);
             let text = scramble.as_str();
 
-            // Should end with y2
-            assert!(text.ends_with("y2"), "Clock should end with y2");
-
             // Should contain + or - for amounts
             assert!(
                 text.contains('+') || text.contains('-'),
                 "Clock should have +/- amounts"
             );
+
+            if scramble.is_wca() {
+                // WCA clock: two sections separated by a y2 rotation,
+                // ending in bare pin moves
+                assert!(text.contains("y2"), "WCA clock should contain y2");
+                let sections: Vec<&str> = text.split("y2").collect();
+                assert_eq!(sections.len(), 2, "WCA clock should have 2 y2 sections");
+                assert!(
+                    !sections[0].trim().is_empty() && !sections[1].trim().is_empty(),
+                    "WCA clock sections should not be empty"
+                );
+            } else {
+                // Built-in clock ends with y2
+                assert!(text.ends_with("y2"), "Clock should end with y2");
+            }
         }
     }
 
@@ -912,6 +928,10 @@ mod tests {
         for event in cube_events {
             for _ in 0..5 {
                 let scramble = generate_scramble(event);
+                if scramble.is_wca() {
+                    // WCA scrambles legitimately contain consecutive same-axis moves
+                    continue;
+                }
                 let tokens: Vec<&str> = scramble.as_str().split_whitespace().collect();
 
                 for i in 1..tokens.len() {
@@ -998,7 +1018,12 @@ mod tests {
 
                     for num_str in nums {
                         let num: i8 = num_str.parse().expect("Should parse as number");
-                        assert!((-5..=6).contains(&num), "Square-1 value {num} out of range");
+                        // WCA Square-1 coordinates span -6..6, built-in uses -5..6
+                        let range = if scramble.is_wca() { -6..=6 } else { -5..=6 };
+                        assert!(
+                            range.contains(&num),
+                            "Square-1 value {num} outside {range:?}"
+                        );
                     }
                 }
             }
@@ -1007,49 +1032,96 @@ mod tests {
 
     #[test]
     fn clock_positions_valid() {
-        let valid_positions = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"];
+        const POSITIONS: [&str; 9] = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"];
+
+        // Longest first so e.g. "UR" is matched before "U"
+        let mut prefixes: Vec<&str> = POSITIONS.to_vec();
+        prefixes.sort_by_key(|pos| std::cmp::Reverse(pos.len()));
 
         for _ in 0..10 {
             let scramble = generate_scramble(WcaEvent::Clock);
-            let tokens: Vec<&str> = scramble.as_str().split_whitespace().collect();
 
-            // All but the last should be position+amount
-            for token in &tokens[..tokens.len() - 1] {
-                // Find where the number starts (+ or - or digit)
-                let pos_end = token.find(|c: char| c == '+' || c == '-' || c.is_ascii_digit());
-                if let Some(idx) = pos_end {
-                    let pos = &token[..idx];
+            for token in scramble.as_str().split_whitespace() {
+                if token == "y2" {
+                    continue;
+                }
+
+                // Primed pin move (WCA-only), e.g. "UR'"
+                if let Some(pin) = token.strip_suffix('\'') {
+                    assert!(prefixes.contains(&pin), "Invalid clock pin move: {token}");
+                    continue;
+                }
+
+                let Some(rest) = prefixes.iter().find_map(|pos| token.strip_prefix(pos)) else {
+                    panic!("Invalid clock position in token: {token}");
+                };
+
+                if rest.is_empty() {
+                    continue;
+                }
+
+                let (magnitude, negative) = parse_clock_amount(rest)
+                    .unwrap_or_else(|| panic!("Invalid clock amount in token: {token}"));
+                if scramble.is_wca() {
+                    // WCA amounts have magnitude 0-6 with a direction sign
                     assert!(
-                        valid_positions.contains(&pos),
-                        "Invalid clock position: {pos}"
+                        (0..=6).contains(&magnitude),
+                        "Clock magnitude {magnitude} out of range in token: {token}"
+                    );
+                } else {
+                    // Built-in amounts span -5 to 6
+                    let amount = if negative { -magnitude } else { magnitude };
+                    assert!(
+                        (-5..=6).contains(&amount),
+                        "Clock amount {amount} out of range in token: {token}"
                     );
                 }
             }
-
-            // Last should be y2
-            assert_eq!(*tokens.last().unwrap(), "y2", "Clock should end with y2");
         }
+    }
+
+    /// Parses "+3"/"-3" (built-in) or "3+"/"3-" (WCA) into (magnitude, negative).
+    fn parse_clock_amount(rest: &str) -> Option<(i8, bool)> {
+        if let Some(digits) = rest.strip_prefix('+') {
+            return Some((digits.parse::<i8>().ok()?, false));
+        }
+        if let Some(digits) = rest.strip_prefix('-') {
+            return Some((digits.parse::<i8>().ok()?, true));
+        }
+        if let Some(digits) = rest.strip_suffix('+') {
+            return Some((digits.parse::<i8>().ok()?, false));
+        }
+        let digits = rest.strip_suffix('-')?;
+        Some((digits.parse::<i8>().ok()?, true))
     }
 
     #[test]
     fn scramble_deterministic_length() {
-        // The same event should always produce the same length scrambles
-        let lengths: Vec<(WcaEvent, usize)> = vec![
-            (WcaEvent::Cube2x2, 10),
-            (WcaEvent::Cube3x3, 20),
-            (WcaEvent::Cube4x4, 40),
-            (WcaEvent::Cube5x5, 60),
-            (WcaEvent::Cube6x6, 80),
-            (WcaEvent::Cube7x7, 100),
-            (WcaEvent::Megaminx, 77),
-            (WcaEvent::Skewb, 9),
+        // The built-in generator produces a fixed length per event;
+        // WCA scrambles vary within competition bounds.
+        let cases: [(WcaEvent, usize, usize, usize); 8] = [
+            (WcaEvent::Cube2x2, 10, 4, 14),
+            (WcaEvent::Cube3x3, 20, 4, 25),
+            (WcaEvent::Cube4x4, 40, 30, 55),
+            (WcaEvent::Cube5x5, 60, 40, 75),
+            (WcaEvent::Cube6x6, 80, 50, 100),
+            (WcaEvent::Cube7x7, 100, 60, 120),
+            (WcaEvent::Megaminx, 77, 77, 77),
+            (WcaEvent::Skewb, 9, 4, 20),
         ];
 
-        for (event, expected_len) in lengths {
+        for (event, internal_len, wca_min, wca_max) in cases {
             for _ in 0..5 {
                 let scramble = generate_scramble(event);
                 let count = scramble.as_str().split_whitespace().count();
-                assert_eq!(count, expected_len, "{event:?} length mismatch");
+                if scramble.is_wca() {
+                    assert!(
+                        (wca_min..=wca_max).contains(&count),
+                        "{event:?} WCA length {count} outside {wca_min}-{wca_max}"
+                    );
+                } else {
+                    assert_eq!(count, internal_len, "{event:?} length mismatch");
+                }
             }
         }
     }
