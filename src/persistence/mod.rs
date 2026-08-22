@@ -1,4 +1,5 @@
-use std::fs;
+use std::fs::{self, File};
+use std::io::BufReader;
 use std::path::PathBuf;
 
 use crate::model::Model;
@@ -60,8 +61,8 @@ pub fn save(model: &Model) {
 
 pub fn load() -> Option<Vec<History>> {
     let path = data_file()?;
-    let content = fs::read_to_string(path).ok()?;
-    serde_json::from_str(&content).ok()
+    let reader = BufReader::new(File::open(path).ok()?);
+    serde_json::from_reader(reader).ok()
 }
 
 pub fn load_config() -> Option<Settings> {

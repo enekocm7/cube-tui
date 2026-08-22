@@ -230,9 +230,11 @@ impl Model {
             .map(|s| s.history.clone())
     }
 
-    pub fn restore_from_history(&mut self, data: Vec<History>) {
+    pub fn restore_from_history(&mut self, data: impl IntoIterator<Item = History>) {
         self.session_state.sessions.clear();
-        for (index, history) in data.into_iter().enumerate() {
+        let data = data.into_iter();
+        self.session_state.sessions.reserve(data.size_hint().0);
+        for (index, history) in data.enumerate() {
             let mut session = Session::new();
             if let Some(last_time) = history.last() {
                 let event = last_time.event();
