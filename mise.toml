@@ -1,3 +1,7 @@
+[tools]
+bun = '1.4.0'
+java = "temurin-21.0.10+7.0.LTS"
+
 [tasks.run]
 description = "Run the app without features"
 run = "cargo run"
@@ -38,6 +42,11 @@ description = "Run tests with all features"
 run = "cargo test --all-features"
 alias = "ta"
 
+[tasks.test-scrambles]
+description = "Run Rust scramble tests"
+run = "cargo test --features wca-scrambles"
+alias = "ts"
+
 [tasks.test-java]
 description = "Test the scrambles Java code"
 dir = "scrambles"
@@ -45,10 +54,10 @@ run = "./gradlew :lib:test --no-daemon"
 run_windows = "gradlew.bat :lib:test --no-daemon"
 alias = "tj"
 
-[tasks.test-scrambles]
+[tasks.test-all-scrambles]
 description = "Run Rust and scrambles Java tests"
 run = [
-    "mise run test-java",
-    "cargo test --features wca-scrambles"
+    { task = "test-java" },
+    { task = "test-scrambles" }
 ]
-alias = "ts"
+alias = "tas"
