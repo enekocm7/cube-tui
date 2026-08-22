@@ -51,7 +51,7 @@ pub fn config_file() -> Option<PathBuf> {
 
 pub fn save(model: &Model) {
     let Some(path) = data_file() else { return };
-    let data = model.all_sessions_history();
+    let data: Vec<History> = model.all_sessions_history().collect();
 
     if let Ok(json) = serde_json::to_string_pretty(&data) {
         fs::write(path, json).ok();

@@ -223,12 +223,11 @@ impl Model {
         }
     }
 
-    pub fn all_sessions_history(&self) -> Vec<History> {
+    pub fn all_sessions_history(&self) -> impl Iterator<Item = History> {
         self.session_state
             .sessions
             .iter()
             .map(|s| s.history.clone())
-            .collect()
     }
 
     pub fn restore_from_history(&mut self, data: Vec<History>) {

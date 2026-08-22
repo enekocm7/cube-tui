@@ -139,7 +139,7 @@ pub fn import(path: &Path) -> anyhow::Result<Vec<History>> {
 pub fn export(path: &Path, model: &Model) -> anyhow::Result<PathBuf> {
     let histories = model.all_sessions_history();
     let mut root = serde_json::Map::new();
-    for (index, history) in histories.iter().enumerate() {
+    for (index, history) in histories.enumerate() {
         let key = format!("session{}", index + 1);
         let mut solves_export = Vec::new();
         for time in history.times() {
