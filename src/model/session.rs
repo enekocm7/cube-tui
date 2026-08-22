@@ -237,6 +237,7 @@ impl Model {
             let mut session = Session::new();
             if let Some(last_time) = history.last() {
                 let event = last_time.event();
+                session.event = event;
                 if index == 0 {
                     session.scramble = Some(generate_scramble(event));
                 }
