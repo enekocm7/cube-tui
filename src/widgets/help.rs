@@ -1,6 +1,6 @@
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
@@ -70,6 +70,10 @@ const HELP_TEXT: &[HelpLine] = &[
     HelpLine::Body("t                  Open theme selector"),
     HelpLine::Body("Esc                Close theme selector"),
     HelpLine::Empty,
+];
+
+#[cfg(feature = "bluetooth")]
+const BLUETOOTH_HELP_TEXT: &[HelpLine] = &[
     HelpLine::Header("BLUETOOTH"),
     HelpLine::Body("b                  Open bluetooth device list"),
     HelpLine::Body("Up / Down          Select bluetooth device"),
@@ -88,26 +92,23 @@ impl HelpWidget {
     }
 
     pub fn max_scroll_for_height(height: u16) -> u16 {
-        let total_lines = u16::try_from(HELP_TEXT.len()).unwrap_or(u16::MAX);
+        let total_lines = u16::try_from(total_help_lines()).unwrap_or(u16::MAX);
         let visible_lines = height.saturating_sub(2);
         total_lines.saturating_sub(visible_lines)
     }
 
     pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let text_color = theme.text();
-        let help_text: Vec<Line> = HELP_TEXT
+        let mut help_text: Vec<Line> = HELP_TEXT
             .iter()
-            .map(|entry| match entry {
-                HelpLine::Header(text) => Line::from(vec![Span::styled(
-                    *text,
-                    Style::default().fg(text_color).add_modifier(Modifier::BOLD),
-                )]),
-                HelpLine::Body(text) => {
-                    Line::from(Span::styled(*text, Style::default().fg(text_color)))
-                }
-                HelpLine::Empty => Line::from(""),
-            })
+            .map(|entry| help_line_to_line(entry, text_color))
             .collect();
+        #[cfg(feature = "bluetooth")]
+        help_text.extend(
+            BLUETOOTH_HELP_TEXT
+                .iter()
+                .map(|entry| help_line_to_line(entry, text_color)),
+        );
 
         let max_scroll = u16::try_from(help_text.len())
             .unwrap_or(u16::MAX)
@@ -135,5 +136,24 @@ impl HelpWidget {
             .scroll((scroll, 0))
             .wrap(Wrap { trim: true })
             .render(area, buf);
+    }
+}
+
+fn total_help_lines() -> usize {
+    #[cfg(feature = "bluetooth")]
+    let count = HELP_TEXT.len() + BLUETOOTH_HELP_TEXT.len();
+    #[cfg(not(feature = "bluetooth"))]
+    let count = HELP_TEXT.len();
+    count
+}
+
+fn help_line_to_line(entry: &HelpLine, text_color: Color) -> Line<'_> {
+    match entry {
+        HelpLine::Header(text) => Line::from(vec![Span::styled(
+            *text,
+            Style::default().fg(text_color).add_modifier(Modifier::BOLD),
+        )]),
+        HelpLine::Body(text) => Line::from(Span::styled(*text, Style::default().fg(text_color))),
+        HelpLine::Empty => Line::from(""),
     }
 }
