@@ -43,6 +43,14 @@ impl Settings {
     pub const fn theme(&self) -> &ThemeColors {
         &self.theme.theme
     }
+
+    pub fn theme_name(&self) -> &str {
+        self.theme.path.as_str()
+    }
+
+    pub fn set_theme(&mut self, theme: &Theme) {
+        self.theme.clone_from(theme);
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -75,6 +83,10 @@ impl Theme {
             path: name.to_owned(),
             theme: colors,
         }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.path
     }
 }
 

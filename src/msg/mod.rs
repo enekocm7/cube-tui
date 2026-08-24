@@ -23,6 +23,7 @@ pub enum Msg {
     Enter,
     Esc,
     OpenDetailedStats,
+    OpenThemeSelector,
     DeleteTime,
     NavLeft,
     NavRight,
@@ -54,7 +55,8 @@ pub const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NextScramble),
         (KeyCode::Char('?'), KeyEventKind::Press) => Some(Msg::Help),
         (KeyCode::Char('i'), KeyEventKind::Press) => Some(Msg::ToggleInspection),
-        (KeyCode::Char('t'), KeyEventKind::Press) => Some(Msg::OpenDetailedStats),
+        (KeyCode::Char('a'), KeyEventKind::Press) => Some(Msg::OpenDetailedStats),
+        (KeyCode::Char('t'), KeyEventKind::Press) => Some(Msg::OpenThemeSelector),
         (KeyCode::Char('d'), KeyEventKind::Press) => Some(Msg::DeleteTime),
         #[cfg(feature = "bluetooth")]
         (KeyCode::Char('b'), KeyEventKind::Press) => Some(Msg::ToggleBluetooth),
@@ -96,6 +98,18 @@ pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
             Msg::NavLeft | Msg::NavRight | Msg::Enter | Msg::Esc | Msg::Tick | Msg::Quit
         );
     }
+    if model.theme_selector.is_some() {
+        return matches!(
+            msg,
+            Msg::SelectUp
+                | Msg::SelectDown
+                | Msg::Esc
+                | Msg::Tick
+                | Msg::Quit
+                | Msg::OpenThemeSelector
+        );
+    }
+
     if model.show_details() {
         return matches!(
             msg,

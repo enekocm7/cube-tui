@@ -1,7 +1,7 @@
 use std::fs;
 
 use ratatui::buffer::Buffer;
-use ratatui::layout::Constraint::Percentage;
+use ratatui::layout::Constraint::{Fill, Length};
 use ratatui::layout::{Direction, Layout, Rect};
 use ratatui::style::{Style, Stylize};
 use ratatui::widgets::{Block, Borders, Clear, Padding, Paragraph, Widget};
@@ -11,8 +11,8 @@ use crate::persistence::themes_dir;
 use crate::{model::settings::Theme, persistence::load_theme};
 
 pub struct ThemeSelector {
-    themes: Vec<Theme>,
-    selection: usize,
+    pub themes: Vec<Theme>,
+    pub selection: usize,
 }
 
 impl ThemeSelector {
@@ -41,17 +41,33 @@ impl ThemeSelector {
         }
     }
 
+    pub fn next(&mut self) {
+        if self.selection < self.themes.len().saturating_sub(1) {
+            self.selection += 1;
+        }
+    }
+
+    pub fn previous(&mut self) {
+        if self.selection > 0 {
+            self.selection -= 1;
+        }
+    }
+
+    pub fn selected(&self) -> Option<&Theme> {
+        self.themes.get(self.selection)
+    }
+
     pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
-        let popup_width = u16::max(area.width / 2, 50);
-        let popup_height = u16::max(area.height / 2, 50);
+        let popup_width = u16::max(area.width / 2, 70);
+        let popup_height = u16::max(area.height / 3, 20);
 
         let x = area.x + (area.width.saturating_sub(popup_width)) / 2;
         let y = area.y + (area.height.saturating_sub(popup_height)) / 2;
         let popup_area = Rect::new(
             x,
             y,
-            popup_width.min(area.width - 2),
-            popup_height.min(area.height - 2),
+            popup_width.min(area.width),
+            popup_height.min(area.height),
         );
 
         Widget::render(Clear, popup_area, buf);
@@ -60,7 +76,7 @@ impl ThemeSelector {
             .title("Themes")
             .borders(Borders::ALL)
             .bg(theme.background())
-            .padding(Padding::uniform(5))
+            .padding(Padding::uniform(1))
             .border_style(Style::default().fg(theme.border()));
 
         let inner = block.inner(popup_area);
@@ -68,14 +84,40 @@ impl ThemeSelector {
 
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Percentage(20), Percentage(80)])
+            .constraints([Length(3), Fill(1), Length(1)])
             .split(inner);
 
-        let message = Paragraph::new(
-            "Select the themes, to create one go to the themes folder (cube --themes)",
-        )
-        .fg(theme.text());
+        let message = Paragraph::new("To create one go to the themes folder (cube --themes)")
+            .fg(theme.text());
         message.render(chunks[0], buf);
-        
+
+        let list_area = chunks[1];
+        let visible_height = list_area.height as usize;
+
+        let scroll_offset = if visible_height > 0 {
+            self.selection.saturating_sub(visible_height / 2)
+        } else {
+            0
+        };
+
+        let end = (scroll_offset + visible_height).min(self.themes.len());
+
+        for (i, theme_item) in self.themes[scroll_offset..end].iter().enumerate() {
+            let absolute_index = scroll_offset + i;
+            let is_selected = absolute_index == self.selection;
+            let item_area = Rect::new(list_area.x, list_area.y + i as u16, list_area.width, 1);
+
+            if is_selected {
+                let styled = Paragraph::new(theme_item.name())
+                    .bg(theme.selection())
+                    .fg(theme.selection_text());
+                styled.render(item_area, buf);
+            } else {
+                let styled = Paragraph::new(theme_item.name()).fg(theme.text());
+                styled.render(item_area, buf);
+            }
+        }
+        let help_text = Paragraph::new("Esc: Close this window").fg(theme.text());
+        help_text.render(chunks[2], buf);
     }
 }

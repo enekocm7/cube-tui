@@ -16,7 +16,6 @@ mod widgets;
 use std::io::Stdout;
 use std::time::{Duration, Instant};
 
-use chrono::Weekday::Tue;
 use clap::Parser;
 use ratatui::DefaultTerminal;
 use ratatui::crossterm::event::{self, Event};

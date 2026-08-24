@@ -51,6 +51,7 @@ impl Msg {
             Self::Enter => handle_enter(model),
             Self::Esc => handle_esc(model),
             Self::OpenDetailedStats => handle_open_detailed_stats(model),
+            Self::OpenThemeSelector => handle_open_theme_selector(model),
             Self::DeleteTime => handle_delete_time(model),
             Self::NavLeft => handle_nav_left(model),
             Self::NavRight => handle_nav_right(model),
@@ -139,6 +140,12 @@ fn handle_select_up(model: &mut Model) {
         model.bluetooth_select_up();
         return;
     }
+
+    if model.theme_selector.is_some() {
+        model.theme_selector_up();
+        return;
+    }
+
     if model.show_mean_detail() {
         model.mean_detail_select_up();
     } else if model.show_detailed_stats() {
@@ -162,6 +169,11 @@ fn handle_select_down(model: &mut Model) {
         model.bluetooth_select_down();
         return;
     }
+
+    if model.theme_selector.is_some() {
+        model.theme_selector_down();
+    }
+
     if model.show_mean_detail() {
         model.mean_detail_select_down();
     } else if model.show_detailed_stats() {
@@ -419,6 +431,14 @@ fn handle_open_detailed_stats(model: &mut Model) {
     }
 }
 
+fn handle_open_theme_selector(model: &mut Model) {
+    if model.theme_selector.is_some() {
+        model.clone_theme_selector();
+    } else {
+        model.open_theme_selector();
+    }
+}
+
 #[allow(clippy::missing_const_for_fn)]
 fn handle_esc(model: &mut Model) {
     #[cfg(feature = "bluetooth")]
@@ -428,6 +448,10 @@ fn handle_esc(model: &mut Model) {
     }
     if model.confirmation().is_some() {
         model.close_confirmation();
+        return;
+    }
+    if model.theme_selector.is_some() {
+        model.clone_theme_selector();
         return;
     }
     model.close_current_screen();
