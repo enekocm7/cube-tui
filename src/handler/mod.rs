@@ -433,7 +433,7 @@ fn handle_open_detailed_stats(model: &mut Model) {
 
 fn handle_open_theme_selector(model: &mut Model) {
     if model.theme_selector.is_some() {
-        model.clone_theme_selector();
+        model.close_theme_selector();
     } else {
         model.open_theme_selector();
     }
@@ -451,7 +451,7 @@ fn handle_esc(model: &mut Model) {
         return;
     }
     if model.theme_selector.is_some() {
-        model.clone_theme_selector();
+        model.close_theme_selector();
         return;
     }
     model.close_current_screen();

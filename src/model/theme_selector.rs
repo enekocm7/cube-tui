@@ -20,7 +20,7 @@ impl Model {
         self.theme_selector = Some(theme_selector);
     }
 
-    pub fn clone_theme_selector(&mut self) {
+    pub fn close_theme_selector(&mut self) {
         self.theme_selector = None;
     }
 
