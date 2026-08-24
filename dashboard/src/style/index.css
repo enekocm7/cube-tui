@@ -7,213 +7,220 @@
    Speedcubing scorecard / stackmat palette
 ───────────────────────────────────────── */
 :root {
-    --matte: #0c0c12;
-    --surface: #111118;
-    --raised: #171720;
-    --cell: #0f0f16;
-    --border: #22222d;
-    --border-hover: #343442;
-    --ink: #ebe9e4;
-    --muted: #6e6c65;
-    --dim: #3f3f4a;
-    --accent: #d98300;
-    --accent-hover: #f09500;
-    --good: #2d9d5e;
-    --bad: #cf4239;
-    --warn: #d98300;
-    --header-bg: rgba(12, 12, 19, 0.78);
-    --glow: rgba(217, 131, 0, 0.08);
-    --thumb-bg: #252530;
-    --moon-color: #d98300;
-    --sun-color: #6e6c65;
-    --logo-filter: none;
+	--matte: #0c0c12;
+	--surface: #111118;
+	--raised: #171720;
+	--cell: #0f0f16;
+	--border: #22222d;
+	--border-hover: #343442;
+	--ink: #ebe9e4;
+	--muted: #6e6c65;
+	--dim: #3f3f4a;
+	--accent: #d98300;
+	--accent-hover: #f09500;
+	--good: #2d9d5e;
+	--bad: #cf4239;
+	--warn: #d98300;
+	--header-bg: rgba(12, 12, 19, 0.78);
+	--glow: rgba(217, 131, 0, 0.08);
+	--thumb-bg: #252530;
+	--moon-color: #d98300;
+	--sun-color: #6e6c65;
+	--logo-filter: none;
 }
 
 /* ─────────────────────────────────────────
    Semantic tokens — light
 ───────────────────────────────────────── */
 html:not(.dark) {
-    --matte: #f2efe7;
-    --surface: #ffffff;
-    --raised: #e9e6de;
-    --cell: #f7f5ef;
-    --border: #d9d6ce;
-    --border-hover: #b8b5ad;
-    --ink: #1e1d1b;
-    --muted: #6e6c65;
-    --dim: #a09d94;
-    --accent: #c27400;
-    --accent-hover: #a56200;
-    --good: #278a52;
-    --bad: #b83a31;
-    --warn: #c27400;
-    --header-bg: rgba(242, 239, 231, 0.78);
-    --glow: rgba(194, 116, 0, 0.06);
-    --thumb-bg: #ffffff;
-    --moon-color: #6e6c65;
-    --sun-color: #c27400;
-    --logo-filter: none;
+	--matte: #f2efe7;
+	--surface: #ffffff;
+	--raised: #e9e6de;
+	--cell: #f7f5ef;
+	--border: #d9d6ce;
+	--border-hover: #b8b5ad;
+	--ink: #1e1d1b;
+	--muted: #6e6c65;
+	--dim: #a09d94;
+	--accent: #c27400;
+	--accent-hover: #a56200;
+	--good: #278a52;
+	--bad: #b83a31;
+	--warn: #c27400;
+	--header-bg: rgba(242, 239, 231, 0.78);
+	--glow: rgba(194, 116, 0, 0.06);
+	--thumb-bg: #ffffff;
+	--moon-color: #6e6c65;
+	--sun-color: #c27400;
+	--logo-filter: none;
 }
 
 /* ─────────────────────────────────────────
    Map to Tailwind tokens
 ───────────────────────────────────────── */
 @theme inline {
-    --font-sans: "Space Grotesk Variable", "Space Grotesk", system-ui, Avenir, Helvetica, Arial, sans-serif;
-    --font-mono: "Geist Mono Variable", "Geist Mono", "JetBrains Mono", "Fira Code", monospace;
-    --color-matte: var(--matte);
-    --color-surface: var(--surface);
-    --color-raised: var(--raised);
-    --color-cell: var(--cell);
-    --color-border: var(--border);
-    --color-border-hover: var(--border-hover);
-    --color-ink: var(--ink);
-    --color-muted: var(--muted);
-    --color-dim: var(--dim);
-    --color-accent: var(--accent);
-    --color-accent-hover: var(--accent-hover);
-    --color-good: var(--good);
-    --color-bad: var(--bad);
-    --color-warn: var(--warn);
-    --color-header-bg: var(--header-bg);
-    --color-moon: var(--moon-color);
-    --color-sun: var(--sun-color);
-    --color-thumb: var(--thumb-bg);
+  --font-sans:
+    "Space Grotesk Variable", "Space Grotesk", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", "JetBrains Mono", "Fira Code", monospace;
+  --color-matte: var(--matte);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-cell: var(--cell);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-dim: var(--dim);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-warn: var(--warn);
+  --color-header-bg: var(--header-bg);
+  --color-moon: var(--moon-color);
+  --color-sun: var(--sun-color);
+  --color-thumb: var(--thumb-bg);
 }
 
 /* ─────────────────────────────────────────
    Base
 ───────────────────────────────────────── */
 @layer base {
-    :root {
-        font-synthesis: none;
-        text-rendering: optimizeLegibility;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-    }
+	:root {
+		font-synthesis: none;
+		text-rendering: optimizeLegibility;
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+	}
 
-    html {
-        background-color: var(--matte);
-    }
+	html {
+		background-color: var(--matte);
+	}
 
-    body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: var(--font-sans);
-        background-color: var(--matte);
-        color: var(--ink);
-        transition:
-            background-color 0.3s ease,
-            color 0.3s ease;
-        background-image: radial-gradient(ellipse 80% 50% at 50% -5%, var(--glow), transparent 65%);
-    }
+	body {
+		margin: 0;
+		min-height: 100vh;
+		font-family: var(--font-sans);
+		background-color: var(--matte);
+		color: var(--ink);
+		transition:
+			background-color 0.3s ease,
+			color 0.3s ease;
+		background-image: radial-gradient(
+			ellipse 80% 50% at 50% -5%,
+			var(--glow),
+			transparent 65%
+		);
+	}
 
-    /* Kill all transitions on first paint — prevents dark-mode flash */
-    html.preload * {
-        transition: none !important;
-    }
+	/* Kill all transitions on first paint — prevents dark-mode flash */
+	html.preload * {
+		transition: none !important;
+	}
 
-    * {
-        box-sizing: border-box;
-    }
+	* {
+		box-sizing: border-box;
+	}
 
-    ::selection {
-        background: var(--accent);
-        color: var(--matte);
-    }
+	::selection {
+		background: var(--accent);
+		color: var(--matte);
+	}
 
-    ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-        background: transparent;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: var(--border);
-        border-radius: 0;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--accent);
-    }
+	::-webkit-scrollbar {
+		width: 6px;
+		height: 6px;
+	}
+	::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	::-webkit-scrollbar-thumb {
+		background: var(--border);
+		border-radius: 0;
+	}
+	::-webkit-scrollbar-thumb:hover {
+		background: var(--accent);
+	}
 
-    button {
-        cursor: pointer;
-    }
+	button {
+		cursor: pointer;
+	}
 
-    input,
-    select {
-        font-family: inherit;
-    }
+	input,
+	select {
+		font-family: inherit;
+	}
 }
 
 /* Logo filter driven by CSS var — no JS needed */
 .logo-img {
-    filter: var(--logo-filter);
-    transition: filter 0.3s ease;
+	filter: var(--logo-filter);
+	transition: filter 0.3s ease;
 }
 
 /* ─────────────────────────────────────────
    Animations
 ───────────────────────────────────────── */
 @keyframes fade-in-up {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+	from {
+		opacity: 0;
+		transform: translateY(12px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 @keyframes settle {
-    0% {
-        opacity: 0;
-        transform: translateY(8px);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
+	0% {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 @layer utilities {
-    .animate-fade-in-up {
-        animation: fade-in-up 0.4s ease-out both;
-    }
+	.animate-fade-in-up {
+		animation: fade-in-up 0.4s ease-out both;
+	}
 
-    .animate-settle {
-        animation: settle 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
+	.animate-settle {
+		animation: settle 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+	}
 
-    .font-feature-tabular {
-        font-feature-settings: "tnum" 1, "zero" 1;
-    }
+	.font-feature-tabular {
+		font-feature-settings:
+			"tnum" 1,
+			"zero" 1;
+	}
 
-    /* Theme toggle */
-    .theme-toggle {
-        width: 5rem;
-        background: var(--raised);
-        border-color: var(--border);
-    }
+	/* Theme toggle */
+	.theme-toggle {
+		width: 5rem;
+		background: var(--raised);
+		border-color: var(--border);
+	}
 
-    .theme-toggle-thumb {
-        width: calc(50% - 4px);
-        left: 4px;
-        background: var(--thumb-bg);
-        border: 1px solid var(--border);
-    }
+	.theme-toggle-thumb {
+		width: calc(50% - 4px);
+		left: 4px;
+		background: var(--thumb-bg);
+		border: 1px solid var(--border);
+	}
 
-    .theme-toggle[data-theme="light"] .theme-toggle-thumb {
-        left: calc(50%);
-    }
+	.theme-toggle[data-theme="light"] .theme-toggle-thumb {
+		left: calc(50%);
+	}
 
-    .theme-toggle-moon {
-        color: var(--moon-color);
-    }
+	.theme-toggle-moon {
+		color: var(--moon-color);
+	}
 
-    .theme-toggle-sun {
-        color: var(--sun-color);
-    }
+	.theme-toggle-sun {
+		color: var(--sun-color);
+	}
 }
