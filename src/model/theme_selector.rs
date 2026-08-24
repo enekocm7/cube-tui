@@ -26,17 +26,25 @@ impl Model {
 
     pub fn theme_selector_up(&mut self) {
         if let Some(theme_selector) = &mut self.theme_selector {
+            let before = theme_selector.selection;
             theme_selector.previous();
-            let theme = theme_selector.selected().cloned().unwrap_or_default();
-            self.apply_theme(&theme);
+            if theme_selector.selection != before
+                && let Some(theme) = theme_selector.selected().cloned()
+            {
+                self.apply_theme(&theme);
+            }
         }
     }
 
     pub fn theme_selector_down(&mut self) {
         if let Some(theme_selector) = &mut self.theme_selector {
+            let before = theme_selector.selection;
             theme_selector.next();
-            let theme = theme_selector.selected().cloned().unwrap_or_default();
-            self.apply_theme(&theme);
+            if theme_selector.selection != before
+                && let Some(theme) = theme_selector.selected().cloned()
+            {
+                self.apply_theme(&theme);
+            }
         }
     }
 
