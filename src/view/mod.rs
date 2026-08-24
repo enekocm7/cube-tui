@@ -311,7 +311,7 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         widget.render_with_theme(area, buf, &theme);
     }
 
-    if let Some(theme_selector) = &model.theme_selector {
+    if let Some(theme_selector) = &mut model.theme_selector {
         theme_selector.render(area, buf, &theme);
     }
 }

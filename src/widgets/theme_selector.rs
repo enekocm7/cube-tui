@@ -13,6 +13,7 @@ use crate::{model::settings::Theme, persistence::load_theme};
 pub struct ThemeSelector {
     pub themes: Vec<Theme>,
     pub selection: usize,
+    scroll_offset: usize,
 }
 
 impl ThemeSelector {
@@ -33,11 +34,13 @@ impl ThemeSelector {
             return Self {
                 themes,
                 selection: 0,
+                scroll_offset: 0,
             };
         }
         Self {
             themes: Vec::new(),
             selection: 0,
+            scroll_offset: 0,
         }
     }
 
@@ -57,7 +60,7 @@ impl ThemeSelector {
         self.themes.get(self.selection)
     }
 
-    pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
+    pub fn render(&mut self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let popup_width = u16::max(area.width / 2, 70);
         let popup_height = u16::max(area.height / 3, 20);
 
@@ -84,23 +87,40 @@ impl ThemeSelector {
 
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Length(3), Fill(1), Length(1)])
+            .constraints([Length(3), Fill(1), Length(1), Length(1)])
             .split(inner);
 
         let message = Paragraph::new("To create one go to the themes folder (cube --themes)")
             .fg(theme.text());
         message.render(chunks[0], buf);
 
-        let list_area = chunks[1];
+        let list_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Length(1), Fill(1), Length(1)])
+            .split(chunks[1]);
+
+        let list_area = list_chunks[1];
         let visible_height = list_area.height as usize;
 
-        let scroll_offset = if visible_height > 0 {
-            self.selection.saturating_sub(visible_height / 2)
+        if visible_height == 0 {
+            self.scroll_offset = 0;
         } else {
-            0
-        };
+            if self.selection < self.scroll_offset {
+                self.scroll_offset = self.selection;
+            } else if self.selection >= self.scroll_offset + visible_height {
+                self.scroll_offset = self.selection - visible_height + 1;
+            }
+            let max_offset = self.themes.len().saturating_sub(visible_height);
+            self.scroll_offset = self.scroll_offset.min(max_offset);
+        }
 
+        let scroll_offset = self.scroll_offset;
         let end = (scroll_offset + visible_height).min(self.themes.len());
+
+        if scroll_offset > 0 {
+            let indicator = Paragraph::new(format!("↑ {scroll_offset} more")).fg(theme.text());
+            indicator.render(list_chunks[0], buf);
+        }
 
         for (i, theme_item) in self.themes[scroll_offset..end].iter().enumerate() {
             let absolute_index = scroll_offset + i;
@@ -117,7 +137,14 @@ impl ThemeSelector {
                 styled.render(item_area, buf);
             }
         }
+
+        let below = self.themes.len() - end;
+        if below > 0 {
+            let indicator = Paragraph::new(format!("↓ {below} more")).fg(theme.text());
+            indicator.render(list_chunks[2], buf);
+        }
+
         let help_text = Paragraph::new("Esc: Close this window").fg(theme.text());
-        help_text.render(chunks[2], buf);
+        help_text.render(chunks[3], buf);
     }
 }
