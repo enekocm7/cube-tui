@@ -299,10 +299,7 @@ mod tests {
         &[1000, 2000, 3000]
     )]
     #[case::empty_session(r#"{"session1": []}"#, &[])]
-    fn import_preserves_solves_within_session(
-        #[case] json: &str,
-        #[case] expected_times: &[u64],
-    ) {
+    fn import_preserves_solves_within_session(#[case] json: &str, #[case] expected_times: &[u64]) {
         let path = write_temp_json(json);
         let histories = import_histories(&path);
         std::fs::remove_file(&path).ok();

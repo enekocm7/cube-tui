@@ -1,6 +1,6 @@
-use crate::model::settings::Settings;
 use crate::scramble::WcaEvent;
 use crate::widgets::history::History;
+use crate::{model::settings::Settings, widgets::theme_selector::ThemeSelector};
 
 #[cfg(feature = "bluetooth")]
 pub mod bluetooth;
@@ -13,6 +13,7 @@ pub mod mean_details;
 pub mod screen;
 pub mod session;
 pub mod settings;
+pub mod theme_selector;
 
 #[cfg(feature = "bluetooth")]
 use bluetooth::BluetoothState;
@@ -30,6 +31,7 @@ pub struct Model {
     pub(crate) settings: Settings,
     pub(crate) help_state: HelpState,
     pub(crate) screen: Screen,
+    pub(crate) theme_selector: Option<ThemeSelector>,
     pub(crate) confirmation: Option<Confirmation>,
     #[cfg(feature = "bluetooth")]
     pub(crate) bluetooth_state: BluetoothState,
@@ -44,6 +46,7 @@ impl Model {
             settings: Settings::default(),
             help_state: HelpState::default(),
             screen: Screen::default(),
+            theme_selector: None,
             confirmation: None,
             #[cfg(feature = "bluetooth")]
             bluetooth_state: BluetoothState::default(),

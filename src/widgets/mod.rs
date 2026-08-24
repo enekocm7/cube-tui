@@ -8,3 +8,4 @@ pub mod history;
 pub mod mean_detail;
 pub mod scramble;
 pub mod stats;
+pub mod theme_selector;

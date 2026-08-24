@@ -13,6 +13,13 @@ pub struct Cli {
     pub(crate) data: bool,
     #[arg(short, long, exclusive = true, help = "Print the config file and exit")]
     pub(crate) config: bool,
+    #[arg(
+        short,
+        long,
+        exclusive = true,
+        help = "Print the themes directory and exit"
+    )]
+    pub(crate) theme: bool,
     #[command(subcommand)]
     pub(crate) subcommand: Option<Command>,
 }
