@@ -16,6 +16,7 @@ mod widgets;
 use std::io::Stdout;
 use std::time::{Duration, Instant};
 
+use chrono::Weekday::Tue;
 use clap::Parser;
 use ratatui::DefaultTerminal;
 use ratatui::crossterm::event::{self, Event};
@@ -48,6 +49,14 @@ fn main() {
                 print_as_link(&dir);
             } else {
                 eprintln!("Error: Could not determine data directory");
+                std::process::exit(1);
+            }
+        }
+        Cli { theme: true, .. } => {
+            if let Some(theme_dir) = persistence::themes_dir() {
+                print_as_link(&theme_dir);
+            } else {
+                eprintln!("Error: Could not determine theme directory");
                 std::process::exit(1);
             }
         }

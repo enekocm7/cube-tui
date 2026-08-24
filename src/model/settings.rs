@@ -69,6 +69,15 @@ pub struct Theme {
     theme: ThemeColors,
 }
 
+impl Theme {
+    pub fn new(name: &str, colors: ThemeColors) -> Self {
+        Self {
+            path: name.to_owned(),
+            theme: colors,
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for Theme {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

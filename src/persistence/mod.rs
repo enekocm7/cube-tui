@@ -16,7 +16,7 @@ fn data_file() -> Option<PathBuf> {
     Some(data_dir()?.join("times.json"))
 }
 
-fn themes_dir() -> Option<PathBuf> {
+pub fn themes_dir() -> Option<PathBuf> {
     let dir = data_dir()?.join("themes");
     fs::create_dir_all(&dir).ok()?;
     Some(dir)
