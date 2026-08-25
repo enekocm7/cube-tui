@@ -89,7 +89,7 @@ pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
     if model.show_help() {
         return matches!(
             msg,
-            Msg::SelectUp | Msg::SelectDown | Msg::Help | Msg::Tick | Msg::Quit
+            Msg::SelectUp | Msg::SelectDown | Msg::Help | Msg::Esc | Msg::Tick | Msg::Quit
         );
     }
     if model.confirmation().is_some() {

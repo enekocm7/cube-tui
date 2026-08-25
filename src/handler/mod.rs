@@ -451,6 +451,10 @@ fn handle_esc(model: &mut Model) {
         model.close_bluetooth();
         return;
     }
+    if model.show_help() {
+        model.toggle_help();
+        return;
+    }
     if model.confirmation().is_some() {
         model.close_confirmation();
         return;
