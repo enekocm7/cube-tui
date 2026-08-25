@@ -408,6 +408,11 @@ fn handle_enter(model: &mut Model) {
         }
         return;
     }
+    if model.theme_selector.is_some() {
+        model.close_theme_selector();
+        return;
+    }
+
     if model.show_mean_detail() {
         model.open_details_for_selected_mean_time();
         return;

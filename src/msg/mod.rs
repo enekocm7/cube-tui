@@ -107,6 +107,7 @@ pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
                 | Msg::Tick
                 | Msg::Quit
                 | Msg::OpenThemeSelector
+                | Msg::Enter
         );
     }
 
