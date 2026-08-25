@@ -99,16 +99,20 @@ impl HelpWidget {
 
     pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let text_color = theme.text();
-        let mut help_text: Vec<Line> = HELP_TEXT
+        let help_text: Vec<Line> = HELP_TEXT
             .iter()
             .map(|entry| help_line_to_line(entry, text_color))
             .collect();
         #[cfg(feature = "bluetooth")]
-        help_text.extend(
-            BLUETOOTH_HELP_TEXT
-                .iter()
-                .map(|entry| help_line_to_line(entry, text_color)),
-        );
+        let help_text = {
+            let mut help_text = help_text;
+            help_text.extend(
+                BLUETOOTH_HELP_TEXT
+                    .iter()
+                    .map(|entry| help_line_to_line(entry, text_color)),
+            );
+            help_text
+        };
 
         let max_scroll = u16::try_from(help_text.len())
             .unwrap_or(u16::MAX)
