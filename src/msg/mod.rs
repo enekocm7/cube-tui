@@ -12,7 +12,7 @@ pub enum Msg {
     SelectDown,
     Quit,
     Help,
-    NextEvent,
+    NextEventOpenEditor,
     PrevEvent,
     NextSession,
     PrevSession,
@@ -46,7 +46,7 @@ pub const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
         (KeyCode::Left, KeyEventKind::Press) => Some(Msg::NavLeft),
         (KeyCode::Right, KeyEventKind::Press) => Some(Msg::NavRight),
         (KeyCode::Tab, KeyEventKind::Press) => Some(Msg::ToggleFocus),
-        (KeyCode::Char('e'), KeyEventKind::Press) => Some(Msg::NextEvent),
+        (KeyCode::Char('e'), KeyEventKind::Press) => Some(Msg::NextEventOpenEditor),
         (KeyCode::Char('E'), KeyEventKind::Press) => Some(Msg::PrevEvent),
         (KeyCode::Char(']'), KeyEventKind::Press) => Some(Msg::NextSession),
         (KeyCode::Char('['), KeyEventKind::Press) => Some(Msg::PrevSession),
@@ -107,6 +107,7 @@ pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
                 | Msg::Tick
                 | Msg::Quit
                 | Msg::OpenThemeSelector
+                | Msg::NextEventOpenEditor
                 | Msg::Enter
         );
     }

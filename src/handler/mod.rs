@@ -39,7 +39,7 @@ impl Msg {
             Self::Tick => handle_tick(model),
             Self::SelectUp => handle_select_up(model),
             Self::SelectDown => handle_select_down(model),
-            Self::NextEvent => handle_next_event(model),
+            Self::NextEventOpenEditor => handle_next_event_open_editor(model),
             Self::PrevEvent => handle_prev_event(model),
             Self::NextSession => handle_next_session(model),
             Self::PrevSession => handle_prev_session(model),
@@ -198,7 +198,12 @@ const fn handle_toggle_focus(model: &mut Model) {
     model.toggle_main_focus();
 }
 
-fn handle_next_event(model: &mut Model) {
+fn handle_next_event_open_editor(model: &mut Model) {
+    if model.theme_selector.is_some() {
+        model.open_theme_in_editor();
+        return;
+    }
+    
     if model.timer_state() == TimerState::Idle {
         model.next_event();
     }

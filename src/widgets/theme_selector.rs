@@ -144,7 +144,7 @@ impl ThemeSelector {
             indicator.render(list_chunks[2], buf);
         }
 
-        let help_text = Paragraph::new("Esc: Close this window").fg(theme.text());
+        let help_text = Paragraph::new("Esc: Close this window | e: Open in default editor").fg(theme.text());
         help_text.render(chunks[3], buf);
     }
 }

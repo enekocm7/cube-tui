@@ -52,4 +52,14 @@ impl Model {
         self.settings.set_theme(theme);
         persistence::save_config(self.settings());
     }
+
+    pub fn open_theme_in_editor(&self) {
+        if let Some(theme_selector) = &self.theme_selector
+            && let Some(theme) = theme_selector.selected() {
+                let name = theme.name();
+                let path = persistence::themes_dir().expect("Shouldn't fail to get the themes dir").join(name);
+                open::that(path).unwrap_or_else(|_| eprintln!("Failed to open theme path"));
+
+        }
+    }
 }
