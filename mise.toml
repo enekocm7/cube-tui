@@ -54,6 +54,20 @@ run = "./gradlew :lib:test --no-daemon"
 run_windows = "gradlew.bat :lib:test --no-daemon"
 alias = "tj"
 
+[tasks.release]
+description = "Bump version, tag, publish and push to trigger the release build"
+alias = "rel"
+usage = '''
+arg "<bump>" help="major | minor | patch | explicit version (e.g. 1.2.3)"
+flag "--dry-run" help="show steps without doing them"
+'''
+run = '''
+#!/usr/bin/env bash
+args=("${usage_bump?}")
+[[ "${usage_dry_run:-false}" == "true" ]] && args+=("--dry-run")
+python scripts/release.py "${args[@]}"
+'''
+
 [tasks.test-all-scrambles]
 description = "Run Rust and scrambles Java tests"
 run = [
