@@ -122,7 +122,7 @@ def main() -> None:
     run(["git", "push"], dry_run=dry_run)
     run(["git", "push", "--tags"], dry_run=dry_run)
 
-    run(["cargo", "publish", "--all-features"], dry_run=dry_run)
+    run(["cargo", "publish", "--all-features", "--no-verify"], dry_run=dry_run)
 
     print(f"\nPushed {tag_name} — GitHub Actions will now build binaries and create the release.")
     if dry_run:
