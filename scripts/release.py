@@ -11,8 +11,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-IS_WINDOWS = sys.platform == "win32"
-
 CARGO_TOML = Path("Cargo.toml")
 
 
@@ -20,7 +18,7 @@ def run(cmd: list[str], dry_run: bool = False, check: bool = True) -> str:
     print(f"+ {' '.join(cmd)}")
     if dry_run:
         return ""
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False, shell=IS_WINDOWS)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if check and result.returncode != 0:
         print(result.stdout)
         print(result.stderr, file=sys.stderr)

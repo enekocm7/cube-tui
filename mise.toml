@@ -1,6 +1,7 @@
 [tools]
 bun = '1.4.0'
 java = "temurin-21.0.10+7.0.LTS"
+python = "latest"
 rust = "stable"
 
 [tasks.run]
@@ -64,9 +65,13 @@ flag "--dry-run" help="show steps without doing them"
 '''
 run = '''
 #!/usr/bin/env bash
-args=("${usage_bump?}")
-[[ "${usage_dry_run:-false}" == "true" ]] && args+=("--dry-run")
-python scripts/release.py "${args[@]}"
+BUMP="${usage_bump?}"
+DRY_RUN="${usage_dry_run:-false}"
+if [ "$DRY_RUN" = "true" ]; then
+  python scripts/release.py "$BUMP" --dry-run
+else
+  python scripts/release.py "$BUMP"
+fi
 '''
 
 [tasks.test-all-scrambles]
