@@ -1,10 +1,8 @@
 use rand::RngExt;
 use rand::prelude::IndexedRandom;
 use serde::{Deserialize, Serialize};
-use std::arch::x86_64::_XABORT_RETRY;
 use std::borrow::Cow;
 use std::fmt;
-use std::random::random;
 
 #[cfg(feature = "wca-scrambles")]
 mod wca;
@@ -546,7 +544,7 @@ fn pyraminx_scramble(length: usize) -> String {
 fn fto_scramble(length: usize) -> String {
     let moves = fto_moves();
     let modifiers = fto_modifiers();
-    simple_scramble(length, &moves, &modifiers)
+    cube_scramble(length, &moves, &modifiers)
 }
 
 fn skewb_scramble(length: usize) -> String {
