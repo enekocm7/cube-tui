@@ -1,8 +1,10 @@
 use rand::RngExt;
 use rand::prelude::IndexedRandom;
 use serde::{Deserialize, Serialize};
+use std::arch::x86_64::_XABORT_RETRY;
 use std::borrow::Cow;
 use std::fmt;
+use std::random::random;
 
 #[cfg(feature = "wca-scrambles")]
 mod wca;
@@ -17,6 +19,7 @@ pub enum WcaEvent {
     Cube7x7,
     Megaminx,
     Pyraminx,
+    FTO,
     Skewb,
     Square1,
     Clock,
@@ -33,6 +36,7 @@ impl WcaEvent {
             Self::Cube7x7 => "7x7x7",
             Self::Megaminx => "Megaminx",
             Self::Pyraminx => "Pyraminx",
+            Self::FTO => "FTO",
             Self::Skewb => "Skewb",
             Self::Square1 => "Square-1",
             Self::Clock => "Clock",
@@ -49,9 +53,10 @@ impl WcaEvent {
             Self::Cube7x7 => 5,
             Self::Megaminx => 6,
             Self::Pyraminx => 7,
-            Self::Skewb => 8,
-            Self::Square1 => 9,
-            Self::Clock => 10,
+            Self::FTO => 8,
+            Self::Skewb => 9,
+            Self::Square1 => 10,
+            Self::Clock => 11,
         }
     }
 
@@ -65,9 +70,11 @@ impl WcaEvent {
             5 => Self::Cube7x7,
             6 => Self::Megaminx,
             7 => Self::Pyraminx,
-            8 => Self::Skewb,
-            9 => Self::Square1,
-            _ => Self::Clock,
+            8 => Self::FTO,
+            9 => Self::Skewb,
+            10 => Self::Square1,
+            11 => Self::Clock,
+            _ => Self::Cube3x3,
         }
     }
 
@@ -98,6 +105,8 @@ pub enum Move {
     Dw,
     Fw,
     Bw,
+    Br,
+    Bl,
     ThreeRw,
     ThreeLw,
     ThreeUw,
@@ -117,7 +126,14 @@ pub enum Move {
 impl Move {
     pub const fn axis(self) -> u8 {
         match self {
-            Self::R | Self::L | Self::Rw | Self::Lw | Self::ThreeRw | Self::ThreeLw => 0,
+            Self::R
+            | Self::L
+            | Self::Rw
+            | Self::Lw
+            | Self::ThreeRw
+            | Self::ThreeLw
+            | Self::Br
+            | Self::Bl => 0,
             Self::U | Self::D | Self::Uw | Self::Dw | Self::ThreeUw | Self::ThreeDw => 1,
             Self::F | Self::B | Self::Fw | Self::Bw | Self::ThreeFw | Self::ThreeBw => 2,
             Self::RDoublePlus | Self::RDoubleMinus => 3,
@@ -142,6 +158,8 @@ impl fmt::Display for Move {
             Self::Dw => "Dw",
             Self::Fw => "Fw",
             Self::Bw => "Bw",
+            Self::Bl => "Bl",
+            Self::Br => "Br",
             Self::ThreeRw => "3Rw",
             Self::ThreeLw => "3Lw",
             Self::ThreeUw => "3Uw",
@@ -221,6 +239,11 @@ impl From<Scramble> for Cow<'static, str> {
 }
 
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
+    //Temporary fix until the official WCA scrambler supports FTO event
+    if event == WcaEvent::FTO {
+        return Scramble::new(random_scramble(event));
+    }
+
     #[cfg(feature = "wca-scrambles")]
     if let Some(text) = wca::get_wca_scramble(event) {
         return Scramble::new_wca(text);
@@ -244,6 +267,7 @@ fn random_scramble(event: WcaEvent) -> String {
         WcaEvent::Skewb => skewb_scramble(9),
         WcaEvent::Square1 => square1_scramble(15),
         WcaEvent::Clock => clock_scramble(14),
+        WcaEvent::FTO => fto_scramble(rand::random_range(25..30)),
     }
 }
 
@@ -411,12 +435,27 @@ fn cube_6x6_moves() -> Vec<Move> {
 fn cube_7x7_moves() -> Vec<Move> {
     cube_6x6_moves()
 }
+fn fto_moves() -> Vec<Move> {
+    vec![
+        Move::R,
+        Move::L,
+        Move::B,
+        Move::D,
+        Move::F,
+        Move::Br,
+        Move::Bl,
+    ]
+}
 
 fn cube_modifiers() -> Vec<Modifier> {
     vec![Modifier::None, Modifier::Prime, Modifier::Double]
 }
 
 fn pyraminx_modifiers() -> Vec<Modifier> {
+    vec![Modifier::None, Modifier::Prime]
+}
+
+fn fto_modifiers() -> Vec<Modifier> {
     vec![Modifier::None, Modifier::Prime]
 }
 
@@ -502,6 +541,12 @@ fn pyraminx_scramble(length: usize) -> String {
     }
 
     base
+}
+
+fn fto_scramble(length: usize) -> String {
+    let moves = fto_moves();
+    let modifiers = fto_modifiers();
+    simple_scramble(length, &moves, &modifiers)
 }
 
 fn skewb_scramble(length: usize) -> String {
