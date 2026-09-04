@@ -203,7 +203,7 @@ fn handle_next_event_open_editor(model: &mut Model) {
         model.open_theme_in_editor();
         return;
     }
-    
+
     if model.timer_state() == TimerState::Idle {
         model.next_event();
     }
