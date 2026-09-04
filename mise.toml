@@ -2,7 +2,6 @@
 bun = '1.4.0'
 java = "temurin-21.0.10+7.0.LTS"
 python = "latest"
-rust = "stable"
 
 [tasks.run]
 description = "Run the app without features"

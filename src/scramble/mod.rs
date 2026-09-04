@@ -17,6 +17,7 @@ pub enum WcaEvent {
     Cube7x7,
     Megaminx,
     Pyraminx,
+    Fto,
     Skewb,
     Square1,
     Clock,
@@ -33,6 +34,7 @@ impl WcaEvent {
             Self::Cube7x7 => "7x7x7",
             Self::Megaminx => "Megaminx",
             Self::Pyraminx => "Pyraminx",
+            Self::Fto => "FTO",
             Self::Skewb => "Skewb",
             Self::Square1 => "Square-1",
             Self::Clock => "Clock",
@@ -49,37 +51,39 @@ impl WcaEvent {
             Self::Cube7x7 => 5,
             Self::Megaminx => 6,
             Self::Pyraminx => 7,
-            Self::Skewb => 8,
-            Self::Square1 => 9,
-            Self::Clock => 10,
+            Self::Fto => 8,
+            Self::Skewb => 9,
+            Self::Square1 => 10,
+            Self::Clock => 11,
         }
     }
 
     const fn from_index(index: usize) -> Self {
         match index {
             0 => Self::Cube2x2,
-            1 => Self::Cube3x3,
             2 => Self::Cube4x4,
             3 => Self::Cube5x5,
             4 => Self::Cube6x6,
             5 => Self::Cube7x7,
             6 => Self::Megaminx,
             7 => Self::Pyraminx,
-            8 => Self::Skewb,
-            9 => Self::Square1,
-            _ => Self::Clock,
+            8 => Self::Fto,
+            9 => Self::Skewb,
+            10 => Self::Square1,
+            11 => Self::Clock,
+            _ => Self::Cube3x3,
         }
     }
 
     pub const fn next(self) -> Self {
         let index = self.as_index();
-        let next_index = (index + 1) % 11;
+        let next_index = (index + 1) % 12;
         Self::from_index(next_index)
     }
 
     pub const fn prev(self) -> Self {
         let index = self.as_index();
-        let prev_index = if index == 0 { 10 } else { index - 1 };
+        let prev_index = if index == 0 { 11 } else { index - 1 };
         Self::from_index(prev_index)
     }
 }
@@ -98,6 +102,8 @@ pub enum Move {
     Dw,
     Fw,
     Bw,
+    Br,
+    Bl,
     ThreeRw,
     ThreeLw,
     ThreeUw,
@@ -117,7 +123,14 @@ pub enum Move {
 impl Move {
     pub const fn axis(self) -> u8 {
         match self {
-            Self::R | Self::L | Self::Rw | Self::Lw | Self::ThreeRw | Self::ThreeLw => 0,
+            Self::R
+            | Self::L
+            | Self::Rw
+            | Self::Lw
+            | Self::ThreeRw
+            | Self::ThreeLw
+            | Self::Br
+            | Self::Bl => 0,
             Self::U | Self::D | Self::Uw | Self::Dw | Self::ThreeUw | Self::ThreeDw => 1,
             Self::F | Self::B | Self::Fw | Self::Bw | Self::ThreeFw | Self::ThreeBw => 2,
             Self::RDoublePlus | Self::RDoubleMinus => 3,
@@ -142,6 +155,8 @@ impl fmt::Display for Move {
             Self::Dw => "Dw",
             Self::Fw => "Fw",
             Self::Bw => "Bw",
+            Self::Bl => "Bl",
+            Self::Br => "Br",
             Self::ThreeRw => "3Rw",
             Self::ThreeLw => "3Lw",
             Self::ThreeUw => "3Uw",
@@ -221,6 +236,11 @@ impl From<Scramble> for Cow<'static, str> {
 }
 
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
+    //Temporary fix until the official WCA scrambler supports FTO event
+    if event == WcaEvent::Fto {
+        return Scramble::new(random_scramble(event));
+    }
+
     #[cfg(feature = "wca-scrambles")]
     if let Some(text) = wca::get_wca_scramble(event) {
         return Scramble::new_wca(text);
@@ -244,6 +264,7 @@ fn random_scramble(event: WcaEvent) -> String {
         WcaEvent::Skewb => skewb_scramble(9),
         WcaEvent::Square1 => square1_scramble(15),
         WcaEvent::Clock => clock_scramble(14),
+        WcaEvent::Fto => fto_scramble(rand::random_range(25..30)),
     }
 }
 
@@ -411,12 +432,27 @@ fn cube_6x6_moves() -> Vec<Move> {
 fn cube_7x7_moves() -> Vec<Move> {
     cube_6x6_moves()
 }
+fn fto_moves() -> Vec<Move> {
+    vec![
+        Move::R,
+        Move::L,
+        Move::B,
+        Move::D,
+        Move::F,
+        Move::Br,
+        Move::Bl,
+    ]
+}
 
 fn cube_modifiers() -> Vec<Modifier> {
     vec![Modifier::None, Modifier::Prime, Modifier::Double]
 }
 
 fn pyraminx_modifiers() -> Vec<Modifier> {
+    vec![Modifier::None, Modifier::Prime]
+}
+
+fn fto_modifiers() -> Vec<Modifier> {
     vec![Modifier::None, Modifier::Prime]
 }
 
@@ -504,6 +540,12 @@ fn pyraminx_scramble(length: usize) -> String {
     base
 }
 
+fn fto_scramble(length: usize) -> String {
+    let moves = fto_moves();
+    let modifiers = fto_modifiers();
+    cube_scramble(length, &moves, &modifiers)
+}
+
 fn skewb_scramble(length: usize) -> String {
     let moves = [Move::R, Move::L, Move::U, Move::B];
     simple_scramble(length, &moves, &pyraminx_modifiers())
@@ -556,6 +598,7 @@ mod tests {
             WcaEvent::Cube7x7,
             WcaEvent::Megaminx,
             WcaEvent::Pyraminx,
+            WcaEvent::Fto,
             WcaEvent::Skewb,
             WcaEvent::Square1,
             WcaEvent::Clock,
@@ -777,10 +820,62 @@ mod tests {
 
     #[test]
     fn wca_event_next_prev() {
-        assert_eq!(WcaEvent::Cube2x2.next(), WcaEvent::Cube3x3);
-        assert_eq!(WcaEvent::Clock.next(), WcaEvent::Cube2x2);
-        assert_eq!(WcaEvent::Cube2x2.prev(), WcaEvent::Clock);
-        assert_eq!(WcaEvent::Cube3x3.prev(), WcaEvent::Cube2x2);
+        let events = [
+            WcaEvent::Cube2x2,
+            WcaEvent::Cube3x3,
+            WcaEvent::Cube4x4,
+            WcaEvent::Cube5x5,
+            WcaEvent::Cube6x6,
+            WcaEvent::Cube7x7,
+            WcaEvent::Megaminx,
+            WcaEvent::Pyraminx,
+            WcaEvent::Fto,
+            WcaEvent::Skewb,
+            WcaEvent::Square1,
+            WcaEvent::Clock,
+        ];
+
+        for (index, event) in events.iter().copied().enumerate() {
+            let next = events[(index + 1) % events.len()];
+            let prev = events[(index + events.len() - 1) % events.len()];
+            assert_eq!(event.next(), next, "unexpected next event for {event:?}");
+            assert_eq!(
+                event.prev(),
+                prev,
+                "unexpected previous event for {event:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn fto_scramble_uses_valid_moves_and_length() {
+        let valid_bases = ["R", "L", "B", "D", "F", "Br", "Bl"];
+        let valid_modifiers = ["", "'"];
+
+        for _ in 0..20 {
+            let scramble = generate_scramble(WcaEvent::Fto);
+            assert!(
+                !scramble.is_wca(),
+                "FTO currently uses the built-in generator"
+            );
+
+            let tokens: Vec<&str> = scramble.as_str().split_whitespace().collect();
+            assert!(
+                (25..30).contains(&tokens.len()),
+                "FTO length {} outside 25-29",
+                tokens.len()
+            );
+
+            for token in tokens {
+                let base = token.trim_end_matches('\'');
+                let modifier = &token[base.len()..];
+                assert!(valid_bases.contains(&base), "invalid FTO move: {base}");
+                assert!(
+                    valid_modifiers.contains(&modifier),
+                    "invalid FTO modifier: {modifier}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -962,6 +1057,7 @@ mod tests {
             WcaEvent::Cube7x7,
             WcaEvent::Megaminx,
             WcaEvent::Pyraminx,
+            WcaEvent::Fto,
             WcaEvent::Skewb,
             WcaEvent::Square1,
             WcaEvent::Clock,
@@ -990,7 +1086,7 @@ mod tests {
             count += 1;
         }
 
-        assert_eq!(count, 11, "Should cycle through all 11 events");
+        assert_eq!(count, 12, "Should cycle through all 12 events");
     }
 
     #[test]
