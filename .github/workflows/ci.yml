@@ -24,6 +24,10 @@ jobs:
         with:
           components: rustfmt, clippy
 
+        #It needs bun in order to build dashboard in the build.rs script
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        
       - name: Cache cargo registry and build
         uses: Swatinem/rust-cache@v2
 
