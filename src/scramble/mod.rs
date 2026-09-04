@@ -17,7 +17,7 @@ pub enum WcaEvent {
     Cube7x7,
     Megaminx,
     Pyraminx,
-    FTO,
+    Fto,
     Skewb,
     Square1,
     Clock,
@@ -34,7 +34,7 @@ impl WcaEvent {
             Self::Cube7x7 => "7x7x7",
             Self::Megaminx => "Megaminx",
             Self::Pyraminx => "Pyraminx",
-            Self::FTO => "FTO",
+            Self::Fto => "FTO",
             Self::Skewb => "Skewb",
             Self::Square1 => "Square-1",
             Self::Clock => "Clock",
@@ -51,7 +51,7 @@ impl WcaEvent {
             Self::Cube7x7 => 5,
             Self::Megaminx => 6,
             Self::Pyraminx => 7,
-            Self::FTO => 8,
+            Self::Fto => 8,
             Self::Skewb => 9,
             Self::Square1 => 10,
             Self::Clock => 11,
@@ -61,18 +61,17 @@ impl WcaEvent {
     const fn from_index(index: usize) -> Self {
         match index {
             0 => Self::Cube2x2,
-            1 => Self::Cube3x3,
             2 => Self::Cube4x4,
             3 => Self::Cube5x5,
             4 => Self::Cube6x6,
             5 => Self::Cube7x7,
             6 => Self::Megaminx,
             7 => Self::Pyraminx,
-            8 => Self::FTO,
+            8 => Self::Fto,
             9 => Self::Skewb,
             10 => Self::Square1,
             11 => Self::Clock,
-            _ => Self::Cube3x3,
+            1 | _ => Self::Cube3x3,
         }
     }
 
@@ -238,7 +237,7 @@ impl From<Scramble> for Cow<'static, str> {
 
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
     //Temporary fix until the official WCA scrambler supports FTO event
-    if event == WcaEvent::FTO {
+    if event == WcaEvent::Fto {
         return Scramble::new(random_scramble(event));
     }
 
@@ -265,7 +264,7 @@ fn random_scramble(event: WcaEvent) -> String {
         WcaEvent::Skewb => skewb_scramble(9),
         WcaEvent::Square1 => square1_scramble(15),
         WcaEvent::Clock => clock_scramble(14),
-        WcaEvent::FTO => fto_scramble(rand::random_range(25..30)),
+        WcaEvent::Fto => fto_scramble(rand::random_range(25..30)),
     }
 }
 
