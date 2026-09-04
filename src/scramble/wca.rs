@@ -68,7 +68,7 @@ const fn event_to_string(event: WcaEvent) -> &'static str {
         WcaEvent::Cube7x7 => "777",
         WcaEvent::Megaminx => "minx",
         WcaEvent::Pyraminx => "pyram",
-        WcaEvent::FTO => "fto",
+        WcaEvent::Fto => "fto",
         WcaEvent::Skewb => "skewb",
         WcaEvent::Square1 => "sq1",
         WcaEvent::Clock => "clock",

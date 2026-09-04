@@ -77,13 +77,13 @@ impl WcaEvent {
 
     pub const fn next(self) -> Self {
         let index = self.as_index();
-        let next_index = (index + 1) % 11;
+        let next_index = (index + 1) % 12;
         Self::from_index(next_index)
     }
 
     pub const fn prev(self) -> Self {
         let index = self.as_index();
-        let prev_index = if index == 0 { 10 } else { index - 1 };
+        let prev_index = if index == 0 { 11 } else { index - 1 };
         Self::from_index(prev_index)
     }
 }
@@ -598,6 +598,7 @@ mod tests {
             WcaEvent::Cube7x7,
             WcaEvent::Megaminx,
             WcaEvent::Pyraminx,
+            WcaEvent::Fto,
             WcaEvent::Skewb,
             WcaEvent::Square1,
             WcaEvent::Clock,
@@ -819,10 +820,62 @@ mod tests {
 
     #[test]
     fn wca_event_next_prev() {
-        assert_eq!(WcaEvent::Cube2x2.next(), WcaEvent::Cube3x3);
-        assert_eq!(WcaEvent::Clock.next(), WcaEvent::Cube2x2);
-        assert_eq!(WcaEvent::Cube2x2.prev(), WcaEvent::Clock);
-        assert_eq!(WcaEvent::Cube3x3.prev(), WcaEvent::Cube2x2);
+        let events = [
+            WcaEvent::Cube2x2,
+            WcaEvent::Cube3x3,
+            WcaEvent::Cube4x4,
+            WcaEvent::Cube5x5,
+            WcaEvent::Cube6x6,
+            WcaEvent::Cube7x7,
+            WcaEvent::Megaminx,
+            WcaEvent::Pyraminx,
+            WcaEvent::Fto,
+            WcaEvent::Skewb,
+            WcaEvent::Square1,
+            WcaEvent::Clock,
+        ];
+
+        for (index, event) in events.iter().copied().enumerate() {
+            let next = events[(index + 1) % events.len()];
+            let prev = events[(index + events.len() - 1) % events.len()];
+            assert_eq!(event.next(), next, "unexpected next event for {event:?}");
+            assert_eq!(
+                event.prev(),
+                prev,
+                "unexpected previous event for {event:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn fto_scramble_uses_valid_moves_and_length() {
+        let valid_bases = ["R", "L", "B", "D", "F", "Br", "Bl"];
+        let valid_modifiers = ["", "'"];
+
+        for _ in 0..20 {
+            let scramble = generate_scramble(WcaEvent::Fto);
+            assert!(
+                !scramble.is_wca(),
+                "FTO currently uses the built-in generator"
+            );
+
+            let tokens: Vec<&str> = scramble.as_str().split_whitespace().collect();
+            assert!(
+                (25..30).contains(&tokens.len()),
+                "FTO length {} outside 25-29",
+                tokens.len()
+            );
+
+            for token in tokens {
+                let base = token.trim_end_matches('\'');
+                let modifier = &token[base.len()..];
+                assert!(valid_bases.contains(&base), "invalid FTO move: {base}");
+                assert!(
+                    valid_modifiers.contains(&modifier),
+                    "invalid FTO modifier: {modifier}"
+                );
+            }
+        }
     }
 
     #[test]
@@ -1004,6 +1057,7 @@ mod tests {
             WcaEvent::Cube7x7,
             WcaEvent::Megaminx,
             WcaEvent::Pyraminx,
+            WcaEvent::Fto,
             WcaEvent::Skewb,
             WcaEvent::Square1,
             WcaEvent::Clock,
@@ -1032,7 +1086,7 @@ mod tests {
             count += 1;
         }
 
-        assert_eq!(count, 11, "Should cycle through all 11 events");
+        assert_eq!(count, 12, "Should cycle through all 12 events");
     }
 
     #[test]
