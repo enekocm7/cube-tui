@@ -71,7 +71,7 @@ impl WcaEvent {
             9 => Self::Skewb,
             10 => Self::Square1,
             11 => Self::Clock,
-            1 | _ => Self::Cube3x3,
+            _ => Self::Cube3x3,
         }
     }
 
