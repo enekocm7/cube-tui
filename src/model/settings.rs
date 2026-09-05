@@ -12,6 +12,14 @@ pub struct Settings {
 }
 
 impl Settings {
+    pub const fn minimum_terminal_width(&self) -> u16 {
+        self.display.minimum_terminal_width()
+    }
+
+    pub const fn minimum_terminal_height(&self) -> u16 {
+        self.display.minimum_terminal_height()
+    }
+
     pub const fn set_inspection(&mut self, inspection: bool) {
         self.timer.inspection = inspection;
     }
@@ -219,5 +227,50 @@ impl Default for DisplaySettings {
             scramble: true,
             stats: true,
         }
+    }
+}
+
+impl DisplaySettings {
+    const fn minimum_terminal_width(self) -> u16 {
+        const BASE_WIDTH: u16 = 28;
+        const HISTORY_WIDTH: u16 = 24;
+        const STATS_WIDTH: u16 = 30;
+
+        BASE_WIDTH
+            + if self.history { HISTORY_WIDTH } else { 0 }
+            + if self.stats { STATS_WIDTH } else { 0 }
+    }
+
+    const fn minimum_terminal_height(self) -> u16 {
+        if self.scramble { 20 } else { 13 }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DisplaySettings;
+
+    #[test]
+    fn minimum_width_accounts_for_visible_side_panels() {
+        let mut display = DisplaySettings::default();
+        assert_eq!(display.minimum_terminal_width(), 82);
+
+        display.history = false;
+        assert_eq!(display.minimum_terminal_width(), 58);
+
+        display.stats = false;
+        assert_eq!(display.minimum_terminal_width(), 28);
+
+        display.history = true;
+        assert_eq!(display.minimum_terminal_width(), 52);
+    }
+
+    #[test]
+    fn minimum_height_accounts_for_scramble() {
+        let mut display = DisplaySettings::default();
+        assert_eq!(display.minimum_terminal_height(), 20);
+
+        display.scramble = false;
+        assert_eq!(display.minimum_terminal_height(), 13);
     }
 }

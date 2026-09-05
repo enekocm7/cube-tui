@@ -2,9 +2,10 @@ use std::borrow::Cow;
 
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
-use ratatui::text::{Line, Span};
+use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
+use crate::model::settings::{Settings, ThemeColors};
 use crate::model::{InspectionState, Model, TimerState};
 use crate::utils::{format_elapsed, get_scramble_lines};
 use crate::widgets::confirmation::ConfirmationWidget;
@@ -25,6 +26,13 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     Block::default()
         .style(Style::new().bg(theme.background()))
         .render(area, buf);
+
+    if area.width < model.settings().minimum_terminal_width()
+        || area.height < model.settings().minimum_terminal_height()
+    {
+        render_terminal_size_error(area, buf, model.settings(), &theme);
+        return;
+    }
 
     if model.show_help() {
         let help_widget = HelpWidget::new(model.help_scroll());
@@ -314,6 +322,45 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     if let Some(theme_selector) = &mut model.theme_selector {
         theme_selector.render(area, buf, &theme);
     }
+}
+
+fn render_terminal_size_error(
+    area: Rect,
+    buf: &mut ratatui::buffer::Buffer,
+    settings: &Settings,
+    theme: &ThemeColors,
+) {
+    let min_width = settings.minimum_terminal_width();
+    let min_height = settings.minimum_terminal_height();
+    let text = Text::from(vec![
+        Line::from(Span::styled(
+            "Terminal too small",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        )),
+        Line::from(format!(
+            "Resize to at least {min_width} columns x {min_height} rows."
+        )),
+        Line::from(format!("Current size: {} x {}", area.width, area.height)),
+        Line::from("Press q to quit."),
+    ]);
+    let top_padding = if usize::from(area.width) >= text.width() {
+        area.height.saturating_sub(text.height() as u16) / 2
+    } else {
+        0
+    };
+    Paragraph::new(text)
+        .style(Style::default().fg(theme.text()))
+        .alignment(Alignment::Center)
+        .wrap(Wrap { trim: true })
+        .render(
+            Rect::new(
+                area.x,
+                area.y + top_padding,
+                area.width,
+                area.height.saturating_sub(top_padding),
+            ),
+            buf,
+        );
 }
 
 const fn inner_area(area: Rect) -> Rect {
