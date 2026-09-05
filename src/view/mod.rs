@@ -21,16 +21,17 @@ use crate::widgets::bluetooth::BluetoothWidget;
 
 #[allow(clippy::too_many_lines)]
 pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
-    let theme = *model.settings().theme();
+    let settings = model.settings();
+    let theme = *settings.theme();
 
     Block::default()
         .style(Style::new().bg(theme.background()))
         .render(area, buf);
 
-    if area.width < model.settings().minimum_terminal_width()
-        || area.height < model.settings().minimum_terminal_height()
+    if area.width < settings.minimum_terminal_width()
+        || area.height < settings.minimum_terminal_height()
     {
-        render_terminal_size_error(area, buf, model.settings(), &theme);
+        render_terminal_size_error(area, buf, settings, &theme);
         return;
     }
 
