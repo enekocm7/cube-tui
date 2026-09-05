@@ -20,6 +20,7 @@ use clap::Parser;
 use ratatui::DefaultTerminal;
 use ratatui::crossterm::event::{self, Event};
 use ratatui::crossterm::{
+    SynchronizedUpdate,
     event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
     execute,
 };
@@ -142,6 +143,7 @@ impl Drop for KeyboardEnhancementGuard {
 
 fn run(terminal: &mut DefaultTerminal) {
     let _keyboard_enhancements = KeyboardEnhancementGuard::enable();
+    let mut stdout = std::io::stdout();
 
     let mut model = Model::new();
     if let Some(data) = persistence::load() {
@@ -169,8 +171,13 @@ fn run(terminal: &mut DefaultTerminal) {
             update(&mut model, msg);
         }
 
-        terminal
-            .draw(|frame| view(frame.area(), frame.buffer_mut(), &mut model))
+        // Include autoresize's clear and the full frame in one visible update.
+        stdout
+            .sync_update(|_| {
+                terminal
+                    .draw(|frame| view(frame.area(), frame.buffer_mut(), &mut model))
+                    .map(|_| ())
+            })
             .ok();
     }
 }
