@@ -86,11 +86,7 @@ impl<'a> MeanDetailWidget<'a> {
             MeanType::Ao100 => "Average of 100",
         };
 
-        let title = format!(
-            "{} at solve #{} (Enter: open time, Esc: back)",
-            type_name,
-            self.solve_index + 1
-        );
+        let title = format!("{} at solve #{}", type_name, self.solve_index + 1);
 
         let block = Block::default()
             .title(title)

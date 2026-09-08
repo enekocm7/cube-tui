@@ -8,6 +8,7 @@ pub mod confirmation;
 pub mod detailed_stats;
 pub mod details;
 pub mod help;
+pub mod keybinds;
 pub mod main_focus;
 pub mod mean_details;
 pub mod screen;

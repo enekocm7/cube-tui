@@ -65,15 +65,28 @@ pub fn load() -> Option<Vec<History>> {
     serde_json::from_reader(reader).ok()
 }
 
-pub fn load_config() -> Option<Settings> {
+pub fn load_config() -> Result<Option<Settings>, String> {
     ensure_default_theme();
-    let path = config_file()?;
-    let content = fs::read_to_string(path).ok()?;
-    toml::from_str(&content).ok()
+    let Some(path) = config_file() else {
+        return Ok(None);
+    };
+    let content = match fs::read_to_string(&path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(format!("failed to read {}: {error}", path.display())),
+    };
+    toml::from_str(&content)
+        .map(Some)
+        .map_err(|error| format!("invalid configuration in {}: {error}", path.display()))
 }
 
 pub fn save_config(settings: &Settings) {
     let Some(path) = config_file() else { return };
+
+    // Do not replace a user's invalid config with in-memory defaults.
+    if path.exists() && load_config().is_err() {
+        return;
+    }
 
     if let Ok(toml) = toml::to_string_pretty(settings) {
         fs::write(path, toml).ok();

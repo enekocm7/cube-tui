@@ -92,3 +92,9 @@ To see all the commands run
 ```sh
 cube --help
 ```
+
+## Settings
+
+- [Custom theme](docs/settings.md)
+- [Custom layout](docs/settings.md)
+- [Custom keybinds](docs/settings.md)

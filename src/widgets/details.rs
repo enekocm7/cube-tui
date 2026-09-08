@@ -29,16 +29,10 @@ impl<'a> DetailsWidget<'a> {
 
         let lines = self.time.map_or_else(
             || {
-                vec![
-                    Line::from(Span::styled(
-                        "No time selected.",
-                        Style::default().fg(theme.text()),
-                    )),
-                    Line::from(Span::styled(
-                        "Esc: close",
-                        Style::default().fg(theme.text()),
-                    )),
-                ]
+                vec![Line::from(Span::styled(
+                    "No time selected.",
+                    Style::default().fg(theme.text()),
+                ))]
             },
             |time| {
                 let plus_two_checked = matches!(time.modifier(), Modifier::PlusTwo);

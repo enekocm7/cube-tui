@@ -25,7 +25,7 @@ impl<'a> DetailedStatsWidget<'a> {
 
     pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
-            .title("Detailed Stats (Enter: view mean, ←/→: navigate, Esc: back)")
+            .title("Detailed Stats")
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.border()));
 

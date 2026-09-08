@@ -149,8 +149,12 @@ fn run(terminal: &mut DefaultTerminal) {
     if let Some(data) = persistence::load() {
         model.restore_from_history(data);
     }
-    if let Some(settings) = persistence::load_config() {
-        model.set_settings(settings);
+    match persistence::load_config() {
+        Ok(Some(settings)) => model.set_settings(settings),
+        Ok(None) => {}
+        Err(error) => {
+            eprintln!("Warning: {error}. Using default settings; the file will not be overwritten.")
+        }
     }
     let tick_rate = Duration::from_millis(30);
     let mut last_tick = Instant::now();
@@ -163,7 +167,7 @@ fn run(terminal: &mut DefaultTerminal) {
 
         if event::poll(Duration::from_millis(10)).unwrap_or(false)
             && let Ok(Event::Key(key)) = event::read()
-            && let Some(msg) = map_key_to_msg(key.code, key.kind)
+            && let Some(msg) = map_key_to_msg(key, model.settings().keybinds())
         {
             if matches!(msg, Msg::Quit) {
                 return;

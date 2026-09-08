@@ -1,8 +1,9 @@
-use ratatui::crossterm::event::{KeyCode, KeyEventKind};
+use ratatui::crossterm::event::{KeyEvent, KeyEventKind};
 
 use crate::model::Model;
+use crate::model::keybinds::{Action, Keybinds};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Msg {
     Press,
     Release,
@@ -35,37 +36,92 @@ pub enum Msg {
     ToggleZen,
 }
 
-pub const fn map_key_to_msg(code: KeyCode, kind: KeyEventKind) -> Option<Msg> {
-    match (code, kind) {
-        (KeyCode::Char('q'), KeyEventKind::Press) => Some(Msg::Quit),
-        (KeyCode::Char('r'), KeyEventKind::Press) => Some(Msg::Reset),
-        (KeyCode::Char(' '), KeyEventKind::Press) => Some(Msg::Press),
-        (KeyCode::Char(' '), KeyEventKind::Release) => Some(Msg::Release),
-        (KeyCode::Up, KeyEventKind::Press) => Some(Msg::SelectUp),
-        (KeyCode::Down, KeyEventKind::Press) => Some(Msg::SelectDown),
-        (KeyCode::Left, KeyEventKind::Press) => Some(Msg::NavLeft),
-        (KeyCode::Right, KeyEventKind::Press) => Some(Msg::NavRight),
-        (KeyCode::Tab, KeyEventKind::Press) => Some(Msg::ToggleFocus),
-        (KeyCode::Char('e'), KeyEventKind::Press) => Some(Msg::NextEventOpenEditor),
-        (KeyCode::Char('E'), KeyEventKind::Press) => Some(Msg::PrevEvent),
-        (KeyCode::Char(']'), KeyEventKind::Press) => Some(Msg::NextSession),
-        (KeyCode::Char('['), KeyEventKind::Press) => Some(Msg::PrevSession),
-        (KeyCode::Char('s'), KeyEventKind::Press) => Some(Msg::NewSession),
-        (KeyCode::Char('S'), KeyEventKind::Press) => Some(Msg::DeleteSession),
-        (KeyCode::Char('n'), KeyEventKind::Press) => Some(Msg::NextScramble),
-        (KeyCode::Char('?'), KeyEventKind::Press) => Some(Msg::Help),
-        (KeyCode::Char('i'), KeyEventKind::Press) => Some(Msg::ToggleInspection),
-        (KeyCode::Char('a'), KeyEventKind::Press) => Some(Msg::OpenDetailedStats),
-        (KeyCode::Char('t'), KeyEventKind::Press) => Some(Msg::OpenThemeSelector),
-        (KeyCode::Char('d'), KeyEventKind::Press) => Some(Msg::DeleteTime),
+pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
+    let action = keybinds.action_for(key)?;
+    if action == Action::Timer {
+        return match key.kind {
+            KeyEventKind::Press => Some(Msg::Press),
+            KeyEventKind::Release => Some(Msg::Release),
+            _ => None,
+        };
+    }
+    if key.kind != KeyEventKind::Press {
+        return None;
+    }
+    match action {
+        Action::Quit => Some(Msg::Quit),
+        Action::ResetTimer => Some(Msg::Reset),
+        Action::SelectUp => Some(Msg::SelectUp),
+        Action::SelectDown => Some(Msg::SelectDown),
+        Action::NavigateLeft => Some(Msg::NavLeft),
+        Action::NavigateRight => Some(Msg::NavRight),
+        Action::ToggleFocus => Some(Msg::ToggleFocus),
+        Action::NextEvent => Some(Msg::NextEventOpenEditor),
+        Action::PreviousEvent => Some(Msg::PrevEvent),
+        Action::NextSession => Some(Msg::NextSession),
+        Action::PreviousSession => Some(Msg::PrevSession),
+        Action::NewSession => Some(Msg::NewSession),
+        Action::DeleteSession => Some(Msg::DeleteSession),
+        Action::NextScramble => Some(Msg::NextScramble),
+        Action::Help => Some(Msg::Help),
+        Action::ToggleInspection => Some(Msg::ToggleInspection),
+        Action::DetailedStats => Some(Msg::OpenDetailedStats),
+        Action::ThemeSelector => Some(Msg::OpenThemeSelector),
+        Action::DeleteTime => Some(Msg::DeleteTime),
         #[cfg(feature = "bluetooth")]
-        (KeyCode::Char('b'), KeyEventKind::Press) => Some(Msg::ToggleBluetooth),
+        Action::Bluetooth => Some(Msg::ToggleBluetooth),
         #[cfg(feature = "bluetooth")]
-        (KeyCode::Char('x'), KeyEventKind::Press) => Some(Msg::DisconnectBluetooth),
-        (KeyCode::Char('z'), KeyEventKind::Press) => Some(Msg::ToggleZen),
-        (KeyCode::Enter, KeyEventKind::Press) => Some(Msg::Enter),
-        (KeyCode::Esc, KeyEventKind::Press) => Some(Msg::Esc),
-        _ => None,
+        Action::DisconnectBluetooth => Some(Msg::DisconnectBluetooth),
+        #[cfg(not(feature = "bluetooth"))]
+        Action::Bluetooth | Action::DisconnectBluetooth => None,
+        Action::ToggleZen => Some(Msg::ToggleZen),
+        Action::Enter => Some(Msg::Enter),
+        Action::Back => Some(Msg::Esc),
+        Action::Timer => unreachable!(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+
+    use super::{Msg, map_key_to_msg};
+    use crate::model::keybinds::Keybinds;
+
+    #[test]
+    fn default_timer_binding_maps_press_and_release() {
+        let keybinds = Keybinds::default();
+        let press = KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE);
+        let release = KeyEvent {
+            code: KeyCode::Char(' '),
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Release,
+            state: KeyEventState::NONE,
+        };
+
+        assert_eq!(map_key_to_msg(press, &keybinds), Some(Msg::Press));
+        assert_eq!(map_key_to_msg(release, &keybinds), Some(Msg::Release));
+    }
+
+    #[test]
+    fn custom_binding_maps_with_modifiers() {
+        let keybinds: Keybinds = toml::from_str("next_scramble = \"Ctrl+n\"").unwrap();
+        let event = KeyEvent::new(KeyCode::Char('n'), KeyModifiers::CONTROL);
+
+        assert_eq!(map_key_to_msg(event, &keybinds), Some(Msg::NextScramble));
+    }
+
+    #[test]
+    fn repeat_events_are_ignored() {
+        let keybinds = Keybinds::default();
+        let event = KeyEvent {
+            code: KeyCode::Char('q'),
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Repeat,
+            state: KeyEventState::NONE,
+        };
+
+        assert_eq!(map_key_to_msg(event, &keybinds), None);
     }
 }
 

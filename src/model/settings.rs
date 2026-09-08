@@ -1,6 +1,7 @@
 use cube_tui_macros::ColorGetters;
 use serde::{Deserialize, Serialize, de::Error};
 
+use crate::model::keybinds::Keybinds;
 use crate::persistence;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -9,6 +10,8 @@ pub struct Settings {
     #[serde(default)]
     theme: Theme,
     display: DisplaySettings,
+    #[serde(default)]
+    keybinds: Keybinds,
 }
 
 impl Settings {
@@ -58,6 +61,10 @@ impl Settings {
 
     pub fn set_theme(&mut self, theme: &Theme) {
         self.theme.clone_from(theme);
+    }
+
+    pub const fn keybinds(&self) -> &Keybinds {
+        &self.keybinds
     }
 }
 

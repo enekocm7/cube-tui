@@ -5,6 +5,7 @@ use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
+use crate::model::keybinds::Action;
 use crate::model::settings::{Settings, ThemeColors};
 use crate::model::{InspectionState, Model, TimerState};
 use crate::utils::{format_elapsed, get_scramble_lines};
@@ -23,6 +24,7 @@ use crate::widgets::bluetooth::BluetoothWidget;
 pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     let settings = model.settings();
     let theme = *settings.theme();
+    let keybinds = settings.keybinds().clone();
 
     Block::default()
         .style(Style::new().bg(theme.background()))
@@ -38,7 +40,7 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     if model.show_help() {
         let help_widget = HelpWidget::new(model.help_scroll());
         model.set_help_max_scroll(HelpWidget::max_scroll_for_height(area.height));
-        help_widget.render_with_theme(area, buf, &theme);
+        help_widget.render_with_theme(area, buf, &theme, &keybinds);
         return;
     }
 
@@ -299,16 +301,34 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     }
 
     let mut help_spans = vec![
-        Span::styled("Space: hold/release  ", Style::default().fg(theme.text())),
-        Span::styled("Enter: details  ", Style::default().fg(theme.text())),
-        Span::styled("r: reset  ", Style::default().fg(theme.text())),
-        Span::styled("q: quit  ", Style::default().fg(theme.text())),
-        Span::styled("?: help", Style::default().fg(theme.text())),
+        Span::styled(
+            format!("{}: hold/release  ", keybinds.label(Action::Timer)),
+            Style::default().fg(theme.text()),
+        ),
+        Span::styled(
+            format!("{}: details  ", keybinds.label(Action::Enter)),
+            Style::default().fg(theme.text()),
+        ),
+        Span::styled(
+            format!("{}: reset  ", keybinds.label(Action::ResetTimer)),
+            Style::default().fg(theme.text()),
+        ),
+        Span::styled(
+            format!("{}: quit  ", keybinds.label(Action::Quit)),
+            Style::default().fg(theme.text()),
+        ),
+        Span::styled(
+            format!("{}: help", keybinds.label(Action::Help)),
+            Style::default().fg(theme.text()),
+        ),
     ];
     if show_history && show_stats {
         help_spans.insert(
             2,
-            Span::styled("Tab: history/stats  ", Style::default().fg(theme.text())),
+            Span::styled(
+                format!("{}: history/stats  ", keybinds.label(Action::ToggleFocus)),
+                Style::default().fg(theme.text()),
+            ),
         );
     }
     Paragraph::new(Line::from(help_spans))
@@ -321,7 +341,7 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     }
 
     if let Some(theme_selector) = &mut model.theme_selector {
-        theme_selector.render(area, buf, &theme);
+        theme_selector.render(area, buf, &theme, &keybinds);
     }
 }
 
@@ -342,7 +362,10 @@ fn render_terminal_size_error(
             "Resize to at least {min_width} columns x {min_height} rows."
         )),
         Line::from(format!("Current size: {} x {}", area.width, area.height)),
-        Line::from("Press q to quit."),
+        Line::from(format!(
+            "Press {} to quit.",
+            settings.keybinds().label(Action::Quit)
+        )),
     ]);
     let top_padding = if usize::from(area.width) >= text.width() {
         area.height.saturating_sub(text.height() as u16) / 2

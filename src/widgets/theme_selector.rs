@@ -6,6 +6,7 @@ use ratatui::layout::{Direction, Layout, Rect};
 use ratatui::style::{Style, Stylize};
 use ratatui::widgets::{Block, Borders, Clear, Padding, Paragraph, Widget};
 
+use crate::model::keybinds::{Action, Keybinds};
 use crate::model::settings::ThemeColors;
 use crate::persistence::themes_dir;
 use crate::{model::settings::Theme, persistence::load_theme};
@@ -60,7 +61,13 @@ impl ThemeSelector {
         self.themes.get(self.selection)
     }
 
-    pub fn render(&mut self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
+    pub fn render(
+        &mut self,
+        area: Rect,
+        buf: &mut Buffer,
+        theme: &ThemeColors,
+        keybinds: &Keybinds,
+    ) {
         let popup_width = u16::max(area.width / 2, 70);
         let popup_height = u16::max(area.height / 3, 20);
 
@@ -144,8 +151,12 @@ impl ThemeSelector {
             indicator.render(list_chunks[2], buf);
         }
 
-        let help_text =
-            Paragraph::new("Esc: Close this window | e: Open in default editor").fg(theme.text());
+        let help_text = Paragraph::new(format!(
+            "{}: Close this window | {}: Open in default editor",
+            keybinds.label(Action::Back),
+            keybinds.label(Action::NextEvent)
+        ))
+        .fg(theme.text());
         help_text.render(chunks[3], buf);
     }
 }
