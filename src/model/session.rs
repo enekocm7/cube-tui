@@ -39,7 +39,7 @@ pub struct Session {
 impl Session {
     pub fn new() -> Self {
         let (tx, rx) = flume::bounded(1);
-        Self {
+        let mut session = Self {
             timer_state: TimerState::Idle,
             history: History::new(),
             scramble: None,
@@ -48,7 +48,27 @@ impl Session {
             next_scramble_rx: rx,
             last_time_ms: 0,
             event: WcaEvent::Cube3x3,
-        }
+        };
+        session.spawn_scramble_generator();
+        session.spawn_scramble_receiver();
+        session
+    }
+
+    pub fn new_with_scramble() -> Self {
+        let (tx, rx) = flume::bounded(1);
+        let mut session = Self {
+            timer_state: TimerState::Idle,
+            history: History::new(),
+            scramble: Some(generate_scramble(WcaEvent::Cube3x3)),
+            next_scramble: Arc::new(Mutex::new(None)),
+            next_scramble_tx: tx,
+            next_scramble_rx: rx,
+            last_time_ms: 0,
+            event: WcaEvent::Cube3x3,
+        };
+        session.spawn_scramble_generator();
+        session.spawn_scramble_receiver();
+        session
     }
 
     pub const fn reset_timer(&mut self) {
@@ -141,7 +161,7 @@ pub struct SessionState {
 impl SessionState {
     pub fn new() -> Self {
         Self {
-            sessions: vec![Session::new()],
+            sessions: vec![Session::new_with_scramble()],
             current_session_index: 0,
         }
     }
