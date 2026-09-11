@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { History } from "../types/types";
 import { parseHistoryFile } from "./parse";
 
@@ -20,14 +20,14 @@ export function usePersistedSessions(): [
 ] {
 	const [sessions, setSessions] = useState<History[]>(loadFromStorage);
 
-	function setAndPersist(sessions: History[]) {
+	const setAndPersist = useCallback((sessions: History[]) => {
 		try {
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
 		} catch {
 			// storage quota exceeded or unavailable — silently ignore
 		}
 		setSessions(sessions);
-	}
+	}, []);
 
 	return [sessions, setAndPersist];
 }

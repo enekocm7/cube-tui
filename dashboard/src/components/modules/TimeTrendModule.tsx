@@ -9,64 +9,20 @@ import {
 	YAxis,
 } from "recharts";
 import type { Time } from "../../types/types";
-import { effectiveMs, formatMillis } from "../../utils/format";
+import { formatMillis } from "../../utils/format";
+import { computeTimeTrend } from "../../utils/timeTrend";
 
 interface TimeTrendModuleProps {
 	times: Time[];
 }
 
-const MAX_CHART_POINTS = 100;
-
-function downsample<T>(items: T[], target: number): T[] {
-	if (items.length <= target) return items;
-	const step = Math.ceil(items.length / target);
-	const sampled: T[] = [];
-	for (let i = 0; i < items.length; i += step) {
-		sampled.push(items[i]);
-	}
-	// Always include the last point so the trend reaches the present solve.
-	if (sampled[sampled.length - 1] !== items[items.length - 1]) {
-		sampled.push(items[items.length - 1]);
-	}
-	return sampled;
-}
-
 function TimeTrendModuleInner({ times }: TimeTrendModuleProps) {
-	const { chartData, validTimes, dnfCount, minMs, maxMs, yMin, yMax } =
-		useMemo(() => {
-			const allPoints = times.map((time, index) => ({
-				solve: index + 1,
-				ms: effectiveMs(time),
-			}));
+	const { chartData, dnfCount, minMs, maxMs, yMin, yMax } = useMemo(
+		() => computeTimeTrend(times),
+		[times],
+	);
 
-			const chartData = downsample(allPoints, MAX_CHART_POINTS);
-			const validTimes = allPoints
-				.map((point) => point.ms)
-				.filter((ms): ms is number => ms !== null);
-			const dnfCount = allPoints.length - validTimes.length;
-
-			if (validTimes.length === 0) {
-				return {
-					chartData,
-					validTimes,
-					dnfCount,
-					minMs: null,
-					maxMs: null,
-					yMin: 0,
-					yMax: 0,
-				};
-			}
-
-			const minMs = Math.min(...validTimes);
-			const maxMs = Math.max(...validTimes);
-			const rangePadding = Math.max(1000, Math.round((maxMs - minMs) * 0.08));
-			const yMin = Math.max(0, minMs - rangePadding);
-			const yMax = maxMs + rangePadding;
-
-			return { chartData, validTimes, dnfCount, minMs, maxMs, yMin, yMax };
-		}, [times]);
-
-	if (validTimes.length === 0) {
+	if (minMs === null || maxMs === null) {
 		return (
 			<section className="h-full border border-border bg-surface animate-fade-in-up p-5 flex flex-col">
 				<p className="text-[10px] uppercase tracking-[0.14em] text-muted font-semibold mb-2">
@@ -166,8 +122,8 @@ function TimeTrendModuleInner({ times }: TimeTrendModuleProps) {
 			</div>
 
 			<div className="mt-2 flex items-center justify-between text-[10px] text-muted font-mono tabular-nums">
-				<span>{formatMillis(minMs!)}</span>
-				<span>{formatMillis(maxMs!)}</span>
+				<span>{formatMillis(minMs)}</span>
+				<span>{formatMillis(maxMs)}</span>
 			</div>
 		</section>
 	);
