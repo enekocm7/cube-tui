@@ -50,9 +50,10 @@ pub fn config_file() -> Option<PathBuf> {
     Some(data_dir()?.join("config.toml"))
 }
 
+/// Serializes all session histories without cloning their solve data.
 pub fn save(model: &Model) {
     let Some(path) = data_file() else { return };
-    let data: Vec<History> = model.all_sessions_history().collect();
+    let data: Vec<&History> = model.all_sessions_history().collect();
 
     if let Ok(json) = serde_json::to_string_pretty(&data) {
         fs::write(path, json).ok();

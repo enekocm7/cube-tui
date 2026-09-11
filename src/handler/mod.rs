@@ -10,24 +10,27 @@ use crate::persistence;
 #[cfg(feature = "bluetooth")]
 use crate::utils::runtime::runtime;
 
-pub fn update(model: &mut Model, msg: Msg) {
-    if matches!(msg, Msg::Tick) {
-        #[cfg(feature = "bluetooth")]
-        {
-            if model.show_bluetooth() {
-                model.poll_bluetooth();
-            }
-            if model.bluetooth_timer_active() {
-                model.poll_bluetooth_timer();
-            }
-        }
-    }
+/// Applies a message to the model and reports whether the UI should redraw.
+///
+/// Accepted non-tick messages always request a redraw. Tick messages request
+/// one only when timer state or Bluetooth-backed state actually changes.
+pub fn update(model: &mut Model, msg: Msg) -> bool {
+    #[cfg(feature = "bluetooth")]
+    let background_changed = matches!(msg, Msg::Tick) && {
+        let scan_changed = model.show_bluetooth() && model.poll_bluetooth();
+        let timer_changed = model.bluetooth_timer_active() && model.poll_bluetooth_timer();
+        scan_changed || timer_changed
+    };
+    #[cfg(not(feature = "bluetooth"))]
+    let background_changed = false;
 
     if !allowed_msg(model, msg) {
-        return;
+        return background_changed;
     }
 
+    let timer_state = model.timer_state();
     msg.apply(model);
+    background_changed || !matches!(msg, Msg::Tick) || model.timer_state() != timer_state
 }
 
 impl Msg {

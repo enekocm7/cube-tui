@@ -45,6 +45,21 @@ pub struct BluetoothState {
 }
 
 impl Model {
+    /// Returns whether Bluetooth still requires periodic channel polling.
+    ///
+    /// A disconnected receiver remains active while it contains buffered
+    /// events, ensuring final status and timer messages are not lost.
+    pub fn bluetooth_needs_poll(&self) -> bool {
+        let state = &self.bluetooth_state;
+        let scanning = self.show_bluetooth()
+            && self.bluetooth_searching()
+            && state.rx.as_ref().is_some_and(receiver_active);
+        let timer = self.bluetooth_timer_active()
+            && (state.timer_rx.as_ref().is_some_and(receiver_active)
+                || state.connected_rx.as_ref().is_some_and(receiver_active));
+        scanning || timer
+    }
+
     pub const fn show_bluetooth(&self) -> bool {
         self.bluetooth_state.show
     }
@@ -91,15 +106,21 @@ impl Model {
         self.bluetooth_state.status = None;
     }
 
-    pub fn poll_bluetooth(&mut self) {
+    /// Drains pending scanner events and reports whether model state changed.
+    ///
+    /// The return value lets the event loop poll an active scan without
+    /// redrawing unchanged frames.
+    pub fn poll_bluetooth(&mut self) -> bool {
         if self.bluetooth_state.screen_state != BluetoothScreenState::Searching {
-            return;
+            return false;
         }
         let Some(rx) = self.bluetooth_state.rx.take() else {
-            return;
+            return false;
         };
 
+        let mut changed = false;
         while let Ok(event) = rx.try_recv() {
+            changed = true;
             match event {
                 BluetoothEvent::Status(status) => {
                     self.bluetooth_state.status = Some(status);
@@ -125,6 +146,7 @@ impl Model {
         }
 
         self.bluetooth_state.rx = Some(rx);
+        changed
     }
 
     pub fn bluetooth_devices(&self) -> &[DeviceInfo] {
@@ -205,10 +227,16 @@ impl Model {
         Some((tx, adapter, conn_tx))
     }
 
-    pub fn poll_bluetooth_timer(&mut self) {
+    /// Drains connection and timer events and reports whether state changed.
+    ///
+    /// Finished solves are recorded and persisted here. Disconnect and error
+    /// events also tear down the active connection before returning.
+    pub fn poll_bluetooth_timer(&mut self) -> bool {
+        let mut changed = false;
         if let Some(conn_rx) = &self.bluetooth_state.connected_rx
             && conn_rx.try_recv() == Ok(())
         {
+            changed = true;
             self.bluetooth_state.screen_state = BluetoothScreenState::Connected;
             self.sync_connected_device_list();
             let name = self
@@ -221,11 +249,12 @@ impl Model {
         }
 
         let Some(rx) = self.bluetooth_state.timer_rx.take() else {
-            return;
+            return changed;
         };
 
         let mut disconnected = false;
         while let Ok(bt_state) = rx.try_recv() {
+            changed = true;
             match bt_state {
                 BtTimerState::Idle | BtTimerState::GetSet | BtTimerState::HandsOn => {
                     self.current_session_mut().timer_state =
@@ -264,6 +293,7 @@ impl Model {
         } else {
             self.bluetooth_state.timer_rx = Some(rx);
         }
+        changed
     }
 
     pub fn bluetooth_connected(&self) -> bool {
@@ -320,5 +350,80 @@ impl Model {
         } else {
             None
         }
+    }
+}
+
+/// Returns whether a receiver can still yield an event.
+///
+/// Buffered messages keep a disconnected channel active until it is drained.
+fn receiver_active<T>(receiver: &flume::Receiver<T>) -> bool {
+    !receiver.is_disconnected() || !receiver.is_empty()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::handler::update;
+    use crate::msg::Msg;
+
+    #[test]
+    fn scan_waits_for_events_without_requesting_unchanged_frames() {
+        let mut model = Model::new();
+        let tx = model.toggle_bluetooth().unwrap();
+        assert!(model.bluetooth_needs_poll());
+        assert!(!update(&mut model, Msg::Tick));
+
+        tx.send(BluetoothEvent::Status(Cow::Borrowed("Scanning")))
+            .unwrap();
+        assert!(update(&mut model, Msg::Tick));
+        assert_eq!(model.bluetooth_status(), Some("Scanning"));
+        assert!(!update(&mut model, Msg::Tick));
+        assert!(model.bluetooth_needs_poll());
+
+        model.close_bluetooth();
+        assert!(!model.bluetooth_needs_poll());
+    }
+
+    #[test]
+    fn finished_scan_delivers_buffered_events_before_polling_stops() {
+        let mut model = Model::new();
+        let tx = model.toggle_bluetooth().unwrap();
+        tx.send(BluetoothEvent::Error(Cow::Borrowed(
+            "No Bluetooth adapters found",
+        )))
+        .unwrap();
+        drop(tx);
+
+        assert!(model.bluetooth_needs_poll());
+        assert!(update(&mut model, Msg::Tick));
+        assert_eq!(
+            model.bluetooth_status(),
+            Some("⚠ No Bluetooth adapters found")
+        );
+        assert!(!model.bluetooth_needs_poll());
+    }
+
+    #[test]
+    fn connection_and_timer_events_redraw_when_bluetooth_panel_is_closed() {
+        let mut model = Model::new();
+        let (timer_tx, timer_rx) = flume::unbounded();
+        let (connected_tx, connected_rx) = flume::bounded(1);
+        model.bluetooth_state.screen_state = BluetoothScreenState::Connecting;
+        model.bluetooth_state.timer_rx = Some(timer_rx);
+        model.bluetooth_state.connected_rx = Some(connected_rx);
+
+        assert!(!model.show_bluetooth());
+        assert!(model.bluetooth_needs_poll());
+        assert!(!update(&mut model, Msg::Tick));
+
+        connected_tx.send(()).unwrap();
+        assert!(update(&mut model, Msg::Tick));
+        assert!(model.bluetooth_connected());
+        assert!(model.bluetooth_needs_poll());
+
+        timer_tx.send(BtTimerState::Running).unwrap();
+        assert!(update(&mut model, Msg::Tick));
+        assert!(matches!(model.timer_state(), TimerState::Running(_)));
+        assert!(!update(&mut model, Msg::Tick));
     }
 }

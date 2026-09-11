@@ -8,7 +8,6 @@ use crate::model::screen::Screen;
 use crate::scramble::{Scramble, WcaEvent, generate_scramble};
 use crate::utils::runtime::runtime;
 use crate::widgets::history::History;
-use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -29,45 +28,31 @@ pub struct Session {
     pub timer_state: TimerState,
     pub history: History,
     pub scramble: Option<Scramble>,
-    next_scramble: Arc<Mutex<Option<Scramble>>>,
-    next_scramble_tx: flume::Sender<Scramble>,
-    next_scramble_rx: flume::Receiver<Scramble>,
+    next_scramble: Option<(WcaEvent, flume::Receiver<Scramble>)>,
     pub last_time_ms: u64,
     pub event: WcaEvent,
 }
 
 impl Session {
+    /// Creates an empty session without generating or prefetching a scramble.
+    ///
+    /// This constructor is used for inactive and restored sessions so they do
+    /// not retain background work before the user selects them.
     pub fn new() -> Self {
-        let (tx, rx) = flume::bounded(1);
-        let mut session = Self {
+        Self {
             timer_state: TimerState::Idle,
             history: History::new(),
             scramble: None,
-            next_scramble: Arc::new(Mutex::new(None)),
-            next_scramble_tx: tx,
-            next_scramble_rx: rx,
+            next_scramble: None,
             last_time_ms: 0,
             event: WcaEvent::Cube3x3,
-        };
-        session.spawn_scramble_generator();
-        session.spawn_scramble_receiver();
-        session
+        }
     }
 
+    /// Creates a session ready for display and starts its next prefetch.
     pub fn new_with_scramble() -> Self {
-        let (tx, rx) = flume::bounded(1);
-        let mut session = Self {
-            timer_state: TimerState::Idle,
-            history: History::new(),
-            scramble: Some(generate_scramble(WcaEvent::Cube3x3)),
-            next_scramble: Arc::new(Mutex::new(None)),
-            next_scramble_tx: tx,
-            next_scramble_rx: rx,
-            last_time_ms: 0,
-            event: WcaEvent::Cube3x3,
-        };
-        session.spawn_scramble_generator();
-        session.spawn_scramble_receiver();
+        let mut session = Self::new();
+        session.next_scramble();
         session
     }
 
@@ -106,14 +91,23 @@ impl Session {
         }
     }
 
+    /// Makes the next scramble current and starts a one-shot replacement prefetch.
+    ///
+    /// A matching in-flight prefetch is consumed, which may briefly block until
+    /// generation completes. Missing, failed, or stale-event prefetches fall
+    /// back to direct generation.
     pub fn next_scramble(&mut self) {
-        let mut next = self.next_scramble.lock().unwrap();
-        if next.is_some() {
-            self.scramble = next.take();
-        } else {
-            let event = self.event;
-            self.scramble = Some(generate_scramble(event));
-        }
+        // A prefetch belongs to the event that requested it. Discard it when
+        // switching events, and wait for an in-flight result instead of starting
+        // a second expensive generator for the same scramble.
+        self.scramble = Some(
+            self.next_scramble
+                .take()
+                .filter(|(event, _)| *event == self.event)
+                .and_then(|(_, rx)| rx.recv().ok())
+                .unwrap_or_else(|| generate_scramble(self.event)),
+        );
+        self.prefetch_scramble();
     }
 
     pub fn next_event(&mut self) {
@@ -126,28 +120,20 @@ impl Session {
         self.next_scramble();
     }
 
-    pub fn spawn_scramble_receiver(&mut self) {
-        let next_scramble = Arc::clone(&self.next_scramble);
-        let rx = self.next_scramble_rx.clone();
-        runtime().spawn_blocking(move || {
-            while let Ok(scramble) = rx.recv() {
-                *next_scramble.lock().unwrap() = Some(scramble);
-            }
-        });
-    }
-
-    pub fn spawn_scramble_generator(&mut self) {
-        let tx = self.next_scramble_tx.clone();
-        let next_scramble = Arc::clone(&self.next_scramble);
+    /// Starts one background job that generates a single scramble.
+    ///
+    /// The receiver is tagged with the current event so a later event change
+    /// cannot accidentally display a stale scramble. The worker exits after
+    /// sending one result, or skips generation if the session was dropped.
+    fn prefetch_scramble(&mut self) {
+        let (tx, rx) = flume::bounded(1);
         let event = self.event;
+        self.next_scramble = Some((event, rx));
+        // This job generates exactly one result and then releases its worker.
+        // Inactive sessions retain only a buffered scramble, not a running task.
         runtime().spawn_blocking(move || {
-            loop {
-                if next_scramble.lock().unwrap().is_none() {
-                    let scramble = generate_scramble(event);
-                    if tx.send(scramble).is_err() {
-                        break;
-                    }
-                }
+            if !tx.is_disconnected() {
+                let _ = tx.send(generate_scramble(event));
             }
         });
     }
@@ -243,27 +229,26 @@ impl Model {
         }
     }
 
-    pub fn all_sessions_history(&self) -> impl Iterator<Item = History> {
-        self.session_state
-            .sessions
-            .iter()
-            .map(|s| s.history.clone())
+    /// Iterates over session histories by reference in session order.
+    ///
+    /// Borrowing avoids cloning every solve during persistence and export.
+    pub fn all_sessions_history(&self) -> impl Iterator<Item = &History> {
+        self.session_state.sessions.iter().map(|s| &s.history)
     }
 
+    /// Replaces all sessions with restored histories and activates the first one.
+    ///
+    /// Each session restores its last event and selection. Only the active
+    /// session receives a current scramble and prefetch; other sessions remain
+    /// lazy until navigation selects them.
     pub fn restore_from_history(&mut self, data: impl IntoIterator<Item = History>) {
         self.session_state.sessions.clear();
         let data = data.into_iter();
         self.session_state.sessions.reserve(data.size_hint().0);
-        for (index, history) in data.enumerate() {
+        for history in data {
             let mut session = Session::new();
             if let Some(last_time) = history.last() {
-                let event = last_time.event();
-                session.event = event;
-                if index == 0 {
-                    session.scramble = Some(generate_scramble(event));
-                }
-                session.spawn_scramble_generator();
-                session.spawn_scramble_receiver();
+                session.event = last_time.event();
             }
             session.history = history;
             session.history.select_last();
@@ -273,6 +258,7 @@ impl Model {
             self.session_state.sessions.push(Session::new());
         }
         self.session_state.current_session_index = 0;
+        self.next_scramble();
         self.help_state = HelpState::default();
         self.screen = Screen::default();
         #[cfg(feature = "bluetooth")]
@@ -281,5 +267,119 @@ impl Model {
         }
         self.main_focus = MainFocus::History;
         self.main_stats_selection = MainStatsSelection::default();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    #[test]
+    fn unused_sessions_do_not_start_prefetch_jobs() {
+        let session = Session::new();
+        assert!(session.scramble.is_none());
+        assert!(session.next_scramble.is_none());
+    }
+
+    #[test]
+    fn prefetch_produces_one_result_and_finishes() {
+        let mut session = Session::new();
+        // FTO uses the built-in generator even with WCA support enabled.
+        session.event = WcaEvent::Fto;
+        session.prefetch_scramble();
+        let (event, rx) = session.next_scramble.take().unwrap();
+        assert_eq!(event, WcaEvent::Fto);
+        assert_ne!(
+            rx.recv_timeout(Duration::from_secs(5)).unwrap().as_str(),
+            ""
+        );
+        assert!(matches!(
+            rx.recv_timeout(Duration::from_secs(5)),
+            Err(flume::RecvTimeoutError::Disconnected)
+        ));
+    }
+
+    #[test]
+    fn next_scramble_consumes_prefetch_and_replenishes_it() {
+        let mut session = Session::new();
+        session.event = WcaEvent::Fto;
+        let (tx, rx) = flume::bounded(1);
+        tx.send(Scramble::new("prefetched scramble")).unwrap();
+        session.next_scramble = Some((session.event, rx));
+
+        session.next_scramble();
+
+        assert_eq!(
+            session.scramble.as_ref().unwrap().as_str(),
+            "prefetched scramble"
+        );
+        assert_eq!(session.next_scramble.as_ref().unwrap().0, WcaEvent::Fto);
+    }
+
+    #[test]
+    fn changing_events_discards_stale_prefetch() {
+        let mut session = Session::new();
+        session.event = WcaEvent::Pyraminx;
+        let (tx, rx) = flume::bounded(1);
+        tx.send(Scramble::new("stale scramble")).unwrap();
+        session.next_scramble = Some((session.event, rx));
+
+        session.next_event();
+
+        assert_eq!(session.event, WcaEvent::Fto);
+        assert_ne!(
+            session.scramble.as_ref().unwrap().as_str(),
+            "stale scramble"
+        );
+        assert_eq!(session.next_scramble.as_ref().unwrap().0, WcaEvent::Fto);
+    }
+
+    #[test]
+    fn disconnected_prefetch_falls_back_and_replenishes() {
+        let mut session = Session::new();
+        session.event = WcaEvent::Fto;
+        let (tx, rx) = flume::bounded(1);
+        session.next_scramble = Some((session.event, rx));
+        drop(tx);
+
+        session.next_scramble();
+
+        assert_ne!(session.scramble.as_ref().unwrap().as_str(), "");
+        assert_eq!(session.next_scramble.as_ref().unwrap().0, WcaEvent::Fto);
+    }
+
+    #[test]
+    fn restoring_sessions_only_prepares_the_active_session() {
+        let mut first_history = History::new();
+        first_history.add_ms(1000, WcaEvent::Cube2x2, "first solve");
+        first_history.add_ms(2000, WcaEvent::Fto, "last solve");
+        let mut second_history = History::new();
+        second_history.add_ms(3000, WcaEvent::Fto, "other session solve");
+        let mut model = Model::new();
+
+        model.restore_from_history([first_history, second_history]);
+
+        assert_eq!(model.current_session_index(), 0);
+        assert_eq!(model.session_count(), 2);
+        let active = model.current_session();
+        assert_eq!(active.event, WcaEvent::Fto);
+        assert_ne!(active.scramble.as_ref().unwrap().as_str(), "");
+        assert_eq!(active.next_scramble.as_ref().unwrap().0, WcaEvent::Fto);
+        assert_eq!(active.history.selected_time().unwrap().raw_ms(), 2000);
+        let inactive = &model.session_state.sessions[1];
+        assert_eq!(inactive.event, WcaEvent::Fto);
+        assert!(inactive.scramble.is_none());
+        assert!(inactive.next_scramble.is_none());
+        assert_eq!(inactive.history.selected_time().unwrap().raw_ms(), 3000);
+
+        // Navigation activates a restored session before its first render/solve.
+        crate::handler::update(&mut model, crate::msg::Msg::NextSession);
+        assert_eq!(model.current_session_index(), 1);
+        assert_ne!(model.scramble(), "");
+        assert_eq!(
+            model.current_session().next_scramble.as_ref().unwrap().0,
+            WcaEvent::Fto
+        );
     }
 }
