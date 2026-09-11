@@ -10,6 +10,7 @@ pub struct MainStatsSelection {
 }
 
 impl Default for MainStatsSelection {
+    /// Selects the first cell in the statistics pane.
     fn default() -> Self {
         Self { row: 1, col: 0 }
     }

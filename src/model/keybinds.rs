@@ -42,15 +42,18 @@ pub struct KeyBinding {
 }
 
 impl KeyBinding {
+    /// Creates a binding from a terminal key code and modifier set.
     pub const fn new(code: KeyCode, modifiers: KeyModifiers) -> Self {
         Self { code, modifiers }
     }
 
+    /// Returns whether an input event matches this normalized binding.
     pub fn matches(self, event: KeyEvent) -> bool {
         let event = Self::normalize(event.code, event.modifiers);
         self == event
     }
 
+    /// Canonicalizes shifted letters so configuration and events compare equally.
     fn normalize(mut code: KeyCode, mut modifiers: KeyModifiers) -> Self {
         if let KeyCode::Char(character) = &mut code
             && modifiers.contains(KeyModifiers::SHIFT)
@@ -67,6 +70,7 @@ impl KeyBinding {
 impl FromStr for KeyBinding {
     type Err = String;
 
+    /// Parses strings such as `Ctrl+Q`, `F5`, or `Space` into a binding.
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         let value = value.trim();
         if value.is_empty() {
@@ -95,6 +99,7 @@ impl FromStr for KeyBinding {
     }
 }
 
+/// Parses the final key token in a configured binding.
 fn parse_key_code(value: &str) -> Result<KeyCode, String> {
     let lower = value.to_ascii_lowercase();
     let code = match lower.as_str() {
@@ -140,6 +145,7 @@ fn parse_key_code(value: &str) -> Result<KeyCode, String> {
 }
 
 impl fmt::Display for KeyBinding {
+    /// Formats a binding in the same stable notation accepted by the parser.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.modifiers.contains(KeyModifiers::CONTROL) {
             formatter.write_str("Ctrl+")?;
@@ -172,6 +178,7 @@ impl fmt::Display for KeyBinding {
 }
 
 impl Serialize for KeyBinding {
+    /// Serializes a binding using its human-readable configuration notation.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -181,6 +188,7 @@ impl Serialize for KeyBinding {
 }
 
 impl<'de> Deserialize<'de> for KeyBinding {
+    /// Parses and validates a binding from its serialized string.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -195,20 +203,24 @@ impl<'de> Deserialize<'de> for KeyBinding {
 pub struct Keybinds(BTreeMap<Action, KeyBinding>);
 
 impl Keybinds {
+    /// Returns the binding assigned to an action.
     pub fn get(&self, action: Action) -> KeyBinding {
         self.0[&action]
     }
 
+    /// Returns a display label for an action's binding.
     pub fn label(&self, action: Action) -> String {
         self.get(action).to_string()
     }
 
+    /// Finds the action assigned to a terminal key event.
     pub fn action_for(&self, event: KeyEvent) -> Option<Action> {
         self.0
             .iter()
             .find_map(|(action, binding)| binding.matches(event).then_some(*action))
     }
 
+    /// Rejects duplicate bindings and unsafe timer modifiers.
     fn validate(&self) -> Result<(), String> {
         let timer = self.get(Action::Timer);
         if !timer.modifiers.is_empty() {
@@ -230,6 +242,7 @@ impl Keybinds {
 }
 
 impl Default for Keybinds {
+    /// Returns the complete built-in keyboard layout.
     fn default() -> Self {
         use Action::*;
         let none = KeyModifiers::empty();
@@ -268,6 +281,7 @@ impl Default for Keybinds {
 }
 
 impl Serialize for Keybinds {
+    /// Serializes the action-to-binding map.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -277,6 +291,7 @@ impl Serialize for Keybinds {
 }
 
 impl<'de> Deserialize<'de> for Keybinds {
+    /// Merges configured bindings with defaults and validates the result.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,

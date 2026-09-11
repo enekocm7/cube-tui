@@ -6,6 +6,7 @@ import org.worldcubeassociation.tnoodle.scrambles.PuzzleRegistry;
 import java.util.Random;
 
 public class Library {
+    /** Resolves the short event identifier used by Rust to a TNoodle puzzle. */
     static Puzzle getPuzzleFromString(String puzzle) {
         return switch (puzzle) {
             case "222" -> PuzzleRegistry.TWO.getScrambler();
@@ -22,6 +23,7 @@ public class Library {
         };
     }
 
+    /** Generates one WCA-compliant scramble for the requested event. */
     static String generateScramble(String event) {
         Puzzle puzzle = getPuzzleFromString(event);
         return puzzle.generateWcaScramble(new Random());

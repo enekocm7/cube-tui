@@ -20,10 +20,12 @@ pub struct ConfirmationWidget<'a> {
 }
 
 impl<'a> ConfirmationWidget<'a> {
+    /// Creates a confirmation widget for a prompt and selected response.
     pub const fn new(message: &'a str, selection: Selection) -> Self {
         Self { message, selection }
     }
 
+    /// Renders the confirmation prompt and its selected response.
     pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let popup_width = u16::max(area.width / 4, 30);
         let popup_height = u16::max(area.height / 5, 7);

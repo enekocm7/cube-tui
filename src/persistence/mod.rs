@@ -6,22 +6,26 @@ use crate::model::Model;
 use crate::model::settings::{Settings, ThemeColors};
 use crate::widgets::history::History;
 
+/// Returns the application data directory for the current platform.
 pub fn data_dir() -> Option<PathBuf> {
     let dir = dirs::data_dir()?.join("cube-tui");
     fs::create_dir_all(&dir).ok()?;
     Some(dir)
 }
 
+/// Returns the persisted session-history file path.
 fn data_file() -> Option<PathBuf> {
     Some(data_dir()?.join("times.json"))
 }
 
+/// Returns the directory containing user-editable theme files.
 pub fn themes_dir() -> Option<PathBuf> {
     let dir = data_dir()?.join("themes");
     fs::create_dir_all(&dir).ok()?;
     Some(dir)
 }
 
+/// Loads a named theme, returning `None` when it is missing or invalid.
 pub fn load_theme(name: &str) -> Option<ThemeColors> {
     let mut name = name.to_owned();
     let has_toml_ext = std::path::Path::new(&name)
@@ -35,6 +39,7 @@ pub fn load_theme(name: &str) -> Option<ThemeColors> {
     toml::from_str(&content).ok()
 }
 
+/// Creates the default theme file if the user does not already have one.
 pub fn ensure_default_theme() {
     let Some(dir) = themes_dir() else { return };
     let path = dir.join("default.toml");
@@ -46,6 +51,7 @@ pub fn ensure_default_theme() {
     }
 }
 
+/// Returns the application settings file path.
 pub fn config_file() -> Option<PathBuf> {
     Some(data_dir()?.join("config.toml"))
 }
@@ -60,12 +66,14 @@ pub fn save(model: &Model) {
     }
 }
 
+/// Loads all persisted session histories.
 pub fn load() -> Option<Vec<History>> {
     let path = data_file()?;
     let reader = BufReader::new(File::open(path).ok()?);
     serde_json::from_reader(reader).ok()
 }
 
+/// Loads settings, distinguishing a missing file from invalid configuration.
 pub fn load_config() -> Result<Option<Settings>, String> {
     ensure_default_theme();
     let Some(path) = config_file() else {
@@ -81,6 +89,7 @@ pub fn load_config() -> Result<Option<Settings>, String> {
         .map_err(|error| format!("invalid configuration in {}: {error}", path.display()))
 }
 
+/// Serializes the supplied settings to the platform configuration file.
 pub fn save_config(settings: &Settings) {
     let Some(path) = config_file() else { return };
 

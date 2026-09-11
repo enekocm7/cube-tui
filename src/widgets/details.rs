@@ -14,6 +14,7 @@ pub struct DetailsWidget<'a> {
 }
 
 impl<'a> DetailsWidget<'a> {
+    /// Creates a solve-details widget for an optional selected solve.
     pub const fn new(time: Option<&'a Time>, selected_modifier_index: usize) -> Self {
         Self {
             time,
@@ -21,6 +22,7 @@ impl<'a> DetailsWidget<'a> {
         }
     }
 
+    /// Renders solve metadata and editable penalty choices.
     pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
             .title("Time Details")
@@ -80,6 +82,7 @@ impl<'a> DetailsWidget<'a> {
     }
 }
 
+/// Builds one selectable checkbox row for a solve modifier.
 fn checkbox_line(label: &str, checked: bool, selected: bool, theme: &ThemeColors) -> Line<'static> {
     let check = if checked { "x" } else { " " };
     let style = if selected {
@@ -92,6 +95,7 @@ fn checkbox_line(label: &str, checked: bool, selected: bool, theme: &ThemeColors
     Line::from(Span::styled(format!("[{check}] {label}"), style))
 }
 
+/// Formats a Unix millisecond timestamp in the user's local time zone.
 fn format_datetime(unix_ms: u64) -> String {
     if unix_ms == 0 {
         return "-".to_string();

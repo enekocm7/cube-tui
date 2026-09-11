@@ -8,11 +8,13 @@ interface DropImportProps {
 	onImport: (sessions: History[]) => void;
 }
 
+/** Renders a drop zone that validates and imports a history JSON file. */
 export function DropImport({ onImport }: DropImportProps) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [isDragging, setIsDragging] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	/** Reads a selected file and passes parsed sessions to the parent. */
 	function processFile(file: File) {
 		setError(null);
 
@@ -44,16 +46,19 @@ export function DropImport({ onImport }: DropImportProps) {
 		reader.readAsText(file);
 	}
 
+	/** Allows file drops and shows the active drag state. */
 	function handleDragOver(e: DragEvent<HTMLButtonElement>) {
 		e.preventDefault();
 		setIsDragging(true);
 	}
 
+	/** Clears the drag highlight when the pointer leaves the drop zone. */
 	function handleDragLeave(e: DragEvent<HTMLButtonElement>) {
 		e.preventDefault();
 		setIsDragging(false);
 	}
 
+	/** Imports the first file dropped onto the component. */
 	function handleDrop(e: DragEvent<HTMLButtonElement>) {
 		e.preventDefault();
 		setIsDragging(false);
@@ -62,6 +67,7 @@ export function DropImport({ onImport }: DropImportProps) {
 		if (file) processFile(file);
 	}
 
+	/** Imports the first file chosen through the file picker. */
 	function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
 		const file = e.target.files?.[0];
 		if (file) processFile(file);

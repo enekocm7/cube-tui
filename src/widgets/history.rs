@@ -32,6 +32,7 @@ pub struct Time {
 }
 
 impl Time {
+    /// Creates an unpenalized solve timestamped at the current wall-clock time.
     pub fn new(
         timestamp_in_millis: u64,
         event: WcaEvent,
@@ -46,6 +47,7 @@ impl Time {
         }
     }
 
+    /// Reconstructs a solve with explicit persisted metadata.
     pub const fn new_with_meta(
         timestamp_in_millis: u64,
         event: WcaEvent,
@@ -62,26 +64,32 @@ impl Time {
         }
     }
 
+    /// Returns the scramble used for this solve.
     pub fn scramble(&self) -> &str {
         &self.scramble
     }
 
+    /// Returns when the solve finished, as Unix epoch milliseconds.
     pub const fn solved_at_unix_ms(&self) -> u64 {
         self.solved_at_unix_ms
     }
 
+    /// Returns the measured time before applying a penalty.
     pub const fn raw_ms(&self) -> u64 {
         self.timestamp_in_millis
     }
 
+    /// Returns the solve's current penalty modifier.
     pub const fn modifier(&self) -> Modifier {
         self.modifier
     }
 
+    /// Returns the puzzle event solved by this attempt.
     pub const fn event(&self) -> WcaEvent {
         self.event
     }
 
+    /// Toggles `modifier`, clearing it when it is already selected.
     pub fn set_modifier(&mut self, modifier: Modifier) {
         if self.modifier == modifier {
             self.modifier = Modifier::None;
@@ -90,6 +98,7 @@ impl Time {
         }
     }
 
+    /// Returns the penalty-adjusted duration, or `None` for a DNF.
     pub const fn effective_ms(&self) -> Option<u64> {
         match self.modifier {
             Modifier::None => Some(self.timestamp_in_millis),
@@ -100,11 +109,13 @@ impl Time {
 }
 
 impl Default for Time {
+    /// Creates a zero-duration 3×3 solve for deserialization defaults.
     fn default() -> Self {
         Self::new(0, Cube3x3, String::new())
     }
 }
 
+/// Returns the current Unix epoch timestamp in milliseconds.
 fn current_unix_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -113,6 +124,7 @@ fn current_unix_ms() -> u64 {
         })
 }
 
+/// Formats milliseconds as `MM:SS.mmm`.
 pub fn format_millis(ms: u64) -> String {
     let total_seconds = ms / 1000;
     let minutes = total_seconds / 60;
@@ -136,6 +148,7 @@ struct BestAverage {
 }
 
 impl Display for Time {
+    /// Formats the effective solve time and its penalty marker.
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self.modifier {
             Modifier::None => f.write_str(&format_millis(self.timestamp_in_millis)),
@@ -172,6 +185,7 @@ impl History {
         }
     }
 
+    /// Creates and appends a solve from its duration, event, and scramble.
     pub fn add_ms(
         &mut self,
         timestamp_in_millis: u64,
@@ -227,24 +241,29 @@ impl History {
         }
     }
 
+    /// Returns all solves in chronological order.
     pub fn times(&self) -> &[Time] {
         &self.times
     }
 
+    /// Returns whether the history contains no solves.
     pub const fn is_empty(&self) -> bool {
         self.times.is_empty()
     }
 
+    /// Returns the most recently appended solve.
     pub fn last(&self) -> Option<&Time> {
         self.times.last()
     }
 
+    /// Selects the most recent solve when the history is non-empty.
     pub const fn select_last(&mut self) {
         if !self.is_empty() {
             self.selected = Some(self.times.len() - 1);
         }
     }
 
+    /// Moves selection one solve toward the end of history.
     pub fn select_next(&mut self) {
         if self.is_empty() {
             return;
@@ -253,6 +272,7 @@ impl History {
         self.selected = Some((selected + 1).min(self.times.len() - 1));
     }
 
+    /// Moves selection one solve toward the beginning of history.
     pub fn select_previous(&mut self) {
         if self.is_empty() {
             return;
@@ -261,6 +281,7 @@ impl History {
         self.selected = Some(selected.saturating_sub(1));
     }
 
+    /// Selects an index, clamping it to the available history.
     pub fn select_index(&mut self, index: usize) {
         if self.is_empty() {
             return;
@@ -278,6 +299,7 @@ impl History {
         }
     }
 
+    /// Returns the currently selected solve.
     pub fn selected_time(&self) -> Option<&Time> {
         self.selected.and_then(|selected| self.times.get(selected))
     }
@@ -296,6 +318,7 @@ impl History {
         }
     }
 
+    /// Returns the most recent solve.
     pub fn get_latest_time(&self) -> Option<&Time> {
         self.times.last()
     }
@@ -313,47 +336,57 @@ impl History {
             .and_then(|index| self.times.get(index))
     }
 
+    /// Returns the latest mean of three as formatted text.
     pub fn get_latest_mo3(&self) -> Option<Cow<'static, str>> {
         self.get_mo3(self.times.len())
             .map(Self::format_average_value)
     }
 
+    /// Returns the fastest mean of three as formatted text.
     pub fn get_fastest_mo3(&self) -> Option<Cow<'static, str>> {
         self.fastest_average_value(3)
     }
 
+    /// Returns the latest average of five as formatted text.
     pub fn get_latest_ao5(&self) -> Option<Cow<'static, str>> {
         self.get_ao5(self.times.len())
             .map(Self::format_average_value)
     }
 
+    /// Returns the fastest average of five as formatted text.
     pub fn get_fastest_ao5(&self) -> Option<Cow<'static, str>> {
         self.fastest_average_value(5)
     }
 
+    /// Returns the latest average of twelve as formatted text.
     pub fn get_latest_ao12(&self) -> Option<Cow<'static, str>> {
         self.get_ao12(self.times.len())
             .map(Self::format_average_value)
     }
 
+    /// Returns the fastest average of twelve as formatted text.
     pub fn get_fastest_ao12(&self) -> Option<Cow<'static, str>> {
         self.fastest_average_value(12)
     }
 
+    /// Returns the latest average of fifty as formatted text.
     pub fn get_latest_ao50(&self) -> Option<Cow<'static, str>> {
         self.get_ao50(self.times.len())
             .map(Self::format_average_value)
     }
 
+    /// Returns the fastest average of fifty as formatted text.
     pub fn get_fastest_ao50(&self) -> Option<Cow<'static, str>> {
         self.fastest_average_value(50)
     }
 
+    /// Returns the latest average of one hundred as formatted text.
     pub fn get_latest_ao100(&self) -> Option<Cow<'static, str>> {
         self.get_ao100(self.times.len())
             .map(Self::format_average_value)
     }
 
+    /// Returns the fastest average of one hundred as formatted text.
     pub fn get_fastest_ao100(&self) -> Option<Cow<'static, str>> {
         self.fastest_average_value(100)
     }
@@ -393,22 +426,27 @@ impl History {
         })
     }
 
+    /// Returns the mean of three ending immediately before `index`.
     fn get_mo3(&self, index: usize) -> Option<AverageValue> {
         self.get_avg(index, 3)
     }
 
+    /// Returns the average of five ending immediately before `index`.
     fn get_ao5(&self, index: usize) -> Option<AverageValue> {
         self.get_avg(index, 5)
     }
 
+    /// Returns the average of twelve ending immediately before `index`.
     fn get_ao12(&self, index: usize) -> Option<AverageValue> {
         self.get_avg(index, 12)
     }
 
+    /// Returns the average of fifty ending immediately before `index`.
     fn get_ao50(&self, index: usize) -> Option<AverageValue> {
         self.get_avg(index, 50)
     }
 
+    /// Returns the average of one hundred ending immediately before `index`.
     fn get_ao100(&self, index: usize) -> Option<AverageValue> {
         self.get_avg(index, 100)
     }
@@ -462,6 +500,7 @@ impl History {
         ))
     }
 
+    /// Converts an average result to the text shown in statistics views.
     fn format_average_value(value: AverageValue) -> Cow<'static, str> {
         match value {
             AverageValue::Time(ms) => Cow::Owned(format_millis(ms)),
@@ -469,39 +508,47 @@ impl History {
         }
     }
 
+    /// Returns the number of solves in the history.
     pub const fn len(&self) -> usize {
         self.times.len()
     }
 
+    /// Returns the solve at `index`.
     pub fn get_time_at(&self, index: usize) -> Option<&Time> {
         self.times.get(index)
     }
 
+    /// Returns the mean of three ending at `solve_index`.
     pub fn mo3_at(&self, solve_index: usize) -> Option<Cow<'static, str>> {
         self.get_mo3(solve_index + 1)
             .map(Self::format_average_value)
     }
 
+    /// Returns the average of five ending at `solve_index`.
     pub fn ao5_at(&self, solve_index: usize) -> Option<Cow<'static, str>> {
         self.get_ao5(solve_index + 1)
             .map(Self::format_average_value)
     }
 
+    /// Returns the average of twelve ending at `solve_index`.
     pub fn ao12_at(&self, solve_index: usize) -> Option<Cow<'static, str>> {
         self.get_ao12(solve_index + 1)
             .map(Self::format_average_value)
     }
 
+    /// Returns the average of fifty ending at `solve_index`.
     pub fn ao50_at(&self, solve_index: usize) -> Option<Cow<'static, str>> {
         self.get_ao50(solve_index + 1)
             .map(Self::format_average_value)
     }
 
+    /// Returns the average of one hundred ending at `solve_index`.
     pub fn ao100_at(&self, solve_index: usize) -> Option<Cow<'static, str>> {
         self.get_ao100(solve_index + 1)
             .map(Self::format_average_value)
     }
 
+    /// Returns the ending index of the latest complete mean of three.
     pub const fn latest_mo3_index(&self) -> Option<usize> {
         if self.times.len() >= 3 {
             Some(self.times.len() - 1)
@@ -510,6 +557,7 @@ impl History {
         }
     }
 
+    /// Returns the ending index of the latest complete average of five.
     pub const fn latest_ao5_index(&self) -> Option<usize> {
         if self.times.len() >= 5 {
             Some(self.times.len() - 1)
@@ -518,6 +566,7 @@ impl History {
         }
     }
 
+    /// Returns the ending index of the latest complete average of twelve.
     pub const fn latest_ao12_index(&self) -> Option<usize> {
         if self.times.len() >= 12 {
             Some(self.times.len() - 1)
@@ -526,6 +575,7 @@ impl History {
         }
     }
 
+    /// Returns the ending index of the latest complete average of fifty.
     pub const fn latest_ao50_index(&self) -> Option<usize> {
         if self.times.len() >= 50 {
             Some(self.times.len() - 1)
@@ -534,6 +584,7 @@ impl History {
         }
     }
 
+    /// Returns the ending index of the latest complete average of one hundred.
     pub const fn latest_ao100_index(&self) -> Option<usize> {
         if self.times.len() >= 100 {
             Some(self.times.len() - 1)
@@ -612,6 +663,7 @@ impl History {
         self.times.get(solve_index - 99..=solve_index)
     }
 
+    /// Renders the scrollable history list with an optional selection highlight.
     pub fn render_with_theme(
         &self,
         area: Rect,

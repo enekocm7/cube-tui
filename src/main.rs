@@ -33,6 +33,7 @@ use crate::msg::{INSPECTION_LIMIT_MS, Msg, map_key_to_msg};
 use crate::utils::print_as_link;
 use crate::view::view;
 
+/// Parses command-line options and dispatches the selected application mode.
 fn main() {
     let cli = Cli::parse();
 
@@ -82,6 +83,7 @@ fn main() {
     }
 }
 
+/// Imports a csTimer file into persistent storage and exits with a status code.
 fn run_import(path: &std::path::Path) -> ! {
     if !path.exists() {
         eprintln!("File does not exist: {}", path.display());
@@ -102,6 +104,7 @@ fn run_import(path: &std::path::Path) -> ! {
     std::process::exit(0);
 }
 
+/// Exports persisted sessions to a csTimer-compatible JSON file.
 fn run_export(path: &std::path::Path) {
     let histories = persistence::load().unwrap_or_default();
     let mut model = Model::new();
@@ -123,6 +126,7 @@ struct KeyboardEnhancementGuard {
 }
 
 impl KeyboardEnhancementGuard {
+    /// Enables press/release keyboard events and remembers whether it succeeded.
     fn enable() -> Self {
         let mut stdout = std::io::stdout();
         let active = execute!(
@@ -135,6 +139,7 @@ impl KeyboardEnhancementGuard {
 }
 
 impl Drop for KeyboardEnhancementGuard {
+    /// Restores the terminal keyboard protocol when the guard leaves scope.
     fn drop(&mut self) {
         if self.active {
             let _ = execute!(self.stdout, PopKeyboardEnhancementFlags);

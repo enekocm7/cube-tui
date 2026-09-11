@@ -16,6 +16,7 @@ pub struct BluetoothWidget<'a> {
 }
 
 impl<'a> BluetoothWidget<'a> {
+    /// Creates a Bluetooth panel from discovery and connection state.
     pub const fn new(
         devices: Vec<DeviceInfo>,
         selected_index: usize,
@@ -30,6 +31,7 @@ impl<'a> BluetoothWidget<'a> {
         }
     }
 
+    /// Renders Bluetooth discovery, connection status, and device selection.
     pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
             .title("Bluetooth Devices")

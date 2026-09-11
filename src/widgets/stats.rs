@@ -15,6 +15,7 @@ pub struct StatsWidget<'a> {
 }
 
 impl<'a> StatsWidget<'a> {
+    /// Creates a statistics widget for a solve history.
     pub const fn new(history: &'a History) -> Self {
         Self {
             history,
@@ -23,12 +24,14 @@ impl<'a> StatsWidget<'a> {
         }
     }
 
+    /// Adds the row and column that should receive keyboard focus styling.
     pub const fn with_selection(mut self, row: usize, col: usize) -> Self {
         self.selected_row = Some(row);
         self.selected_col = Some(col);
         self
     }
 
+    /// Normalizes a statistic into fixed-width text for table alignment.
     fn fixed_cell(value: Cow<'static, str>) -> Cow<'static, str> {
         const CELL_WIDTH: usize = 10;
 
@@ -43,6 +46,7 @@ impl<'a> StatsWidget<'a> {
     }
 
     #[allow(clippy::similar_names)]
+    /// Renders latest and record statistics for the active session.
     pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
             .title("Stats")

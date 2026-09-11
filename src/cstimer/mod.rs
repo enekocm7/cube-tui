@@ -31,6 +31,7 @@ struct CstimerSolveRaw([i64; 2], String, String, u64);
 struct CstimerSolveExport([i64; 2], String, String, u64);
 
 impl<'de> Deserialize<'de> for CstimerSolve {
+    /// Deserializes one solve from csTimer's positional array representation.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -48,6 +49,7 @@ impl<'de> Deserialize<'de> for CstimerSolve {
 }
 
 impl<'de> Deserialize<'de> for CstimerFile {
+    /// Extracts and orders only the `sessionN` entries from an export object.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -57,10 +59,12 @@ impl<'de> Deserialize<'de> for CstimerFile {
         impl<'de> Visitor<'de> for SessionsVisitor {
             type Value = CstimerFile;
 
+            /// Describes the csTimer top-level object expected by this visitor.
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("a map of csTimer sessions")
             }
 
+            /// Collects valid session entries and ignores unrelated properties.
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
             where
                 A: MapAccess<'de>,
@@ -81,11 +85,13 @@ impl<'de> Deserialize<'de> for CstimerFile {
     }
 }
 
+/// Parses the numeric suffix from a csTimer `sessionN` property name.
 fn parse_session_index(key: &str) -> Option<usize> {
     let suffix = key.strip_prefix("session")?;
     suffix.parse().ok()
 }
 
+/// Converts legacy second timestamps to the millisecond representation used internally.
 const fn normalize_timestamp_ms(timestamp: u64) -> u64 {
     if timestamp < 1_000_000_000_000 {
         timestamp * 1000
@@ -94,6 +100,7 @@ const fn normalize_timestamp_ms(timestamp: u64) -> u64 {
     }
 }
 
+/// Converts millisecond timestamps to the seconds expected in csTimer exports.
 const fn normalize_timestamp_seconds(timestamp_ms: u64) -> u64 {
     if timestamp_ms >= 1_000_000_000_000 {
         timestamp_ms / 1000

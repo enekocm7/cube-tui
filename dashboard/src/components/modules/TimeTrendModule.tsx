@@ -16,6 +16,7 @@ interface TimeTrendModuleProps {
 	times: Time[];
 }
 
+/** Renders the memoized solve-time trend chart and its summary. */
 function TimeTrendModuleInner({ times }: TimeTrendModuleProps) {
 	const { chartData, dnfCount, minMs, maxMs, yMin, yMax } = useMemo(
 		() => computeTimeTrend(times),
@@ -129,4 +130,5 @@ function TimeTrendModuleInner({ times }: TimeTrendModuleProps) {
 	);
 }
 
+/** Memoized trend module that skips renders when its props are unchanged. */
 export const TimeTrendModule = memo(TimeTrendModuleInner);

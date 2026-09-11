@@ -3,10 +3,12 @@ use crate::model::screen::{DetailsReturn, Screen};
 use crate::widgets::history::Time;
 
 impl Model {
+    /// Returns whether an average-detail screen is visible.
     pub const fn show_mean_detail(&self) -> bool {
         self.screen.show_mean_detail()
     }
 
+    /// Opens the average window selected in detailed statistics when available.
     pub fn open_mean_detail(&mut self) {
         let (row, col) = self.detailed_stats_row_col();
         let has_mean = match col {
@@ -27,6 +29,7 @@ impl Model {
         }
     }
 
+    /// Opens the latest or best solve/average selected in the main stats pane.
     pub fn open_mean_detail_from_stats(&mut self) -> bool {
         let row = self.main_stats_selection.row;
         let col = self.main_stats_selection.col;
@@ -87,6 +90,7 @@ impl Model {
         true
     }
 
+    /// Returns the number of solves in the displayed average window.
     pub fn mean_detail_times_len(&self) -> usize {
         let row = self.detailed_stats_row();
         let times = match self.detailed_stats_col() {
@@ -100,6 +104,7 @@ impl Model {
         times.map_or(0, <[Time]>::len)
     }
 
+    /// Returns the selected solve's index within the average window.
     pub const fn mean_detail_selected_index(&self) -> usize {
         if let Screen::MeanDetail { selected_index, .. } = &self.screen {
             *selected_index
@@ -108,12 +113,14 @@ impl Model {
         }
     }
 
+    /// Moves the average-window selection up one solve.
     pub const fn mean_detail_select_up(&mut self) {
         if let Screen::MeanDetail { selected_index, .. } = &mut self.screen {
             *selected_index = selected_index.saturating_sub(1);
         }
     }
 
+    /// Moves the average-window selection down within the window.
     pub fn mean_detail_select_down(&mut self) {
         let max = self.mean_detail_times_len().saturating_sub(1);
         if let Screen::MeanDetail { selected_index, .. } = &mut self.screen {
@@ -121,6 +128,7 @@ impl Model {
         }
     }
 
+    /// Opens solve details for the selected member of an average window.
     pub fn open_details_for_selected_mean_time(&mut self) -> bool {
         let row = self.detailed_stats_row();
         let col = self.detailed_stats_col();
@@ -160,6 +168,7 @@ impl Model {
         true
     }
 
+    /// Returns whether the average screen was entered from the main stats pane.
     const fn mean_detail_from_stats_column(&self) -> bool {
         if let Screen::MeanDetail {
             from_stats_column, ..
@@ -171,6 +180,7 @@ impl Model {
         }
     }
 
+    /// Returns the row and column selected in detailed statistics.
     const fn detailed_stats_row_col(&self) -> (usize, usize) {
         if let Screen::DetailedStats { row, col } = &self.screen {
             (*row, *col)

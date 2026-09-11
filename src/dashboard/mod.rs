@@ -17,6 +17,7 @@ use rust_embed::RustEmbed;
 struct DashboardAssets;
 
 #[cfg(feature = "dashboard")]
+/// Resolves an embedded dashboard asset or returns an HTTP 404 response.
 fn serve_asset(path: &str) -> Response {
     match DashboardAssets::get(path) {
         Some(content) => {
@@ -36,6 +37,7 @@ fn serve_asset(path: &str) -> Response {
 }
 
 #[cfg(feature = "dashboard")]
+/// Serializes persisted sessions as the dashboard API response.
 fn api_sessions() -> Response {
     crate::persistence::load().map_or_else(
         || Json(Vec::<serde_json::Value>::new()).into_response(),
@@ -44,6 +46,7 @@ fn api_sessions() -> Response {
 }
 
 #[cfg(feature = "dashboard")]
+/// Starts the dashboard server and blocks until it exits or fails.
 pub fn run_dashboard(port: u16) -> ! {
     let rt = crate::utils::runtime::runtime();
     let result = rt.block_on(async move { run_dashboard_async(port).await });
@@ -57,6 +60,7 @@ pub fn run_dashboard(port: u16) -> ! {
 }
 
 #[cfg(feature = "dashboard")]
+/// Configures and runs the asynchronous dashboard HTTP server.
 async fn run_dashboard_async(port: u16) -> anyhow::Result<()> {
     let app = Router::new()
         .route("/api/sessions", get(|| async { api_sessions() }))

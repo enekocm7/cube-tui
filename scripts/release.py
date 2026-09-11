@@ -15,6 +15,7 @@ CARGO_TOML = Path("Cargo.toml")
 
 
 def run(cmd: list[str], dry_run: bool = False, check: bool = True) -> str:
+    """Run a command, optionally printing it without executing it."""
     print(f"+ {' '.join(cmd)}")
     if dry_run:
         return ""
@@ -27,6 +28,7 @@ def run(cmd: list[str], dry_run: bool = False, check: bool = True) -> str:
 
 
 def get_current_version() -> str:
+    """Read and return the package version declared in Cargo.toml."""
     if not CARGO_TOML.exists():
         sys.exit("Cargo.toml not found in current dir")
     for line in CARGO_TOML.read_text().splitlines():
@@ -37,6 +39,7 @@ def get_current_version() -> str:
 
 
 def bump_version(current: str, part: str) -> str:
+    """Increment the requested semantic-version component."""
     m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", current)
     if not m:
         sys.exit(f"Current version '{current}' isn't plain semver (X.Y.Z)")
@@ -51,6 +54,7 @@ def bump_version(current: str, part: str) -> str:
 
 
 def resolve_new_version(current: str, target: str) -> str:
+    """Resolve a bump name or explicit version into a validated version."""
     if target in ("major", "minor", "patch"):
         return bump_version(current, target)
     if re.fullmatch(r"\d+\.\d+\.\d+", target):
@@ -59,6 +63,7 @@ def resolve_new_version(current: str, target: str) -> str:
 
 
 def write_new_version(new_version: str, dry_run: bool) -> None:
+    """Update Cargo metadata and the lockfile to use ``new_version``."""
     text = CARGO_TOML.read_text()
     new_text, n = re.subn(
         r'(?m)^(\s*version\s*=\s*)"[^"]+"',
@@ -74,12 +79,14 @@ def write_new_version(new_version: str, dry_run: bool) -> None:
 
 
 def check_git_clean() -> None:
+    """Abort unless the repository has no tracked or untracked changes."""
     status = run(["git", "status", "--porcelain"], dry_run=False)
     if status:
         sys.exit("Working tree is not clean. Commit or stash changes first:\n" + status)
 
 
 def confirm(prompt: str, dry_run: bool) -> None:
+    """Request interactive confirmation unless this is a dry run."""
     if dry_run:
         return
     answer = input(f"{prompt} [y/N] ").strip().lower()
@@ -88,6 +95,7 @@ def confirm(prompt: str, dry_run: bool) -> None:
 
 
 def main() -> None:
+    """Validate arguments and execute the complete release workflow."""
     parser = argparse.ArgumentParser(description="Bump version, tag, publish and push to trigger the release build.")
     parser.add_argument("bump", help="major | minor | patch | explicit version (e.g 1.2.3)")
     parser.add_argument("--dry-run", action="store_true", help="show steps without doing them")

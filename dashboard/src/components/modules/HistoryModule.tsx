@@ -15,6 +15,7 @@ interface TimeRowProps {
 	onOpen: () => void;
 }
 
+/** Renders one solve row in the history table. */
 function TimeRow({ index, time, isBest, onOpen }: TimeRowProps) {
 	const isDnf = time.modifier === Modifier.DNF;
 	const isPlusTwo = time.modifier === Modifier.PlusTwo;
@@ -73,6 +74,7 @@ interface RowData {
 	onOpenSolve: (reverseIndex: number) => void;
 }
 
+/** Adapts a virtual-list row to the history row renderer. */
 function Row({ index, style, data }: ListChildComponentProps<RowData>) {
 	const { times, reversed, bestMs, onOpenSolve } = data;
 	const time = reversed[index];
@@ -97,6 +99,7 @@ interface HistoryModuleProps {
 	onOpenSolve: (reverseIndex: number) => void;
 }
 
+/** Renders a virtualized, height-aware table of session solves. */
 export function HistoryModule({
 	times,
 	bestMs,

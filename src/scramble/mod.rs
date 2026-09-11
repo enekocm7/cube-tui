@@ -24,6 +24,7 @@ pub enum WcaEvent {
 }
 
 impl WcaEvent {
+    /// Returns the human-readable puzzle name used by the UI.
     pub const fn name(self) -> &'static str {
         match self {
             Self::Cube2x2 => "2x2x2",
@@ -41,6 +42,7 @@ impl WcaEvent {
         }
     }
 
+    /// Maps an event to its stable position in the navigation cycle.
     const fn as_index(self) -> usize {
         match self {
             Self::Cube2x2 => 0,
@@ -58,6 +60,7 @@ impl WcaEvent {
         }
     }
 
+    /// Maps a navigation-cycle position back to an event.
     const fn from_index(index: usize) -> Self {
         match index {
             0 => Self::Cube2x2,
@@ -75,12 +78,14 @@ impl WcaEvent {
         }
     }
 
+    /// Returns the next event, wrapping after Clock.
     pub const fn next(self) -> Self {
         let index = self.as_index();
         let next_index = (index + 1) % 12;
         Self::from_index(next_index)
     }
 
+    /// Returns the previous event, wrapping before 2×2.
     pub const fn prev(self) -> Self {
         let index = self.as_index();
         let prev_index = if index == 0 { 11 } else { index - 1 };
@@ -121,6 +126,7 @@ pub enum Move {
 }
 
 impl Move {
+    /// Returns the move axis used to avoid redundant consecutive cube moves.
     pub const fn axis(self) -> u8 {
         match self {
             Self::R
@@ -141,6 +147,7 @@ impl Move {
 }
 
 impl fmt::Display for Move {
+    /// Writes the move in standard puzzle notation.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             Self::R => "R",
@@ -184,6 +191,7 @@ pub enum Modifier {
 }
 
 impl fmt::Display for Modifier {
+    /// Writes the move suffix in standard puzzle notation.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             Self::None => "",
@@ -200,6 +208,7 @@ pub struct Scramble {
 }
 
 impl Scramble {
+    /// Creates a locally generated scramble.
     pub fn new(text: impl Into<Cow<'static, str>>) -> Self {
         Self {
             text: text.into(),
@@ -207,6 +216,7 @@ impl Scramble {
         }
     }
 
+    /// Creates a scramble supplied by an official WCA generator.
     pub fn new_wca(text: impl Into<Cow<'static, str>>) -> Self {
         Self {
             text: text.into(),
@@ -214,27 +224,32 @@ impl Scramble {
         }
     }
 
+    /// Returns the scramble notation as a string slice.
     pub fn as_str(&self) -> &str {
         &self.text
     }
 
+    /// Returns whether the official WCA backend produced this scramble.
     pub const fn is_wca(&self) -> bool {
         self.wca
     }
 }
 
 impl fmt::Display for Scramble {
+    /// Writes the scramble notation without its provenance metadata.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.text)
     }
 }
 
 impl From<Scramble> for Cow<'static, str> {
+    /// Consumes a scramble and returns its owned or borrowed notation.
     fn from(scramble: Scramble) -> Self {
         scramble.text
     }
 }
 
+/// Generates a scramble for `event`, preferring the optional WCA backend.
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
     //Temporary fix until the official WCA scrambler supports FTO event
     if event == WcaEvent::Fto {
@@ -251,6 +266,7 @@ pub fn generate_scramble(event: WcaEvent) -> Scramble {
     Scramble::new(text)
 }
 
+/// Generates a scramble using the built-in event-specific algorithm.
 fn random_scramble(event: WcaEvent) -> String {
     match event {
         WcaEvent::Cube2x2 => cube_scramble(10, &cube_2x2_moves(), &cube_modifiers()),
@@ -268,6 +284,7 @@ fn random_scramble(event: WcaEvent) -> String {
     }
 }
 
+/// Infers the most likely puzzle event from scramble notation.
 pub fn classify_event(scramble: &str) -> WcaEvent {
     let text = scramble.trim();
     if text.is_empty() {
@@ -338,12 +355,14 @@ pub fn classify_event(scramble: &str) -> WcaEvent {
     WcaEvent::Cube3x3
 }
 
+/// Removes a move's amount or direction suffix for classification.
 fn base_move(token: &str) -> &str {
     token
         .strip_suffix('2')
         .unwrap_or_else(|| token.strip_suffix('\'').map_or(token, |stripped| stripped))
 }
 
+/// Returns whether a token resembles a clock dial turn.
 fn is_clock_token(token: &str) -> bool {
     const POSITIONS: [&str; 9] = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"];
     for pos in POSITIONS {
@@ -364,14 +383,17 @@ fn is_clock_token(token: &str) -> bool {
     false
 }
 
+/// Returns the move set used for 2×2 scrambles.
 fn cube_2x2_moves() -> Vec<Move> {
     vec![Move::R, Move::U, Move::F]
 }
 
+/// Returns the move set used for 3×3 scrambles.
 fn cube_3x3_moves() -> Vec<Move> {
     vec![Move::R, Move::L, Move::U, Move::D, Move::F, Move::B]
 }
 
+/// Returns the move set used for 4×4 scrambles.
 fn cube_4x4_moves() -> Vec<Move> {
     vec![
         Move::R,
@@ -389,6 +411,7 @@ fn cube_4x4_moves() -> Vec<Move> {
     ]
 }
 
+/// Returns the move set used for 5×5 scrambles.
 fn cube_5x5_moves() -> Vec<Move> {
     vec![
         Move::R,
@@ -406,6 +429,7 @@ fn cube_5x5_moves() -> Vec<Move> {
     ]
 }
 
+/// Returns the move set used for 6×6 scrambles.
 fn cube_6x6_moves() -> Vec<Move> {
     vec![
         Move::R,
@@ -429,9 +453,11 @@ fn cube_6x6_moves() -> Vec<Move> {
     ]
 }
 
+/// Returns the move set used for 7×7 scrambles.
 fn cube_7x7_moves() -> Vec<Move> {
     cube_6x6_moves()
 }
+/// Returns the move set used for face-turning octahedron scrambles.
 fn fto_moves() -> Vec<Move> {
     vec![
         Move::R,
@@ -444,18 +470,22 @@ fn fto_moves() -> Vec<Move> {
     ]
 }
 
+/// Returns suffixes valid for ordinary cube moves.
 fn cube_modifiers() -> Vec<Modifier> {
     vec![Modifier::None, Modifier::Prime, Modifier::Double]
 }
 
+/// Returns suffixes valid for Pyraminx moves.
 fn pyraminx_modifiers() -> Vec<Modifier> {
     vec![Modifier::None, Modifier::Prime]
 }
 
+/// Returns suffixes valid for face-turning octahedron moves.
 fn fto_modifiers() -> Vec<Modifier> {
     vec![Modifier::None, Modifier::Prime]
 }
 
+/// Generates cube moves without consecutive moves on the same axis.
 fn cube_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> String {
     let mut rng = rand::rng();
     let mut last_move: Option<Move> = None;
@@ -479,6 +509,7 @@ fn cube_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> Strin
     parts.join(" ")
 }
 
+/// Generates a Megaminx scramble in standard row-oriented notation.
 fn megaminx_scramble() -> String {
     let mut rng = rand::rng();
     let r_moves = [Move::RDoublePlus, Move::RDoubleMinus];
@@ -501,6 +532,7 @@ fn megaminx_scramble() -> String {
     rows.join("\n")
 }
 
+/// Samples independent moves and modifiers to the requested length.
 fn simple_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> String {
     let mut rng = rand::rng();
     let mut parts = Vec::with_capacity(length);
@@ -516,6 +548,7 @@ fn simple_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> Str
     parts.join(" ")
 }
 
+/// Generates a Pyraminx body scramble followed by optional tip moves.
 fn pyraminx_scramble(length: usize) -> String {
     let mut rng = rand::rng();
     let moves = [Move::R, Move::L, Move::U, Move::B];
@@ -540,17 +573,20 @@ fn pyraminx_scramble(length: usize) -> String {
     base
 }
 
+/// Generates a face-turning octahedron scramble.
 fn fto_scramble(length: usize) -> String {
     let moves = fto_moves();
     let modifiers = fto_modifiers();
     cube_scramble(length, &moves, &modifiers)
 }
 
+/// Generates a Skewb scramble.
 fn skewb_scramble(length: usize) -> String {
     let moves = [Move::R, Move::L, Move::U, Move::B];
     simple_scramble(length, &moves, &pyraminx_modifiers())
 }
 
+/// Generates non-zero Square-1 turn pairs separated by slices.
 fn square1_scramble(length: usize) -> String {
     let mut rng = rand::rng();
     let mut parts = Vec::with_capacity(length * 2);
@@ -568,6 +604,7 @@ fn square1_scramble(length: usize) -> String {
     parts.join(" ")
 }
 
+/// Generates clock dial turns followed by the puzzle rotation.
 fn clock_scramble(length: usize) -> String {
     let mut rng = rand::rng();
     let positions = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"];

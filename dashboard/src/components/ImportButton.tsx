@@ -9,9 +9,11 @@ interface ImportButtonProps {
 	compact?: boolean;
 }
 
+/** Renders a compact or full-size JSON history file picker. */
 export function ImportButton({ onImport, compact = false }: ImportButtonProps) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
+	/** Reads and validates the file selected by the hidden input. */
 	function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
 		const file = e.target.files?.[0];
 		if (!file) return;

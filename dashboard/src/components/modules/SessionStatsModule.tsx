@@ -5,6 +5,7 @@ interface StatCardProps {
 	value: string;
 }
 
+/** Renders one labeled session statistic. */
 function StatCard({ label, value }: StatCardProps) {
 	const dim = value === "—" || value === "DNF";
 
@@ -33,6 +34,7 @@ interface SessionStatsModuleProps {
 	meanMs: number | null;
 }
 
+/** Renders aggregate performance and session metadata statistics. */
 export function SessionStatsModule({
 	eventLabel,
 	timesCount,

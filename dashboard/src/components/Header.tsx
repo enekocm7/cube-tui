@@ -9,6 +9,7 @@ interface HeaderProps {
 	setSessions?: (sessions: History[]) => void;
 }
 
+/** Renders dashboard branding, theme controls, and optional import actions. */
 export function Header({ showImport = false, setSessions }: HeaderProps) {
 	const [darkMode, setDarkMode] = useState(() =>
 		document.documentElement.classList.contains("dark"),

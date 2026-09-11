@@ -14,6 +14,7 @@ pub struct ScrambleWidget<'a> {
 }
 
 impl<'a> ScrambleWidget<'a> {
+    /// Creates a scramble widget with event and provenance labels.
     pub fn new(text: &'a str, event_name: &str, is_wca: bool) -> Self {
         let prefix = if is_wca { "WCA Scramble" } else { "Scramble" };
         Self {
@@ -22,6 +23,7 @@ impl<'a> ScrambleWidget<'a> {
         }
     }
 
+    /// Renders wrapped scramble notation using the active theme.
     pub fn render_with_theme(self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
             .title(self.title.as_str())

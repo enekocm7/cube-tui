@@ -15,54 +15,67 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// Returns the minimum width required by the enabled side panels.
     pub const fn minimum_terminal_width(&self) -> u16 {
         self.display.minimum_terminal_width()
     }
 
+    /// Returns the minimum height required by the current display settings.
     pub const fn minimum_terminal_height(&self) -> u16 {
         self.display.minimum_terminal_height()
     }
 
+    /// Sets whether WCA inspection is enabled.
     pub const fn set_inspection(&mut self, inspection: bool) {
         self.timer.inspection = inspection;
     }
 
+    /// Returns whether WCA inspection is enabled.
     pub const fn inspection(&self) -> bool {
         self.timer.inspection
     }
 
+    /// Sets whether zen mode is enabled.
     pub const fn set_zen(&mut self, zen: bool) {
         self.timer.zen = zen;
     }
 
+    /// Returns whether zen mode is enabled.
     pub const fn zen(&self) -> bool {
         self.timer.zen
     }
 
+    /// Returns whether the solve-history panel is visible.
     pub const fn history(&self) -> bool {
         self.display.history
     }
 
+    /// Returns whether the statistics panel is visible.
     pub const fn stats(&self) -> bool {
         self.display.stats
     }
 
+    /// Returns whether the scramble panel is visible.
     pub const fn scramble(&self) -> bool {
         self.display.scramble
     }
 
+    /// Returns the colors of the active theme.
     pub const fn theme(&self) -> &ThemeColors {
         &self.theme.theme
     }
 
+    /// Returns the configured theme filename.
     pub fn theme_name(&self) -> &str {
         self.theme.path.as_str()
     }
 
+    /// Replaces the active theme name and colors.
     pub fn set_theme(&mut self, theme: &Theme) {
         self.theme.clone_from(theme);
     }
 
+    /// Returns the configured keyboard bindings.
     pub const fn keybinds(&self) -> &Keybinds {
         &self.keybinds
     }
@@ -77,6 +90,7 @@ pub struct TimerSettings {
 }
 
 impl Default for TimerSettings {
+    /// Enables inspection and disables zen mode by default.
     fn default() -> Self {
         Self {
             inspection: true,
@@ -93,6 +107,7 @@ pub struct Theme {
 }
 
 impl Theme {
+    /// Creates a named theme from an already parsed color palette.
     pub fn new(name: &str, colors: ThemeColors) -> Self {
         Self {
             path: name.to_owned(),
@@ -100,12 +115,14 @@ impl Theme {
         }
     }
 
+    /// Returns the theme's persisted filename.
     pub fn name(&self) -> &str {
         &self.path
     }
 }
 
 impl<'de> Deserialize<'de> for Theme {
+    /// Loads the named palette while deserializing the theme reference.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -125,6 +142,7 @@ impl<'de> Deserialize<'de> for Theme {
 }
 
 impl Default for Theme {
+    /// Loads `default.toml`, falling back to built-in colors.
     fn default() -> Self {
         let theme = persistence::load_theme("default.toml").unwrap_or_default();
         Self {
@@ -145,6 +163,7 @@ pub struct ThemeColors {
 }
 
 impl Default for ThemeColors {
+    /// Returns the built-in high-contrast dark palette.
     fn default() -> Self {
         Self {
             background: ColorSettings::BLACK,
@@ -177,10 +196,12 @@ impl ColorSettings {
         b: 255,
     };
 
+    /// Converts the RGB triplet to a Ratatui color.
     pub const fn to_color(self) -> ratatui::style::Color {
         ratatui::style::Color::Rgb(self.r, self.g, self.b)
     }
 
+    /// Parses a six-digit `#RRGGBB` color.
     pub fn from_hex(s: &str) -> Option<Self> {
         let s = s.strip_prefix('#')?;
         if s.len() != 6 {
@@ -192,12 +213,14 @@ impl ColorSettings {
             b: u8::from_str_radix(&s[4..6], 16).ok()?,
         })
     }
+    /// Formats the color as an uppercase `#RRGGBB` value.
     fn to_hex(self) -> String {
         format!("#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
     }
 }
 
 impl Serialize for ColorSettings {
+    /// Serializes the color as a hexadecimal string.
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -207,6 +230,7 @@ impl Serialize for ColorSettings {
 }
 
 impl<'de> Deserialize<'de> for ColorSettings {
+    /// Deserializes and validates a hexadecimal color string.
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -228,6 +252,7 @@ pub struct DisplaySettings {
 }
 
 impl Default for DisplaySettings {
+    /// Makes the history, scramble, and statistics panels visible.
     fn default() -> Self {
         Self {
             history: true,
@@ -238,6 +263,7 @@ impl Default for DisplaySettings {
 }
 
 impl DisplaySettings {
+    /// Computes the width occupied by the timer and enabled side panels.
     const fn minimum_terminal_width(self) -> u16 {
         const BASE_WIDTH: u16 = 28;
         const HISTORY_WIDTH: u16 = 24;
@@ -248,6 +274,7 @@ impl DisplaySettings {
             + if self.stats { STATS_WIDTH } else { 0 }
     }
 
+    /// Computes the height required with or without the scramble panel.
     const fn minimum_terminal_height(self) -> u16 {
         if self.scramble { 20 } else { 13 }
     }

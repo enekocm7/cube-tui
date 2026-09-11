@@ -1,6 +1,7 @@
 import type { History, Time } from "../types/types";
 import { Modifier, WcaEvent } from "../types/types";
 
+/** Narrows an unknown value to a supported puzzle event. */
 function isWcaEvent(value: unknown): value is WcaEvent {
 	return (
 		typeof value === "string" &&
@@ -8,6 +9,7 @@ function isWcaEvent(value: unknown): value is WcaEvent {
 	);
 }
 
+/** Narrows an unknown value to a supported solve modifier. */
 function isModifier(value: unknown): value is Modifier {
 	return (
 		typeof value === "string" &&
@@ -15,6 +17,7 @@ function isModifier(value: unknown): value is Modifier {
 	);
 }
 
+/** Validates and normalizes one persisted solve record. */
 function parseTime(raw: unknown): Time {
 	if (typeof raw !== "object" || raw === null)
 		throw new Error("Invalid time entry");
@@ -37,6 +40,7 @@ function parseTime(raw: unknown): Time {
 	};
 }
 
+/** Validates one persisted session and all of its solves. */
 function parseHistory(raw: unknown): History {
 	if (typeof raw !== "object" || raw === null)
 		throw new Error("Invalid history object");
@@ -48,6 +52,7 @@ function parseHistory(raw: unknown): History {
 	return { times: h.times.map(parseTime) };
 }
 
+/** Parses the JSON history format exported by the TUI. */
 export function parseHistoryFile(json: string): History[] {
 	const raw: unknown = JSON.parse(json);
 

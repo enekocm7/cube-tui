@@ -34,6 +34,7 @@ pub fn update(model: &mut Model, msg: Msg) -> bool {
 }
 
 impl Msg {
+    /// Dispatches this message to its state-transition handler.
     fn apply(self, model: &mut Model) {
         match self {
             Self::Press => handle_press(model),
@@ -69,6 +70,7 @@ impl Msg {
     }
 }
 
+/// Handles the initial timer-key press for the active timer state.
 fn handle_press(model: &mut Model) {
     if model.show_details() {
         if model.timer_state() == TimerState::Idle {
@@ -103,6 +105,7 @@ fn handle_press(model: &mut Model) {
     }
 }
 
+/// Handles release of the timer key, starting or stopping as appropriate.
 fn handle_release(model: &mut Model) {
     #[cfg(feature = "bluetooth")]
     if model.bluetooth_connected() {
@@ -119,10 +122,12 @@ fn handle_release(model: &mut Model) {
     }
 }
 
+/// Resets the timer and advances to a fresh scramble.
 fn handle_reset(model: &mut Model) {
     model.reset_timer();
 }
 
+/// Advances time-dependent and asynchronous model state by one UI tick.
 fn handle_tick(model: &mut Model) {
     if let TimerState::Inspection(InspectionState::Running(start)) = model.timer_state() {
         let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
@@ -133,6 +138,7 @@ fn handle_tick(model: &mut Model) {
     }
 }
 
+/// Moves the active screen's selection upward.
 fn handle_select_up(model: &mut Model) {
     if model.show_help() {
         model.scroll_help_up();
@@ -162,6 +168,7 @@ fn handle_select_up(model: &mut Model) {
     }
 }
 
+/// Moves the active screen's selection downward.
 fn handle_select_down(model: &mut Model) {
     if model.show_help() {
         model.scroll_help_down();
@@ -190,6 +197,7 @@ fn handle_select_down(model: &mut Model) {
     }
 }
 
+/// Switches keyboard focus between the history and statistics panes.
 const fn handle_toggle_focus(model: &mut Model) {
     if model.show_help() || model.show_details() || model.show_detailed_stats() {
         return;
@@ -201,6 +209,7 @@ const fn handle_toggle_focus(model: &mut Model) {
     model.toggle_main_focus();
 }
 
+/// Advances the puzzle event, opening settings when event editing is active.
 fn handle_next_event_open_editor(model: &mut Model) {
     if model.theme_selector.is_some() {
         model.open_theme_in_editor();
@@ -212,12 +221,14 @@ fn handle_next_event_open_editor(model: &mut Model) {
     }
 }
 
+/// Selects the previous puzzle event when the main timer is active.
 fn handle_prev_event(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.prev_event();
     }
 }
 
+/// Activates the next session and prepares it for display.
 fn handle_next_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.next_session();
@@ -227,6 +238,7 @@ fn handle_next_session(model: &mut Model) {
     }
 }
 
+/// Activates the previous session and prepares it for display.
 fn handle_prev_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.prev_session();
@@ -236,6 +248,7 @@ fn handle_prev_session(model: &mut Model) {
     }
 }
 
+/// Creates and activates a session when the configured limit permits it.
 fn handle_new_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.add_session();
@@ -244,23 +257,27 @@ fn handle_new_session(model: &mut Model) {
     }
 }
 
+/// Opens confirmation before deleting the active session.
 fn handle_delete_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle && model.session_count() > 1 {
         model.open_confirmation(ConfirmationAction::DeleteSession);
     }
 }
 
+/// Replaces the current scramble while the main timer is idle.
 fn handle_next_scramble(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
         model.next_scramble();
     }
 }
 
+/// Shows or hides the keyboard-help overlay.
 const fn handle_help(model: &mut Model) {
     model.toggle_help();
 }
 
 #[cfg(feature = "bluetooth")]
+/// Opens or closes the Bluetooth device picker and starts discovery.
 fn handle_toggle_bluetooth(model: &mut Model) {
     if model.show_help() || model.show_details() || model.show_detailed_stats() {
         return;
@@ -301,6 +318,7 @@ fn handle_toggle_bluetooth(model: &mut Model) {
 }
 
 #[cfg(feature = "bluetooth")]
+/// Requests disconnection from the active Bluetooth timer.
 fn handle_disconnect_bluetooth(model: &mut Model) {
     if (model.bluetooth_connected() || model.bluetooth_connecting())
         && let Some((tx, rx, adapter)) = model.disconnect_bluetooth()
@@ -310,6 +328,7 @@ fn handle_disconnect_bluetooth(model: &mut Model) {
 }
 
 #[cfg(feature = "bluetooth")]
+/// Launches a scanner task and forwards its status through `sender`.
 fn restart_bluetooth_scan(
     tx: flume::Sender<BluetoothEvent>,
     _rx: flume::Receiver<BluetoothEvent>,
@@ -331,6 +350,7 @@ fn restart_bluetooth_scan(
 }
 
 #[cfg(feature = "bluetooth")]
+/// Starts a connection to the selected Bluetooth timer.
 fn handle_bluetooth_connect(model: &mut Model) {
     use std::borrow::Cow;
 
@@ -370,16 +390,19 @@ fn handle_bluetooth_connect(model: &mut Model) {
     });
 }
 
+/// Toggles inspection timing and persists the new setting.
 fn handle_toggle_inspection(model: &mut Model) {
     model.toggle_inspection();
     persistence::save_config(model.settings());
 }
 
+/// Toggles zen mode and persists the new setting.
 fn handle_toggle_zen(model: &mut Model) {
     model.toggle_zen();
     persistence::save_config(model.settings());
 }
 
+/// Confirms the context-sensitive action for the active screen.
 fn handle_enter(model: &mut Model) {
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
@@ -438,12 +461,14 @@ fn handle_enter(model: &mut Model) {
     }
 }
 
+/// Opens the detailed statistics screen for the active session.
 fn handle_open_detailed_stats(model: &mut Model) {
     if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
         model.open_detailed_stats();
     }
 }
 
+/// Opens the theme selector and initializes its current selection.
 fn handle_open_theme_selector(model: &mut Model) {
     if model.theme_selector.is_some() {
         model.close_theme_selector();
@@ -453,6 +478,7 @@ fn handle_open_theme_selector(model: &mut Model) {
 }
 
 #[allow(clippy::missing_const_for_fn)]
+/// Closes the topmost modal or returns to the main screen.
 fn handle_esc(model: &mut Model) {
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
@@ -474,12 +500,14 @@ fn handle_esc(model: &mut Model) {
     model.close_current_screen();
 }
 
+/// Opens confirmation before deleting the selected solve.
 fn handle_delete_time(model: &mut Model) {
     if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
         model.open_confirmation(ConfirmationAction::DeleteTime);
     }
 }
 
+/// Moves selection left or performs the screen-specific previous action.
 fn handle_nav_left(model: &mut Model) {
     if model.confirmation().is_some() {
         model.confirmation_selection_left();
@@ -492,6 +520,7 @@ fn handle_nav_left(model: &mut Model) {
     }
 }
 
+/// Moves selection right or performs the screen-specific next action.
 fn handle_nav_right(model: &mut Model) {
     if model.confirmation().is_some() {
         model.confirmation_selection_right();

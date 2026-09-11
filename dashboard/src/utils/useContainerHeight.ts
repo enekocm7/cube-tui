@@ -1,5 +1,6 @@
 import { type RefObject, useEffect, useState } from "react";
 
+/** Tracks an element's height with `ResizeObserver`, bounded by `minHeight`. */
 export function useContainerHeight(
 	ref: RefObject<HTMLElement | null>,
 	defaultHeight: number,
@@ -10,6 +11,7 @@ export function useContainerHeight(
 		const el = ref.current;
 		if (!el) return;
 
+		/** Copies the container's current height into React state. */
 		const update = () => {
 			setHeight(el.clientHeight);
 		};

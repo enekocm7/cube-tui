@@ -135,16 +135,19 @@ pub struct HelpWidget {
 }
 
 impl HelpWidget {
+    /// Creates a help widget at the supplied scroll offset.
     pub const fn new(scroll: u16) -> Self {
         Self { scroll }
     }
 
+    /// Calculates the greatest valid help scroll offset for a viewport height.
     pub fn max_scroll_for_height(height: u16) -> u16 {
         let total_lines = u16::try_from(total_help_lines()).unwrap_or(u16::MAX);
         let visible_lines = height.saturating_sub(2);
         total_lines.saturating_sub(visible_lines)
     }
 
+    /// Renders key bindings and explanatory help text at the current scroll.
     pub fn render_with_theme(
         self,
         area: Rect,
@@ -197,6 +200,7 @@ impl HelpWidget {
     }
 }
 
+/// Returns the total rendered line count of the static help content.
 fn total_help_lines() -> usize {
     #[cfg(feature = "bluetooth")]
     let count = HELP_TEXT.len() + BLUETOOTH_HELP_TEXT.len();
@@ -205,6 +209,7 @@ fn total_help_lines() -> usize {
     count
 }
 
+/// Converts a structured help entry into a styled terminal line.
 fn help_line_to_line<'a>(entry: &HelpLine, text_color: Color, keybinds: &Keybinds) -> Line<'a> {
     match entry {
         HelpLine::Header(text) => Line::from(vec![Span::styled(

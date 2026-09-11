@@ -28,6 +28,7 @@ pub struct MeanDetailWidget<'a> {
 }
 
 impl<'a> MeanDetailWidget<'a> {
+    /// Creates a detail table for one rolling-average window.
     pub fn new(
         history: &'a History,
         solve_index: usize,
@@ -77,6 +78,7 @@ impl<'a> MeanDetailWidget<'a> {
         }
     }
 
+    /// Renders the average's constituent solves and trim status.
     pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let type_name = match self.mean_type {
             MeanType::Mo3 => "Mean of 3",
@@ -217,6 +219,7 @@ impl<'a> MeanDetailWidget<'a> {
     }
 }
 
+/// Returns the solve indices discarded by the selected WCA average rule.
 fn compute_trimmed_indices(times: &[Time], mean_type: MeanType) -> Vec<usize> {
     let n = match mean_type {
         MeanType::Mo3 => return vec![],

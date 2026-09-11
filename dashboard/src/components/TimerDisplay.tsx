@@ -9,10 +9,12 @@ interface TimerDisplayProps {
 	fallback?: string;
 }
 
+/** Smoothly settles a numeric display value unless reduced motion is requested. */
 function useSettledValue(
 	target: number | null,
 	enabled: boolean,
 ): number | null {
+	/** Resolves the user's motion preference once for this mounted display. */
 	const prefersReducedMotion = useMemo(() => {
 		if (typeof window === "undefined") return true;
 		return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -34,6 +36,7 @@ function useSettledValue(
 		const to = target;
 
 		let raf = 0;
+		/** Advances one animation frame toward the target value. */
 		const step = (now: number) => {
 			const t = Math.min((now - start) / duration, 1);
 			const eased = 1 - Math.pow(1 - t, 3);
@@ -50,6 +53,7 @@ function useSettledValue(
 	return display;
 }
 
+/** Renders the session's latest solve as a prominent animated timer. */
 export function TimerDisplay({
 	ms,
 	label,

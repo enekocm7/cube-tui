@@ -13,6 +13,7 @@ const SCRAMBLE_JAR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/lib-all.ja
 
 static JVM: OnceLock<Result<JavaVM, String>> = OnceLock::new();
 
+/// Generates an official scramble through the bundled TNoodle-compatible JAR.
 pub fn get_wca_scramble(event: WcaEvent) -> Option<String> {
     let event_str = event_to_string(event);
     let jvm = get_or_init_jvm().as_ref().ok()?;
@@ -37,6 +38,7 @@ pub fn get_wca_scramble(event: WcaEvent) -> Option<String> {
     Some(result)
 }
 
+/// Returns the lazily initialized JVM, retaining any initialization error.
 fn get_or_init_jvm() -> &'static Result<JavaVM, String> {
     JVM.get_or_init(|| -> Result<JavaVM, String> {
         let jar_path = extract_jar_to_temp().map_err(|e| format!("failed to extract jar: {e}"))?;
@@ -50,6 +52,7 @@ fn get_or_init_jvm() -> &'static Result<JavaVM, String> {
     })
 }
 
+/// Writes the embedded scrambler JAR to a process-scoped temporary file.
 fn extract_jar_to_temp() -> std::io::Result<PathBuf> {
     let mut path = temp_dir();
     path.push(format!("cube-tui-scrambles-{}.jar", id()));
@@ -58,6 +61,7 @@ fn extract_jar_to_temp() -> std::io::Result<PathBuf> {
     Ok(path)
 }
 
+/// Maps an event to the identifier expected by the Java scrambler.
 const fn event_to_string(event: WcaEvent) -> &'static str {
     match event {
         WcaEvent::Cube2x2 => "222",

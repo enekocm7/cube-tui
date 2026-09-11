@@ -2,6 +2,7 @@
 #[cfg(feature = "wca-scrambles")]
 use std::ffi::OsStr;
 
+/// Builds the optional bundled assets required by enabled Cargo features.
 fn main() {
     #[cfg(feature = "dashboard")]
     build_dashboard();
@@ -10,6 +11,7 @@ fn main() {
 }
 
 #[cfg(feature = "wca-scrambles")]
+/// Compiles the Java WCA scrambler and copies its shaded JAR into `OUT_DIR`.
 fn build_scrambles() {
     use std::fs;
     use std::path::{Path, PathBuf};
@@ -56,6 +58,7 @@ fn build_scrambles() {
 }
 
 #[cfg(feature = "dashboard")]
+/// Installs dashboard dependencies and produces the embedded web build.
 fn build_dashboard() {
     use std::path::Path;
     use std::process::Command;
@@ -105,6 +108,7 @@ fn build_dashboard() {
 
 #[cfg(unix)]
 #[cfg(feature = "wca-scrambles")]
+/// Adds executable bits to a build helper while preserving its other permissions.
 fn add_execution_permission<P: AsRef<OsStr>>(path: P) {
     use std::fs;
     use std::os::unix::fs::PermissionsExt;

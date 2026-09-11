@@ -8,6 +8,7 @@ import { SessionSelection } from "./SessionSelection.tsx";
 import { TimerDisplay } from "./TimerDisplay.tsx";
 import TimesColumn from "./TimesColumn.tsx";
 
+/** Coordinates persisted sessions and the dashboard's selected session. */
 function App() {
 	const [sessions, setSessions] = usePersistedSessions();
 	const [selectedIndex, setSelectedIndex] = useState(0);
@@ -38,6 +39,7 @@ function App() {
 		}
 	}, [sessions, selectedIndex]);
 
+	/** Replaces persisted sessions after a successful file import. */
 	function handleImport(nextSessions: History[]) {
 		setSessions(nextSessions);
 		setSelectedIndex(0);

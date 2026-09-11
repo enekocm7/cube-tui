@@ -36,6 +36,10 @@ pub enum Msg {
     ToggleZen,
 }
 
+/// Maps a terminal key event to the configured application message.
+///
+/// Key-repeat events are deliberately ignored so held keys cannot trigger
+/// repeated state transitions.
 pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
     let action = keybinds.action_for(key)?;
     if action == Action::Timer {
@@ -127,6 +131,10 @@ mod tests {
 
 pub const INSPECTION_LIMIT_MS: u64 = 15_000;
 
+/// Returns whether a message is valid for the currently active modal or screen.
+///
+/// Modal interfaces capture input so unrelated global actions cannot mutate the
+/// obscured main screen; ticking and quitting remain available everywhere.
 pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {

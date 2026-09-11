@@ -8,6 +8,7 @@ pub enum ConfirmationAction {
 }
 
 impl ConfirmationAction {
+    /// Returns the prompt displayed for this destructive action.
     pub const fn message(self) -> &'static str {
         match self {
             Self::DeleteSession => "Delete this session?",
@@ -24,6 +25,7 @@ pub struct Confirmation {
 }
 
 impl Model {
+    /// Opens a confirmation dialog with `No` selected by default.
     pub fn open_confirmation(&mut self, action: ConfirmationAction) {
         self.confirmation = Some(Confirmation {
             message: action.message().to_owned(),
@@ -32,22 +34,26 @@ impl Model {
         });
     }
 
+    /// Dismisses the active confirmation dialog.
     pub fn close_confirmation(&mut self) {
         self.confirmation = None;
     }
 
+    /// Selects the non-destructive response.
     pub const fn confirmation_selection_left(&mut self) {
         if let Some(confirmation) = &mut self.confirmation {
             confirmation.selection = Selection::No;
         }
     }
 
+    /// Selects the affirmative response.
     pub const fn confirmation_selection_right(&mut self) {
         if let Some(confirmation) = &mut self.confirmation {
             confirmation.selection = Selection::Yes;
         }
     }
 
+    /// Returns the active confirmation dialog, if any.
     pub const fn confirmation(&self) -> Option<&Confirmation> {
         self.confirmation.as_ref()
     }

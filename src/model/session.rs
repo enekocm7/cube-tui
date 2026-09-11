@@ -56,29 +56,35 @@ impl Session {
         session
     }
 
+    /// Clears the timer state and the previously displayed duration.
     pub const fn reset_timer(&mut self) {
         self.timer_state = TimerState::Idle;
         self.last_time_ms = 0;
     }
 
+    /// Begins the inspection countdown at the current instant.
     pub fn start_inspection(&mut self) {
         self.timer_state = TimerState::Inspection(InspectionState::Running(Instant::now()));
     }
 
+    /// Begins measuring a solve at the current instant.
     pub fn start_timer(&mut self) {
         self.timer_state = TimerState::Running(Instant::now());
     }
 
+    /// Returns the timer to idle while retaining the displayed duration.
     pub const fn stop_timer(&mut self) {
         self.timer_state = TimerState::Idle;
     }
 
+    /// Marks a running inspection as pulsed without changing its start time.
     pub const fn pulse_timer(&mut self) {
         if let TimerState::Inspection(InspectionState::Running(start)) = self.timer_state {
             self.timer_state = TimerState::Inspection(InspectionState::Pulsed(start));
         }
     }
 
+    /// Returns the elapsed duration appropriate to the current timer state.
     pub fn elapsed_ms(&self) -> u64 {
         match self.timer_state {
             TimerState::Inspection(state) => match state {
@@ -110,11 +116,13 @@ impl Session {
         self.prefetch_scramble();
     }
 
+    /// Advances to the next event and prepares its first scramble.
     pub fn next_event(&mut self) {
         self.event = self.event.next();
         self.next_scramble();
     }
 
+    /// Moves to the previous event and prepares its first scramble.
     pub fn prev_event(&mut self) {
         self.event = self.event.prev();
         self.next_scramble();
@@ -145,6 +153,7 @@ pub struct SessionState {
 }
 
 impl SessionState {
+    /// Creates state containing one active, scramble-ready session.
     pub fn new() -> Self {
         Self {
             sessions: vec![Session::new_with_scramble()],
@@ -154,32 +163,39 @@ impl SessionState {
 }
 
 impl Default for SessionState {
+    /// Creates the default one-session state.
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl Model {
+    /// Returns the zero-based index of the active session.
     pub const fn current_session_index(&self) -> usize {
         self.session_state.current_session_index
     }
 
+    /// Returns the number of available sessions.
     pub const fn session_count(&self) -> usize {
         self.session_state.sessions.len()
     }
 
+    /// Returns whether another session would exceed [`MAX_SESSIONS`].
     pub const fn is_at_max_sessions(&self) -> bool {
         self.session_state.sessions.len() >= MAX_SESSIONS
     }
 
+    /// Returns the active session.
     pub fn current_session(&self) -> &Session {
         &self.session_state.sessions[self.session_state.current_session_index]
     }
 
+    /// Returns mutable access to the active session.
     pub fn current_session_mut(&mut self) -> &mut Session {
         &mut self.session_state.sessions[self.session_state.current_session_index]
     }
 
+    /// Appends and selects an empty session, returning `false` at the limit.
     pub fn add_session(&mut self) -> bool {
         if self.is_at_max_sessions() {
             return false;
@@ -189,6 +205,7 @@ impl Model {
         true
     }
 
+    /// Deletes the active session, returning `false` when it is the only one.
     pub fn delete_current_session(&mut self) -> bool {
         if self.session_state.sessions.len() <= 1 {
             return false;
@@ -210,6 +227,7 @@ impl Model {
         true
     }
 
+    /// Selects the next session, wrapping at the end.
     pub const fn next_session(&mut self) {
         if self.session_state.sessions.is_empty() {
             return;
@@ -218,6 +236,7 @@ impl Model {
             (self.session_state.current_session_index + 1) % self.session_state.sessions.len();
     }
 
+    /// Selects the previous session, wrapping at the beginning.
     pub const fn prev_session(&mut self) {
         if self.session_state.sessions.is_empty() {
             return;

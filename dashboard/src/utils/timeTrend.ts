@@ -3,6 +3,7 @@ import { effectiveMs } from "./format";
 
 const MAX_CHART_POINTS = 100;
 
+/** Downsamples session times and derives chart bounds and DNF totals. */
 export function computeTimeTrend(times: Time[]) {
 	const chartData: { solve: number; ms: number | null }[] = [];
 	const step = Math.max(1, Math.ceil(times.length / MAX_CHART_POINTS));

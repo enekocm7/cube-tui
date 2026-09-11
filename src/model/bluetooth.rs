@@ -60,10 +60,12 @@ impl Model {
         scanning || timer
     }
 
+    /// Returns whether the Bluetooth device panel is visible.
     pub const fn show_bluetooth(&self) -> bool {
         self.bluetooth_state.show
     }
 
+    /// Opens or closes Bluetooth discovery and returns the new scanner sender.
     pub fn toggle_bluetooth(&mut self) -> Option<flume::Sender<BluetoothEvent>> {
         self.bluetooth_state.show = !self.bluetooth_state.show;
         if self.bluetooth_state.show {
@@ -92,6 +94,7 @@ impl Model {
         }
     }
 
+    /// Closes Bluetooth UI state and cancels outstanding scanner work.
     pub fn close_bluetooth(&mut self) {
         self.bluetooth_state.show = false;
         self.stop_bluetooth_scan();
@@ -101,6 +104,7 @@ impl Model {
         }
     }
 
+    /// Drops the scanner channel and clears its transient state.
     fn stop_bluetooth_scan(&mut self) {
         self.bluetooth_state.rx = None;
         self.bluetooth_state.status = None;
@@ -149,10 +153,12 @@ impl Model {
         changed
     }
 
+    /// Returns discovered Bluetooth timer devices in display order.
     pub fn bluetooth_devices(&self) -> &[DeviceInfo] {
         &self.bluetooth_state.devices
     }
 
+    /// Inserts a discovered device or refreshes its existing list entry.
     fn upsert_bluetooth_device(&mut self, device: DeviceInfo) {
         let existing = self
             .bluetooth_state
@@ -167,6 +173,7 @@ impl Model {
         self.bluetooth_state.devices.push(device);
     }
 
+    /// Ensures the connected timer remains represented in the device list.
     fn sync_connected_device_list(&mut self) {
         self.bluetooth_state.devices = self
             .bluetooth_state
@@ -181,30 +188,36 @@ impl Model {
         self.bluetooth_state.selected_index = 0;
     }
 
+    /// Returns the most recent Bluetooth status or error message.
     pub fn bluetooth_status(&self) -> Option<&str> {
         self.bluetooth_state.status.as_deref()
     }
 
+    /// Returns the selected Bluetooth device index.
     pub const fn bluetooth_selected_index(&self) -> usize {
         self.bluetooth_state.selected_index
     }
 
+    /// Moves the Bluetooth device selection up one row.
     pub const fn bluetooth_select_up(&mut self) {
         self.bluetooth_state.selected_index = self.bluetooth_state.selected_index.saturating_sub(1);
     }
 
+    /// Moves the Bluetooth device selection down within the discovered list.
     pub fn bluetooth_select_down(&mut self) {
         let max_index = self.bluetooth_state.devices.len().saturating_sub(1);
         self.bluetooth_state.selected_index =
             (self.bluetooth_state.selected_index + 1).min(max_index);
     }
 
+    /// Returns the currently selected discovered device.
     pub fn bluetooth_selected_device(&self) -> Option<&DeviceInfo> {
         self.bluetooth_state
             .devices
             .get(self.bluetooth_state.selected_index)
     }
 
+    /// Creates connection state for the selected device when possible.
     pub fn connect_bluetooth_device(&mut self) -> Option<BluetoothConnection> {
         if self.bluetooth_state.screen_state != BluetoothScreenState::Searching {
             return None;
@@ -296,22 +309,27 @@ impl Model {
         changed
     }
 
+    /// Returns whether a Bluetooth timer is currently connected.
     pub fn bluetooth_connected(&self) -> bool {
         self.bluetooth_state.screen_state == BluetoothScreenState::Connected
     }
 
+    /// Returns the high-level state displayed by the Bluetooth panel.
     pub const fn bluetooth_screen_state(&self) -> BluetoothScreenState {
         self.bluetooth_state.screen_state
     }
 
+    /// Returns whether a Bluetooth connection attempt is in progress.
     pub fn bluetooth_connecting(&self) -> bool {
         self.bluetooth_state.screen_state == BluetoothScreenState::Connecting
     }
 
+    /// Returns whether Bluetooth discovery is in progress.
     pub fn bluetooth_searching(&self) -> bool {
         self.bluetooth_state.screen_state == BluetoothScreenState::Searching
     }
 
+    /// Returns whether a connected timer is actively timing or readying a solve.
     pub const fn bluetooth_timer_active(&self) -> bool {
         matches!(
             self.bluetooth_state.screen_state,
@@ -319,14 +337,17 @@ impl Model {
         )
     }
 
+    /// Returns the connected timer's display name.
     pub fn connected_device_name(&self) -> Option<&str> {
         self.bluetooth_state.connected_device_name.as_deref()
     }
 
+    /// Returns the connected timer's platform peripheral identifier.
     pub fn connected_device_id(&self) -> Option<PeripheralId> {
         self.bluetooth_state.connected_device_id.clone()
     }
 
+    /// Tears down the active connection and returns its adapter and device ID.
     pub fn disconnect_bluetooth(
         &mut self,
     ) -> Option<(

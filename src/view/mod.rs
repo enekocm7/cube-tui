@@ -21,6 +21,7 @@ use crate::widgets::stats::StatsWidget;
 use crate::widgets::bluetooth::BluetoothWidget;
 
 #[allow(clippy::too_many_lines)]
+/// Renders the complete application view into the supplied terminal buffer.
 pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     let settings = model.settings();
     let theme = *settings.theme();
@@ -345,6 +346,7 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     }
 }
 
+/// Renders the minimum-size warning in place of the normal application UI.
 fn render_terminal_size_error(
     area: Rect,
     buf: &mut ratatui::buffer::Buffer,
@@ -387,6 +389,7 @@ fn render_terminal_size_error(
         );
 }
 
+/// Returns an area's interior after removing a one-cell border.
 const fn inner_area(area: Rect) -> Rect {
     Rect::new(
         area.x + 1,
@@ -396,6 +399,7 @@ const fn inner_area(area: Rect) -> Rect {
     )
 }
 
+/// Chooses the timer text and style for the model's current state.
 fn timer_display(model: &Model) -> (Cow<'static, str>, Style) {
     let theme = model.settings().theme();
     let style = match model.timer_state() {

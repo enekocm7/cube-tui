@@ -18,6 +18,7 @@ pub struct ThemeSelector {
 }
 
 impl ThemeSelector {
+    /// Loads theme files and creates a selector at the first entry.
     pub fn new() -> Self {
         if let Some(theme_path) = themes_dir() {
             let mut themes: Vec<Theme> = Vec::new();
@@ -45,22 +46,26 @@ impl ThemeSelector {
         }
     }
 
+    /// Moves selection to the next available theme.
     pub fn next(&mut self) {
         if self.selection < self.themes.len().saturating_sub(1) {
             self.selection += 1;
         }
     }
 
+    /// Moves selection to the previous available theme.
     pub fn previous(&mut self) {
         if self.selection > 0 {
             self.selection -= 1;
         }
     }
 
+    /// Returns the currently selected theme.
     pub fn selected(&self) -> Option<&Theme> {
         self.themes.get(self.selection)
     }
 
+    /// Renders the theme list and highlights its current selection.
     pub fn render(
         &mut self,
         area: Rect,

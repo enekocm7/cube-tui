@@ -18,6 +18,7 @@ import { SessionStatsModule } from "./modules/SessionStatsModule";
 import { TimeTrendModule } from "./modules/TimeTrendModule";
 import { TimerDisplay } from "./TimerDisplay.tsx";
 
+/** Renders one labeled statistic in the solve-details modal. */
 function ModalStatCard({ label, value }: { label: string; value: string }) {
 	const dim = value === "—" || value === "DNF";
 	return (
@@ -34,6 +35,7 @@ function ModalStatCard({ label, value }: { label: string; value: string }) {
 	);
 }
 
+/** Formats a solve timestamp as local date and time. */
 function formatDateTime(unix_ms: number): string {
 	if (!unix_ms) return "—";
 	return new Date(unix_ms).toLocaleString("en", {
@@ -42,6 +44,7 @@ function formatDateTime(unix_ms: number): string {
 	});
 }
 
+/** Returns a human-readable label for a penalty modifier. */
 function modifierLabel(modifier: Modifier): string {
 	switch (modifier) {
 		case Modifier.None:
@@ -53,6 +56,7 @@ function modifierLabel(modifier: Modifier): string {
 	}
 }
 
+/** Formats a signed time difference for comparison with nearby solves. */
 function formatDelta(ms: number): string {
 	const sign = ms >= 0 ? "+" : "-";
 	return `${sign}${formatMillis(Math.abs(ms))}`;
@@ -66,6 +70,7 @@ interface TimeDetailsModalProps {
 	onClose: () => void;
 }
 
+/** Renders complete metadata and context for one selected solve. */
 function TimeDetailsModal({
 	time,
 	solveIndex,
@@ -150,6 +155,7 @@ interface TimesColumnProps {
 	history: History;
 }
 
+/** Renders the recent-times sidebar and manages its details modal. */
 export default function TimesColumn({ history }: TimesColumnProps) {
 	const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
@@ -213,6 +219,7 @@ export default function TimesColumn({ history }: TimesColumnProps) {
 	}, [times]);
 
 	useEffect(() => {
+		/** Closes the modal when the user presses Escape. */
 		function handleEscape(event: KeyboardEvent) {
 			if (event.key === "Escape") {
 				setSelectedIdx(null);
@@ -223,6 +230,7 @@ export default function TimesColumn({ history }: TimesColumnProps) {
 		return () => window.removeEventListener("keydown", handleEscape);
 	}, []);
 
+	/** Opens details for the solve at `i`. */
 	function handleOpen(i: number) {
 		setSelectedIdx(i);
 	}

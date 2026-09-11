@@ -13,6 +13,7 @@ interface RecordCardProps {
 	value: string;
 }
 
+/** Renders one record metric card. */
 function RecordCard({ label, value }: RecordCardProps) {
 	const dim = value === "—" || value === "DNF";
 
@@ -30,6 +31,7 @@ function RecordCard({ label, value }: RecordCardProps) {
 	);
 }
 
+/** Renders personal-best solve and rolling-average records. */
 export function RecordsModule({
 	bestSingle,
 	bestAo5,

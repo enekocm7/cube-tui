@@ -30,14 +30,17 @@ pub enum DetailsReturn {
 }
 
 impl Screen {
+    /// Returns whether this screen is the solve-details dialog.
     pub const fn show_details(&self) -> bool {
         matches!(self, Self::Details { .. })
     }
 
+    /// Returns whether this screen is the detailed-statistics table.
     pub const fn show_detailed_stats(&self) -> bool {
         matches!(self, Self::DetailedStats { .. })
     }
 
+    /// Returns whether this screen shows one average's constituent solves.
     pub const fn show_mean_detail(&self) -> bool {
         matches!(self, Self::MeanDetail { .. })
     }

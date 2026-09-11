@@ -8,6 +8,7 @@ interface SessionSelectionProps {
 	onSelect: (index: number) => void;
 }
 
+/** Builds a concise option label from a session's dominant event and size. */
 function sessionLabel(history: History, index: number): string {
 	const eventCounts = history.times.reduce<Partial<Record<WcaEvent, number>>>(
 		(acc, t) => {
@@ -27,11 +28,13 @@ function sessionLabel(history: History, index: number): string {
 	return `Session ${index + 1} · ${eventName} · ${solves} solve${solves === 1 ? "" : "s"}`;
 }
 
+/** Renders the active-session picker. */
 export function SessionSelection({
 	sessions,
 	selectedIndex,
 	onSelect,
 }: SessionSelectionProps) {
+	/** Converts the selected option value to a session index. */
 	function handleSelect(e: ChangeEvent<HTMLSelectElement>) {
 		onSelect(Number(e.target.value));
 	}

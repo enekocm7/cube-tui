@@ -2,6 +2,7 @@ interface CubeLogoProps {
 	size?: number;
 }
 
+/** Renders the scalable cube mark used in dashboard branding. */
 export function CubeLogo({ size = 32 }: CubeLogoProps) {
 	return (
 		<img

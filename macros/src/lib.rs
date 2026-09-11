@@ -5,6 +5,10 @@ use quote::quote;
 use syn::{Data, DeriveInput, Fields, parse_macro_input};
 
 #[proc_macro_derive(ColorGetters)]
+/// Derives immutable color getter methods for every named field of a struct.
+///
+/// Each generated method has the same name as its field and returns the field's
+/// value as `ratatui::style::Color`.
 pub fn derive_color_getters(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;

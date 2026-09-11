@@ -15,6 +15,7 @@ pub struct DetailedStatsWidget<'a> {
 }
 
 impl<'a> DetailedStatsWidget<'a> {
+    /// Creates a detailed-statistics table with its selected cell.
     pub const fn new(history: &'a History, selected_row: usize, selected_col: usize) -> Self {
         Self {
             history,
@@ -23,6 +24,7 @@ impl<'a> DetailedStatsWidget<'a> {
         }
     }
 
+    /// Renders the per-solve rolling-statistics table.
     pub fn render(&self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let block = Block::default()
             .title("Detailed Stats")
@@ -170,6 +172,7 @@ impl<'a> DetailedStatsWidget<'a> {
     }
 }
 
+/// Chooses a table-cell style from row selection and cell focus.
 fn row_style(is_row_selected: bool, is_cell_highlighted: bool, theme: &ThemeColors) -> Style {
     if is_cell_highlighted {
         Style::default()
@@ -185,6 +188,7 @@ fn row_style(is_row_selected: bool, is_cell_highlighted: bool, theme: &ThemeColo
     }
 }
 
+/// Truncates a string to at most `max` characters, adding an ellipsis.
 fn truncate(s: &str, max: usize) -> String {
     if s.len() <= max {
         s.to_string()

@@ -2,6 +2,7 @@ use std::borrow::Cow;
 
 pub mod runtime;
 
+/// Returns the number of terminal rows needed to wrap a scramble at `width`.
 pub fn get_scramble_lines(scramble: &str, width: u16) -> u16 {
     // If the scramble is a megaminx scramble the separators are already in the scramble
     if scramble.contains('\n') {
@@ -13,12 +14,14 @@ pub fn get_scramble_lines(scramble: &str, width: u16) -> u16 {
     u16::try_from(num_lines).unwrap_or(5)
 }
 
+/// Prints a terminal hyperlink for `path`, falling back to its display text.
 pub fn print_as_link(path: &std::path::Path) {
     let display = path.display();
     let url = format!("file:///{}", path.to_string_lossy().replace('\\', "/"));
     println!("\x1b]8;;{url}\x1b\\{display}\x1b]8;;\x1b\\");
 }
 
+/// Formats milliseconds as a compact elapsed-time string.
 pub fn format_elapsed(ms: u64) -> Cow<'static, str> {
     if ms == 0 {
         return Cow::Borrowed("00:00.000");
