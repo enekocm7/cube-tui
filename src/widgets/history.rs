@@ -209,8 +209,12 @@ impl History {
     fn update_fastest_after_append(&mut self) {
         let solve_index = self.times.len() - 1;
         if let Some(best_index) = self.fastest_time.get_mut()
-            && best_index
-                .is_none_or(|index| self.times[solve_index].raw_ms() < self.times[index].raw_ms())
+            && let Some(solve_ms) = self.times[solve_index].effective_ms()
+            && best_index.is_none_or(|index| {
+                self.times[index]
+                    .effective_ms()
+                    .is_none_or(|best_ms| solve_ms < best_ms)
+            })
         {
             *best_index = Some(solve_index);
         }
@@ -323,15 +327,16 @@ impl History {
         self.times.last()
     }
 
-    /// Returns the fastest raw solve, calculating and caching its index on demand.
+    /// Returns the fastest non-DNF solve, calculating and caching its index on demand.
     pub fn get_fastest_time(&self) -> Option<&Time> {
         self.fastest_time
             .get_or_init(|| {
                 self.times
                     .iter()
                     .enumerate()
-                    .min_by_key(|(_, time)| time.raw_ms())
-                    .map(|(index, _)| index)
+                    .filter_map(|(index, time)| time.effective_ms().map(|millis| (millis, index)))
+                    .min_by_key(|&(millis, _)| millis)
+                    .map(|(_, index)| index)
             })
             .and_then(|index| self.times.get(index))
     }
@@ -759,7 +764,12 @@ mod tests {
     }
 
     fn assert_fastest_matches_reference(h: &History) {
-        let expected_time = h.times().iter().min_by_key(|time| time.raw_ms());
+        let expected_time = h
+            .times()
+            .iter()
+            .filter_map(|time| time.effective_ms().map(|millis| (millis, time)))
+            .min_by_key(|&(millis, _)| millis)
+            .map(|(_, time)| time);
         assert_eq!(
             h.get_fastest_time().map(Time::raw_ms),
             expected_time.map(Time::raw_ms)
@@ -908,6 +918,30 @@ mod tests {
             time_with_modifier(8_000, Modifier::DNF),
         ]);
         assert_eq!(h.get_fastest_mo3().unwrap(), "DNF");
+    }
+
+    #[test]
+    fn fastest_time_ignores_a_fast_dnf() {
+        let h = history(vec![
+            time_with_modifier(100, Modifier::DNF),
+            time_with_ms(1_000),
+            time_with_ms(2_000),
+        ]);
+
+        assert_eq!(h.get_fastest_time().unwrap().raw_ms(), 1_000);
+    }
+
+    #[test]
+    fn fastest_average_ignores_a_fast_dnf() {
+        let h = history(vec![
+            time_with_modifier(100, Modifier::DNF),
+            time_with_ms(1_000),
+            time_with_ms(1_100),
+            time_with_ms(1_200),
+            time_with_ms(1_300),
+        ]);
+
+        assert_eq!(h.get_fastest_ao5().unwrap(), "00:01.200");
     }
 
     #[test]
