@@ -35,6 +35,11 @@ impl Settings {
         self.timer.inspection
     }
 
+    /// Returns the inspection limit in milliseconds.
+    pub const fn inspection_limit(&mut self) -> u64 {
+        self.timer.inspection_limit
+    }
+
     /// Sets whether zen mode is enabled.
     pub const fn set_zen(&mut self, zen: bool) {
         self.timer.zen = zen;
@@ -86,6 +91,10 @@ pub struct TimerSettings {
     #[serde(default)]
     inspection: bool,
     #[serde(default)]
+    inspection_limit: u64,
+    #[serde(default)]
+    inspection_audio: bool,
+    #[serde(default)]
     zen: bool,
 }
 
@@ -94,6 +103,8 @@ impl Default for TimerSettings {
     fn default() -> Self {
         Self {
             inspection: true,
+            inspection_limit: 15_000,
+            inspection_audio: false,
             zen: false,
         }
     }

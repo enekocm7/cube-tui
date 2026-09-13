@@ -28,8 +28,8 @@ use ratatui::crossterm::{
 
 use crate::cli::{Cli, Command};
 use crate::handler::update;
-use crate::model::{InspectionState, Model, TimerState};
-use crate::msg::{INSPECTION_LIMIT_MS, Msg, map_key_to_msg};
+use crate::model::{Model, TimerState};
+use crate::msg::{Msg, map_key_to_msg};
 use crate::utils::print_as_link;
 use crate::view::view;
 
@@ -153,12 +153,9 @@ const TICK_RATE: Duration = Duration::from_millis(30);
 ///
 /// A held inspection timer remains animated until its limit so the UI draws
 /// the final zero before switching to event-driven idle rendering.
-fn timer_is_animating(state: TimerState, now: Instant) -> bool {
+fn timer_is_animating(state: TimerState) -> bool {
     match state {
-        TimerState::Running(_) | TimerState::Inspection(InspectionState::Running(_)) => true,
-        TimerState::Inspection(InspectionState::Pulsed(start)) => {
-            now.saturating_duration_since(start) < Duration::from_millis(INSPECTION_LIMIT_MS)
-        }
+        TimerState::Running(_) | TimerState::Inspection(_) => true,
         TimerState::Idle | TimerState::Pulsed => false,
     }
 }
@@ -224,7 +221,7 @@ fn run(terminal: &mut DefaultTerminal) {
     loop {
         // Draw the final zero even if an ignored input event returns just as
         // inspection expires, before its next scheduled tick.
-        let animate_timer = timer_is_animating(model.timer_state(), Instant::now());
+        let animate_timer = timer_is_animating(model.timer_state());
         let timer_animation_just_ended = timer_was_animating && !animate_timer;
         if timer_animation_just_ended {
             redraw = true;
@@ -283,26 +280,9 @@ mod event_loop_tests {
 
     #[test]
     fn idle_and_armed_timers_do_not_need_periodic_frames() {
-        let now = Instant::now();
-        assert!(!timer_is_animating(TimerState::Idle, now));
-        assert!(!timer_is_animating(TimerState::Pulsed, now));
-        assert!(timer_is_animating(TimerState::Running(now), now));
-    }
-
-    #[test]
-    fn inspection_keeps_updating_until_its_final_frame() {
-        let start = Instant::now();
-        let deadline = start + Duration::from_millis(INSPECTION_LIMIT_MS);
-        assert!(timer_is_animating(
-            TimerState::Inspection(InspectionState::Running(start)),
-            deadline
-        ));
-        let held = TimerState::Inspection(InspectionState::Pulsed(start));
-        assert!(timer_is_animating(
-            held,
-            deadline.checked_sub(TICK_RATE).unwrap()
-        ));
-        assert!(!timer_is_animating(held, deadline));
+        assert!(!timer_is_animating(TimerState::Idle));
+        assert!(!timer_is_animating(TimerState::Pulsed));
+        assert!(timer_is_animating(TimerState::Running(Instant::now())));
     }
 
     #[test]
