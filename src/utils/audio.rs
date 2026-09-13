@@ -46,6 +46,7 @@ pub fn play_audio(audio_type: InspectionAudio) -> anyhow::Result<()> {
         })
         .mixer();
     let audio_bytes: &[u8] = audio_type.into();
-    rodio::play(mixer, Cursor::new(audio_bytes))?;
+    let player = rodio::play(mixer, Cursor::new(audio_bytes))?;
+    player.detach();
     Ok(())
 }
