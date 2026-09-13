@@ -25,8 +25,12 @@ pub enum TimerState {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum InspectionState {
-    Pulsed(Instant),
-    Running(Instant),
+    Pulsed,
+    Running {
+        time: Instant,
+        first_audio_played: bool,
+        second_audio_played: bool,
+    },
 }
 
 pub struct Session {
@@ -91,7 +95,11 @@ impl Session {
 
     /// Begins the inspection countdown at the current instant.
     pub fn start_inspection(&mut self) {
-        self.timer_state = TimerState::Inspection(InspectionState::Running(Instant::now()));
+        self.timer_state = TimerState::Inspection(InspectionState::Running {
+            time: Instant::now(),
+            first_audio_played: false,
+            second_audio_played: false,
+        });
     }
 
     /// Begins measuring a solve at the current instant.
@@ -106,8 +114,8 @@ impl Session {
 
     /// Marks a running inspection as pulsed without changing its start time.
     pub const fn pulse_timer(&mut self) {
-        if let TimerState::Inspection(InspectionState::Running(start)) = self.timer_state {
-            self.timer_state = TimerState::Inspection(InspectionState::Pulsed(start));
+        if let TimerState::Inspection(InspectionState::Running { .. }) = self.timer_state {
+            self.timer_state = TimerState::Inspection(InspectionState::Pulsed);
         }
     }
 
@@ -115,9 +123,10 @@ impl Session {
     pub fn elapsed_ms(&self) -> u64 {
         match self.timer_state {
             TimerState::Inspection(state) => match state {
-                InspectionState::Running(start) | InspectionState::Pulsed(start) => {
-                    u64::try_from(start.elapsed().as_millis()).unwrap()
+                InspectionState::Running { time, .. } => {
+                    u64::try_from(time.elapsed().as_millis()).unwrap()
                 }
+                InspectionState::Pulsed => 0,
             },
             TimerState::Running(start) => u64::try_from(start.elapsed().as_millis()).unwrap(),
             TimerState::Idle | TimerState::Pulsed => self.last_time_ms,

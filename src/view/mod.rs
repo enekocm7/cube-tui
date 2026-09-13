@@ -404,13 +404,13 @@ fn timer_display(model: &Model) -> (Cow<'static, str>, Style) {
     let theme = model.settings().theme();
     let style = match model.timer_state() {
         TimerState::Idle => Style::default().fg(theme.text()),
-        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_)) => {
+        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed) => {
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
         }
         TimerState::Running(_) => Style::default()
             .fg(Color::Green)
             .add_modifier(Modifier::BOLD),
-        TimerState::Inspection(InspectionState::Running(_)) => Style::default()
+        TimerState::Inspection(InspectionState::Running { .. }) => Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD),
     };
@@ -419,8 +419,7 @@ fn timer_display(model: &Model) -> (Cow<'static, str>, Style) {
         TimerState::Pulsed => format_elapsed(0),
         TimerState::Inspection(_) => {
             let elapsed_ms = model.elapsed_ms();
-            let remaining_ms = 15_000_u64.saturating_sub(elapsed_ms);
-            Cow::Owned(format!("Inspect: {}", format_elapsed(remaining_ms)))
+            Cow::Owned(format!("Inspect: {}", format_elapsed(elapsed_ms)))
         }
         _ => format_elapsed(model.elapsed_ms()),
     };
