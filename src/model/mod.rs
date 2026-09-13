@@ -23,7 +23,7 @@ use help::HelpState;
 use main_focus::{MainFocus, MainStatsSelection};
 use screen::Screen;
 use session::SessionState;
-pub use session::{InspectionState, TimerState};
+pub use session::TimerState;
 
 pub const MAX_SESSIONS: usize = 99;
 
@@ -191,6 +191,11 @@ impl Model {
     /// Returns the active session's timer state.
     pub fn timer_state(&self) -> TimerState {
         self.current_session().timer_state
+    }
+
+    /// Returns a mutable reference of the session's timer state
+    pub fn timer_state_mut(&mut self) -> &mut TimerState {
+        &mut self.current_session_mut().timer_state
     }
 
     /// Replaces the active session's timer state.

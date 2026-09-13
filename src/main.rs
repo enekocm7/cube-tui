@@ -155,7 +155,7 @@ const TICK_RATE: Duration = Duration::from_millis(30);
 /// the final zero before switching to event-driven idle rendering.
 fn timer_is_animating(state: TimerState) -> bool {
     match state {
-        TimerState::Running(_) | TimerState::Inspection(_) => true,
+        TimerState::Running(_) | TimerState::Inspection { .. } => true,
         TimerState::Idle | TimerState::Pulsed => false,
     }
 }

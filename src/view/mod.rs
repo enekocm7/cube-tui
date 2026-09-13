@@ -7,7 +7,7 @@ use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
 use crate::model::keybinds::Action;
 use crate::model::settings::{Settings, ThemeColors};
-use crate::model::{InspectionState, Model, TimerState};
+use crate::model::{Model, TimerState};
 use crate::utils::{format_elapsed, get_scramble_lines};
 use crate::widgets::confirmation::ConfirmationWidget;
 use crate::widgets::detailed_stats::DetailedStatsWidget;
@@ -404,20 +404,20 @@ fn timer_display(model: &Model) -> (Cow<'static, str>, Style) {
     let theme = model.settings().theme();
     let style = match model.timer_state() {
         TimerState::Idle => Style::default().fg(theme.text()),
-        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed) => {
+        TimerState::Pulsed | TimerState::Inspection { pulsed: true, .. } => {
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
         }
         TimerState::Running(_) => Style::default()
             .fg(Color::Green)
             .add_modifier(Modifier::BOLD),
-        TimerState::Inspection(InspectionState::Running { .. }) => Style::default()
+        TimerState::Inspection { pulsed: false, .. } => Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD),
     };
 
     let text = match model.timer_state() {
         TimerState::Pulsed => format_elapsed(0),
-        TimerState::Inspection(_) => {
+        TimerState::Inspection { .. } => {
             let elapsed_ms = model.elapsed_ms();
             Cow::Owned(format!("Inspect: {}", format_elapsed(elapsed_ms)))
         }

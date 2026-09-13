@@ -19,18 +19,13 @@ use std::time::{Duration, Instant};
 pub enum TimerState {
     Idle,
     Pulsed,
-    Inspection(InspectionState),
-    Running(Instant),
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum InspectionState {
-    Pulsed,
-    Running {
+    Inspection {
         time: Instant,
+        pulsed: bool,
         first_audio_played: bool,
         second_audio_played: bool,
     },
+    Running(Instant),
 }
 
 pub struct Session {
@@ -95,11 +90,12 @@ impl Session {
 
     /// Begins the inspection countdown at the current instant.
     pub fn start_inspection(&mut self) {
-        self.timer_state = TimerState::Inspection(InspectionState::Running {
+        self.timer_state = TimerState::Inspection {
             time: Instant::now(),
+            pulsed: false,
             first_audio_played: false,
             second_audio_played: false,
-        });
+        };
     }
 
     /// Begins measuring a solve at the current instant.
@@ -114,20 +110,17 @@ impl Session {
 
     /// Marks a running inspection as pulsed without changing its start time.
     pub const fn pulse_timer(&mut self) {
-        if let TimerState::Inspection(InspectionState::Running { .. }) = self.timer_state {
-            self.timer_state = TimerState::Inspection(InspectionState::Pulsed);
+        if let TimerState::Inspection { pulsed, .. } = &mut self.timer_state {
+            *pulsed = true;
         }
     }
 
     /// Returns the elapsed duration appropriate to the current timer state.
     pub fn elapsed_ms(&self) -> u64 {
         match self.timer_state {
-            TimerState::Inspection(state) => match state {
-                InspectionState::Running { time, .. } => {
-                    u64::try_from(time.elapsed().as_millis()).unwrap()
-                }
-                InspectionState::Pulsed => 0,
-            },
+            TimerState::Inspection { time, .. } => {
+                u64::try_from(time.elapsed().as_millis()).unwrap()
+            }
             TimerState::Running(start) => u64::try_from(start.elapsed().as_millis()).unwrap(),
             TimerState::Idle | TimerState::Pulsed => self.last_time_ms,
         }

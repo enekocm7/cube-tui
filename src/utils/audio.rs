@@ -15,6 +15,7 @@ const EIGHT_SECONDS_FILE: &[u8] = include_bytes!("../../assets/audio/8-seconds.m
 const TWELVE_SECONDS_FILE: &[u8] = include_bytes!("../../assets/audio/12-seconds.mp3");
 
 impl From<InspectionAudio> for &[u8] {
+    /// Returns the embedded MP3 bytes for the selected inspection cue.
     fn from(value: InspectionAudio) -> Self {
         match value {
             InspectionAudio::EightSeconds => EIGHT_SECONDS_FILE,
@@ -25,24 +26,19 @@ impl From<InspectionAudio> for &[u8] {
 
 static MIXER: OnceLock<MixerDeviceSink> = OnceLock::new();
 
-/// Plays the audio file specified in [`audio_type`]
+/// Plays the selected embedded inspection cue through the default audio device.
 ///
-/// The audio file should be under the assets/audio folder
-///
-/// # Arguments
-///
-/// * [`audio_type`] - The name of the audio file.
+/// The output mixer is initialized on the first call and reused for subsequent
+/// cues.
 ///
 /// # Errors
 ///
-/// Returns an error if the audio file cannot be opened or played.
+/// Returns an error if Rodio cannot decode or enqueue the embedded MP3 data.
 ///
-/// # Examples
+/// # Panics
 ///
-/// ```rust
-/// play_audio(InspectionAudio::EightSeconds)
-/// play_audio(InspectionAudio::TwelveSeconds)
-/// ```
+/// Panics if the system's default audio output cannot be opened during mixer
+/// initialization.
 pub fn play_audio(audio_type: InspectionAudio) -> anyhow::Result<()> {
     let mixer = MIXER
         .get_or_init(|| {
