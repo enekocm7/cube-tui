@@ -1,11 +1,10 @@
 #[cfg(feature = "bluetooth")]
 use futures_util::StreamExt;
 
-use crate::model::TimerState::Inspection;
 #[cfg(feature = "bluetooth")]
 use crate::model::bluetooth::BluetoothEvent;
 use crate::model::confirmation::ConfirmationAction;
-use crate::model::{InspectionState, Model, TimerState};
+use crate::model::{Model, TimerState};
 use crate::msg::{Msg, allowed_msg};
 use crate::persistence;
 use crate::utils::audio::InspectionAudio::{EightSeconds, TwelveSeconds};
@@ -97,8 +96,10 @@ fn handle_press(model: &mut Model) {
                 model.set_timer_state(TimerState::Pulsed);
             }
         }
-        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed) => {}
-        TimerState::Inspection(InspectionState::Running { .. }) => model.pulse_timer(),
+        TimerState::Pulsed => {}
+        TimerState::Inspection { .. } => {
+            model.pulse_timer();
+        }
         TimerState::Running(start) => {
             let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
             model.record_solve(elapsed_ms);
@@ -119,7 +120,7 @@ fn handle_release(model: &mut Model) {
     }
     if matches!(
         model.timer_state(),
-        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed)
+        TimerState::Pulsed | TimerState::Inspection { pulsed: true, .. }
     ) {
         model.start_timer();
     }
@@ -132,33 +133,29 @@ fn handle_reset(model: &mut Model) {
 
 /// Advances time-dependent and asynchronous model state by one UI tick.
 fn handle_tick(model: &mut Model) {
-    if let TimerState::Inspection(InspectionState::Running {
+    let inspection_limit = model.settings.inspection_limit();
+
+    if let TimerState::Inspection {
         time,
         first_audio_played,
         second_audio_played,
-    }) = model.timer_state()
+        ..
+    } = model.timer_state_mut()
     {
         let elapsed_ms = u64::try_from(time.elapsed().as_millis()).unwrap();
-        let inspection_limit = model.settings.inspection_limit();
-        if (8_000..8_100).contains(&elapsed_ms) && !first_audio_played {
+
+        if (8_000..8_100).contains(&elapsed_ms) && !*first_audio_played {
             play_audio(EightSeconds).expect("Failed to play audio");
-            model.set_timer_state(Inspection(InspectionState::Running {
-                time,
-                first_audio_played: true,
-                second_audio_played,
-            }));
+            *first_audio_played = true;
         }
-        if (12_000..12_100).contains(&elapsed_ms) && !second_audio_played {
+
+        if (12_000..12_100).contains(&elapsed_ms) && !*second_audio_played {
             play_audio(TwelveSeconds).expect("Failed to play audio");
-            model.set_timer_state(Inspection(InspectionState::Running {
-                time,
-                first_audio_played,
-                second_audio_played: true,
-            }));
+            *second_audio_played = true;
         }
+
         if elapsed_ms >= inspection_limit {
-            model.set_last_time_ms(inspection_limit);
-            model.set_timer_state(TimerState::Inspection(InspectionState::Pulsed));
+            todo!("Include penalties")
         }
     }
 }
