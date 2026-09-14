@@ -1,5 +1,5 @@
 use crate::scramble::WcaEvent;
-use crate::widgets::history::History;
+use crate::widgets::history::{History, Modifier, Time};
 use crate::{model::settings::Settings, widgets::theme_selector::ThemeSelector};
 
 #[cfg(feature = "bluetooth")]
@@ -125,9 +125,22 @@ impl Model {
         self.current_session_mut().start_inspection();
     }
 
-    /// Starts timing a solve in the active session.
-    pub fn start_timer(&mut self) {
-        self.current_session_mut().start_timer();
+    /// Starts timing a solve, or immediately records an expired inspection as DNF.
+    ///
+    /// Returns `true` when timing started and `false` when the attempt instead
+    /// finished as a zero-duration DNF.
+    pub fn start_timer(&mut self) -> bool {
+        let inspection_limit_ms = self.settings.inspection_limit();
+        let modifier = self
+            .current_session()
+            .inspection_modifier(inspection_limit_ms);
+        if modifier == Modifier::DNF {
+            self.finish_inspection_dnf();
+            false
+        } else {
+            self.current_session_mut().start_timer(modifier);
+            true
+        }
     }
 
     /// Stops the active session timer without recording a solve.
@@ -160,6 +173,11 @@ impl Model {
         self.current_session().elapsed_ms()
     }
 
+    /// Returns the modifier attached to the duration currently shown while idle.
+    pub fn displayed_modifier(&self) -> Modifier {
+        self.current_session().last_modifier
+    }
+
     /// Advances the active session to a newly generated scramble.
     pub fn next_scramble(&mut self) {
         self.current_session_mut().next_scramble();
@@ -167,6 +185,39 @@ impl Model {
 
     /// Records a completed solve and consumes its displayed scramble.
     pub fn record_solve(&mut self, time_ms: u64) {
+        let modifier = match self.current_session().timer_state {
+            TimerState::Running {
+                inspection_modifier,
+                ..
+            } => inspection_modifier,
+            TimerState::Idle | TimerState::Pulsed | TimerState::Inspection { .. } => Modifier::None,
+        };
+        self.record_solve_with_modifier(time_ms, modifier);
+    }
+
+    /// Finishes an inspection that reached the DNF threshold.
+    pub(crate) fn finish_expired_inspection(&mut self) -> bool {
+        let inspection_limit_ms = self.settings.inspection_limit();
+        if self
+            .current_session()
+            .inspection_modifier(inspection_limit_ms)
+            != Modifier::DNF
+        {
+            return false;
+        }
+
+        self.finish_inspection_dnf();
+        true
+    }
+
+    /// Records the zero-duration DNF used when inspection expires.
+    fn finish_inspection_dnf(&mut self) {
+        self.record_solve_with_modifier(0, Modifier::DNF);
+        self.next_scramble();
+    }
+
+    /// Records a completed solve with an explicit modifier.
+    fn record_solve_with_modifier(&mut self, time_ms: u64, modifier: Modifier) {
         let session = self.current_session_mut();
         let event = session.event;
         let scramble = session
@@ -174,7 +225,10 @@ impl Model {
             .take()
             .expect("active session should have a scramble");
         session.last_time_ms = time_ms;
-        session.history.add_ms(time_ms, event, scramble);
+        session.last_modifier = modifier;
+        session
+            .history
+            .add(Time::new_with_modifier(time_ms, event, scramble, modifier));
         session.stop_timer();
     }
 
@@ -205,7 +259,9 @@ impl Model {
 
     /// Replaces the time displayed while the timer is idle.
     pub fn set_last_time_ms(&mut self, ms: u64) {
-        self.current_session_mut().last_time_ms = ms;
+        let session = self.current_session_mut();
+        session.last_time_ms = ms;
+        session.last_modifier = Modifier::None;
     }
 
     /// Returns the active session's current scramble text.
