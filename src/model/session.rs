@@ -7,7 +7,7 @@ use crate::model::main_focus::{MainFocus, MainStatsSelection};
 use crate::model::screen::Screen;
 use crate::scramble::{Scramble, WcaEvent, generate_scramble};
 use crate::utils::runtime::runtime;
-use crate::widgets::history::History;
+use crate::widgets::history::{History, Modifier};
 use std::sync::{
     Arc, Mutex,
     atomic::{AtomicBool, Ordering},
@@ -19,14 +19,16 @@ use std::time::{Duration, Instant};
 pub enum TimerState {
     Idle,
     Pulsed,
-    Inspection(InspectionState),
-    Running(Instant),
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum InspectionState {
-    Pulsed(Instant),
-    Running(Instant),
+    Inspection {
+        time: Instant,
+        pulsed: bool,
+        first_audio_played: bool,
+        second_audio_played: bool,
+    },
+    Running {
+        time: Instant,
+        inspection_modifier: Modifier,
+    },
 }
 
 pub struct Session {
@@ -38,6 +40,7 @@ pub struct Session {
     next_scramble_rx: flume::Receiver<Scramble>,
     scramble_workers_cancelled: Arc<AtomicBool>,
     pub last_time_ms: u64,
+    pub last_modifier: Modifier,
     pub event: WcaEvent,
 }
 
@@ -57,6 +60,7 @@ impl Session {
             next_scramble_rx: rx,
             scramble_workers_cancelled: Arc::new(AtomicBool::new(false)),
             last_time_ms: 0,
+            last_modifier: Modifier::None,
             event: WcaEvent::Cube3x3,
         };
         session.spawn_scramble_generator();
@@ -76,6 +80,7 @@ impl Session {
             next_scramble_rx: rx,
             scramble_workers_cancelled: Arc::new(AtomicBool::new(false)),
             last_time_ms: 0,
+            last_modifier: Modifier::None,
             event: WcaEvent::Cube3x3,
         };
         session.spawn_scramble_generator();
@@ -87,16 +92,36 @@ impl Session {
     pub const fn reset_timer(&mut self) {
         self.timer_state = TimerState::Idle;
         self.last_time_ms = 0;
+        self.last_modifier = Modifier::None;
     }
 
     /// Begins the inspection countdown at the current instant.
     pub fn start_inspection(&mut self) {
-        self.timer_state = TimerState::Inspection(InspectionState::Running(Instant::now()));
+        self.timer_state = TimerState::Inspection {
+            time: Instant::now(),
+            pulsed: false,
+            first_audio_played: false,
+            second_audio_played: false,
+        };
     }
 
-    /// Begins measuring a solve at the current instant.
-    pub fn start_timer(&mut self) {
-        self.timer_state = TimerState::Running(Instant::now());
+    /// Returns the modifier implied by the active inspection's elapsed time.
+    pub(super) fn inspection_modifier(&self, inspection_limit_ms: u64) -> Modifier {
+        match self.timer_state {
+            TimerState::Inspection { time, .. } => inspection_modifier(
+                u64::try_from(time.elapsed().as_millis()).unwrap(),
+                inspection_limit_ms,
+            ),
+            TimerState::Idle | TimerState::Pulsed | TimerState::Running { .. } => Modifier::None,
+        }
+    }
+
+    /// Begins measuring a solve with its previously classified inspection modifier.
+    pub(super) fn start_timer(&mut self, inspection_modifier: Modifier) {
+        self.timer_state = TimerState::Running {
+            time: Instant::now(),
+            inspection_modifier,
+        };
     }
 
     /// Returns the timer to idle while retaining the displayed duration.
@@ -106,20 +131,18 @@ impl Session {
 
     /// Marks a running inspection as pulsed without changing its start time.
     pub const fn pulse_timer(&mut self) {
-        if let TimerState::Inspection(InspectionState::Running(start)) = self.timer_state {
-            self.timer_state = TimerState::Inspection(InspectionState::Pulsed(start));
+        if let TimerState::Inspection { pulsed, .. } = &mut self.timer_state {
+            *pulsed = true;
         }
     }
 
     /// Returns the elapsed duration appropriate to the current timer state.
     pub fn elapsed_ms(&self) -> u64 {
         match self.timer_state {
-            TimerState::Inspection(state) => match state {
-                InspectionState::Running(start) | InspectionState::Pulsed(start) => {
-                    u64::try_from(start.elapsed().as_millis()).unwrap()
-                }
-            },
-            TimerState::Running(start) => u64::try_from(start.elapsed().as_millis()).unwrap(),
+            TimerState::Inspection { time, .. } => {
+                u64::try_from(time.elapsed().as_millis()).unwrap()
+            }
+            TimerState::Running { time, .. } => u64::try_from(time.elapsed().as_millis()).unwrap(),
             TimerState::Idle | TimerState::Pulsed => self.last_time_ms,
         }
     }
@@ -205,6 +228,17 @@ impl Session {
         self.scramble_workers_cancelled = Arc::new(AtomicBool::new(false));
         self.spawn_scramble_generator();
         self.spawn_scramble_receiver();
+    }
+}
+
+/// Classifies a WCA inspection overrun using the two-second `+2` window.
+const fn inspection_modifier(elapsed_ms: u64, inspection_limit_ms: u64) -> Modifier {
+    if elapsed_ms < inspection_limit_ms {
+        Modifier::None
+    } else if elapsed_ms - inspection_limit_ms < 2_000 {
+        Modifier::PlusTwo
+    } else {
+        Modifier::DNF
     }
 }
 
@@ -366,6 +400,53 @@ impl Model {
 mod tests {
     use super::*;
 
+    #[test]
+    fn inspection_modifier_uses_wca_boundaries() {
+        assert_eq!(inspection_modifier(14_999, 15_000), Modifier::None);
+        assert_eq!(inspection_modifier(15_000, 15_000), Modifier::PlusTwo);
+        assert_eq!(inspection_modifier(16_999, 15_000), Modifier::PlusTwo);
+        assert_eq!(inspection_modifier(17_000, 15_000), Modifier::DNF);
+    }
+
+    #[test]
+    fn recorded_solve_receives_inspection_modifier() {
+        for (elapsed_ms, expected) in [(14_000, Modifier::None), (16_000, Modifier::PlusTwo)] {
+            let mut model = Model::new();
+            model.set_timer_state(TimerState::Inspection {
+                time: Instant::now()
+                    .checked_sub(Duration::from_millis(elapsed_ms))
+                    .unwrap(),
+                pulsed: true,
+                first_audio_played: false,
+                second_audio_played: false,
+            });
+
+            assert!(model.start_timer());
+            model.record_solve(1_234);
+
+            assert_eq!(model.history().last().unwrap().modifier(), expected);
+        }
+    }
+
+    #[test]
+    fn starting_after_dnf_limit_finishes_zero_duration_attempt() {
+        let mut model = Model::new();
+        model.set_timer_state(TimerState::Inspection {
+            time: Instant::now().checked_sub(Duration::from_secs(18)).unwrap(),
+            pulsed: true,
+            first_audio_played: false,
+            second_audio_played: false,
+        });
+
+        assert!(!model.start_timer());
+
+        let recorded = model.history().last().unwrap();
+        assert_eq!(model.timer_state(), TimerState::Idle);
+        assert_eq!(recorded.raw_ms(), 0);
+        assert_eq!(recorded.modifier(), Modifier::DNF);
+        assert_eq!(recorded.to_string(), "DNF(00:00.000)");
+    }
+
     /// Builds a session whose workers can be started independently by a test.
     fn session_without_workers(event: WcaEvent) -> Session {
         let (tx, rx) = flume::bounded(1);
@@ -378,6 +459,7 @@ mod tests {
             next_scramble_rx: rx,
             scramble_workers_cancelled: Arc::new(AtomicBool::new(false)),
             last_time_ms: 0,
+            last_modifier: Modifier::None,
             event,
         }
     }

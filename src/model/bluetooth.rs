@@ -6,6 +6,7 @@ use btleplug::platform::PeripheralId;
 use crate::bluetooth::{BtTimerState, DeviceInfo};
 use crate::model::Model;
 use crate::model::session::TimerState;
+use crate::widgets::history::Modifier;
 
 pub type BluetoothConnection = (
     flume::Sender<BtTimerState>,
@@ -273,6 +274,7 @@ impl Model {
                     self.current_session_mut().timer_state =
                         if matches!(bt_state, BtTimerState::Idle) {
                             self.current_session_mut().last_time_ms = 0;
+                            self.current_session_mut().last_modifier = Modifier::None;
                             TimerState::Idle
                         } else {
                             TimerState::Pulsed
@@ -282,7 +284,10 @@ impl Model {
                     self.current_session_mut().timer_state = TimerState::Idle;
                 }
                 BtTimerState::Running => {
-                    self.current_session_mut().timer_state = TimerState::Running(Instant::now());
+                    self.current_session_mut().timer_state = TimerState::Running {
+                        time: Instant::now(),
+                        inspection_modifier: Modifier::None,
+                    };
                 }
                 BtTimerState::Finished(time_ms) => {
                     self.record_solve(time_ms);
@@ -444,7 +449,7 @@ mod tests {
 
         timer_tx.send(BtTimerState::Running).unwrap();
         assert!(update(&mut model, Msg::Tick));
-        assert!(matches!(model.timer_state(), TimerState::Running(_)));
+        assert!(matches!(model.timer_state(), TimerState::Running { .. }));
         assert!(!update(&mut model, Msg::Tick));
     }
 }

@@ -4,9 +4,11 @@ use futures_util::StreamExt;
 #[cfg(feature = "bluetooth")]
 use crate::model::bluetooth::BluetoothEvent;
 use crate::model::confirmation::ConfirmationAction;
-use crate::model::{InspectionState, Model, TimerState};
-use crate::msg::{INSPECTION_LIMIT_MS, Msg, allowed_msg};
+use crate::model::{Model, TimerState};
+use crate::msg::{Msg, allowed_msg};
 use crate::persistence;
+use crate::utils::audio::InspectionAudio::{EightSeconds, TwelveSeconds};
+use crate::utils::audio::play_audio;
 #[cfg(feature = "bluetooth")]
 use crate::utils::runtime::runtime;
 
@@ -94,10 +96,12 @@ fn handle_press(model: &mut Model) {
                 model.set_timer_state(TimerState::Pulsed);
             }
         }
-        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_)) => {}
-        TimerState::Inspection(InspectionState::Running(_)) => model.pulse_timer(),
-        TimerState::Running(start) => {
-            let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
+        TimerState::Pulsed => {}
+        TimerState::Inspection { .. } => {
+            model.pulse_timer();
+        }
+        TimerState::Running { time, .. } => {
+            let elapsed_ms = u64::try_from(time.elapsed().as_millis()).unwrap();
             model.record_solve(elapsed_ms);
             model.next_scramble();
             persistence::save(model);
@@ -116,9 +120,10 @@ fn handle_release(model: &mut Model) {
     }
     if matches!(
         model.timer_state(),
-        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_))
-    ) {
-        model.start_timer();
+        TimerState::Pulsed | TimerState::Inspection { pulsed: true, .. }
+    ) && !model.start_timer()
+    {
+        persistence::save(model);
     }
 }
 
@@ -129,13 +134,34 @@ fn handle_reset(model: &mut Model) {
 
 /// Advances time-dependent and asynchronous model state by one UI tick.
 fn handle_tick(model: &mut Model) {
-    if let TimerState::Inspection(InspectionState::Running(start)) = model.timer_state() {
-        let elapsed_ms = u64::try_from(start.elapsed().as_millis()).unwrap();
-        if elapsed_ms >= INSPECTION_LIMIT_MS {
-            model.set_last_time_ms(INSPECTION_LIMIT_MS);
-            model.set_timer_state(TimerState::Inspection(InspectionState::Pulsed(start)));
+    if advance_inspection(model) {
+        persistence::save(model);
+    }
+}
+
+/// Advances inspection audio and finishes attempts that reach the DNF limit.
+fn advance_inspection(model: &mut Model) -> bool {
+    if let TimerState::Inspection {
+        time,
+        first_audio_played,
+        second_audio_played,
+        ..
+    } = model.timer_state_mut()
+    {
+        let elapsed_ms = u64::try_from(time.elapsed().as_millis()).unwrap();
+
+        if (8_000..8_100).contains(&elapsed_ms) && !*first_audio_played {
+            play_audio(EightSeconds).expect("Failed to play audio");
+            *first_audio_played = true;
+        }
+
+        if (12_000..12_100).contains(&elapsed_ms) && !*second_audio_played {
+            play_audio(TwelveSeconds).expect("Failed to play audio");
+            *second_audio_played = true;
         }
     }
+
+    model.finish_expired_inspection()
 }
 
 /// Moves the active screen's selection upward.
@@ -530,5 +556,33 @@ fn handle_nav_right(model: &mut Model) {
         model.main_stats_col_right();
     } else if model.show_details() {
         model.details_nav_next();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use super::*;
+    use crate::widgets::history::Modifier;
+
+    #[test]
+    fn tick_finishes_expired_inspection_as_zero_duration_dnf() {
+        let mut model = Model::new();
+        model.set_timer_state(TimerState::Inspection {
+            time: Instant::now().checked_sub(Duration::from_secs(18)).unwrap(),
+            pulsed: false,
+            first_audio_played: false,
+            second_audio_played: false,
+        });
+
+        assert!(advance_inspection(&mut model));
+
+        let recorded = model.history().last().unwrap();
+        assert_eq!(model.timer_state(), TimerState::Idle);
+        assert_eq!(model.elapsed_ms(), 0);
+        assert_eq!(recorded.raw_ms(), 0);
+        assert_eq!(recorded.modifier(), Modifier::DNF);
+        assert_eq!(recorded.to_string(), "DNF(00:00.000)");
     }
 }

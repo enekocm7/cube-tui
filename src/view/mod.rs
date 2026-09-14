@@ -7,12 +7,13 @@ use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
 use crate::model::keybinds::Action;
 use crate::model::settings::{Settings, ThemeColors};
-use crate::model::{InspectionState, Model, TimerState};
+use crate::model::{Model, TimerState};
 use crate::utils::{format_elapsed, get_scramble_lines};
 use crate::widgets::confirmation::ConfirmationWidget;
 use crate::widgets::detailed_stats::DetailedStatsWidget;
 use crate::widgets::details::DetailsWidget;
 use crate::widgets::help::HelpWidget;
+use crate::widgets::history::Modifier as SolveModifier;
 use crate::widgets::mean_detail::MeanDetailWidget;
 use crate::widgets::scramble::ScrambleWidget;
 use crate::widgets::stats::StatsWidget;
@@ -162,7 +163,7 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
         return;
     }
 
-    if model.zen_enabled() && matches!(model.timer_state(), TimerState::Running(_)) {
+    if model.zen_enabled() && matches!(model.timer_state(), TimerState::Running { .. }) {
         let vertical = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
@@ -402,28 +403,87 @@ const fn inner_area(area: Rect) -> Rect {
 /// Chooses the timer text and style for the model's current state.
 fn timer_display(model: &Model) -> (Cow<'static, str>, Style) {
     let theme = model.settings().theme();
+    let inspection_limit = model.settings().inspection_limit();
     let style = match model.timer_state() {
-        TimerState::Idle => Style::default().fg(theme.text()),
-        TimerState::Pulsed | TimerState::Inspection(InspectionState::Pulsed(_)) => {
+        TimerState::Idle if model.displayed_modifier() == SolveModifier::DNF => {
             Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
         }
-        TimerState::Running(_) => Style::default()
+        TimerState::Idle => Style::default().fg(theme.text()),
+        TimerState::Inspection { time, .. }
+            if time.elapsed().as_millis() as u64 >= inspection_limit =>
+        {
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+        }
+        TimerState::Pulsed | TimerState::Inspection { pulsed: true, .. } => {
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+        }
+        TimerState::Running { .. } => Style::default()
             .fg(Color::Green)
             .add_modifier(Modifier::BOLD),
-        TimerState::Inspection(InspectionState::Running(_)) => Style::default()
+        TimerState::Inspection { pulsed: false, .. } => Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::BOLD),
     };
 
     let text = match model.timer_state() {
         TimerState::Pulsed => format_elapsed(0),
-        TimerState::Inspection(_) => {
+        TimerState::Inspection { .. } => {
             let elapsed_ms = model.elapsed_ms();
-            let remaining_ms = 15_000_u64.saturating_sub(elapsed_ms);
-            Cow::Owned(format!("Inspect: {}", format_elapsed(remaining_ms)))
+            Cow::Owned(format!("Inspect: {}", format_elapsed(elapsed_ms)))
         }
         _ => format_elapsed(model.elapsed_ms()),
     };
 
     (text, style)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use super::*;
+
+    fn inspecting_for(elapsed: Duration) -> Model {
+        let mut model = Model::new();
+        model.set_timer_state(TimerState::Inspection {
+            time: Instant::now().checked_sub(elapsed).unwrap(),
+            pulsed: false,
+            first_audio_played: false,
+            second_audio_played: false,
+        });
+        model
+    }
+
+    #[test]
+    fn inspection_text_turns_red_at_dnf_limit() {
+        let model = inspecting_for(Duration::from_secs(18));
+
+        let (text, style) = timer_display(&model);
+
+        assert!(text.starts_with("Inspect: 00:18."));
+        assert_eq!(style.fg, Some(Color::Red));
+    }
+
+    #[test]
+    fn inspection_text_stays_yellow_before_dnf_limit() {
+        let model = inspecting_for(Duration::from_secs(16));
+
+        let (_, style) = timer_display(&model);
+
+        assert_eq!(style.fg, Some(Color::Yellow));
+    }
+
+    #[test]
+    fn expired_inspection_displays_zero_in_red_until_reset() {
+        let mut model = inspecting_for(Duration::from_secs(18));
+        assert!(!model.start_timer());
+
+        let (text, style) = timer_display(&model);
+        assert_eq!(text, "00:00.000");
+        assert_eq!(style.fg, Some(Color::Red));
+
+        model.reset_timer();
+        let (_, reset_style) = timer_display(&model);
+        assert_eq!(reset_style.fg, Some(model.settings().theme().text()));
+    }
 }

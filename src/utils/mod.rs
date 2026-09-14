@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+pub mod audio;
 pub mod runtime;
 
 /// Returns the number of terminal rows needed to wrap a scramble at `width`.

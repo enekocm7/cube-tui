@@ -5,12 +5,11 @@ use crate::model::keybinds::Keybinds;
 use crate::persistence;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Settings {
     pub timer: TimerSettings,
-    #[serde(default)]
     theme: Theme,
     display: DisplaySettings,
-    #[serde(default)]
     keybinds: Keybinds,
 }
 
@@ -33,6 +32,11 @@ impl Settings {
     /// Returns whether WCA inspection is enabled.
     pub const fn inspection(&self) -> bool {
         self.timer.inspection
+    }
+
+    /// Returns the inspection limit in milliseconds.
+    pub const fn inspection_limit(&self) -> u64 {
+        self.timer.inspection_limit
     }
 
     /// Sets whether zen mode is enabled.
@@ -82,11 +86,34 @@ impl Settings {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(default)]
 pub struct TimerSettings {
-    #[serde(default)]
     inspection: bool,
-    #[serde(default)]
+    #[serde(
+        default = "default_inspection_limit",
+        deserialize_with = "deserialize_inspection_limit"
+    )]
+    inspection_limit: u64,
+    inspection_audio: bool,
     zen: bool,
+}
+
+/// Returns the default [`inspection_limit`]
+const fn default_inspection_limit() -> u64 {
+    15_000
+}
+
+/// Custom deserialization for [`inspection_limit`]
+fn deserialize_inspection_limit<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = u64::deserialize(deserializer)?;
+    Ok(if value == 0 {
+        default_inspection_limit()
+    } else {
+        value
+    })
 }
 
 impl Default for TimerSettings {
@@ -94,6 +121,8 @@ impl Default for TimerSettings {
     fn default() -> Self {
         Self {
             inspection: true,
+            inspection_limit: default_inspection_limit(),
+            inspection_audio: false,
             zen: false,
         }
     }
@@ -242,12 +271,10 @@ impl<'de> Deserialize<'de> for ColorSettings {
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[serde(default)]
 pub struct DisplaySettings {
-    #[serde(default)]
     history: bool,
-    #[serde(default)]
     scramble: bool,
-    #[serde(default)]
     stats: bool,
 }
 
@@ -282,7 +309,53 @@ impl DisplaySettings {
 
 #[cfg(test)]
 mod tests {
-    use super::DisplaySettings;
+    use super::{DisplaySettings, Settings};
+
+    #[test]
+    fn documented_timer_config_keeps_default_inspection_limit() {
+        let settings: Settings = toml::from_str(
+            r"
+                [timer]
+                inspection = true
+                zen = false
+            ",
+        )
+        .unwrap();
+
+        assert!(settings.timer.inspection);
+        assert_eq!(settings.timer.inspection_limit, 15_000);
+    }
+
+    #[test]
+    fn partial_nested_settings_keep_their_defaults() {
+        let settings: Settings = toml::from_str(
+            r"
+                [display]
+                history = false
+            ",
+        )
+        .unwrap();
+
+        assert!(settings.timer.inspection);
+        assert_eq!(settings.timer.inspection_limit, 15_000);
+        assert!(!settings.display.history);
+        assert!(settings.display.scramble);
+        assert!(settings.display.stats);
+    }
+
+    #[test]
+    fn zero_inspection_limit_from_an_older_config_is_repaired() {
+        let settings: Settings = toml::from_str(
+            r"
+                [timer]
+                inspection = true
+                inspection_limit = 0
+            ",
+        )
+        .unwrap();
+
+        assert_eq!(settings.timer.inspection_limit, 15_000);
+    }
 
     #[test]
     fn minimum_width_accounts_for_visible_side_panels() {

@@ -46,7 +46,7 @@ pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
         return match key.kind {
             KeyEventKind::Press => Some(Msg::Press),
             KeyEventKind::Release => Some(Msg::Release),
-            _ => None,
+            KeyEventKind::Repeat => None,
         };
     }
     if key.kind != KeyEventKind::Press {
@@ -84,52 +84,6 @@ pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
         Action::Timer => unreachable!(),
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
-
-    use super::{Msg, map_key_to_msg};
-    use crate::model::keybinds::Keybinds;
-
-    #[test]
-    fn default_timer_binding_maps_press_and_release() {
-        let keybinds = Keybinds::default();
-        let press = KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE);
-        let release = KeyEvent {
-            code: KeyCode::Char(' '),
-            modifiers: KeyModifiers::NONE,
-            kind: KeyEventKind::Release,
-            state: KeyEventState::NONE,
-        };
-
-        assert_eq!(map_key_to_msg(press, &keybinds), Some(Msg::Press));
-        assert_eq!(map_key_to_msg(release, &keybinds), Some(Msg::Release));
-    }
-
-    #[test]
-    fn custom_binding_maps_with_modifiers() {
-        let keybinds: Keybinds = toml::from_str("next_scramble = \"Ctrl+n\"").unwrap();
-        let event = KeyEvent::new(KeyCode::Char('n'), KeyModifiers::CONTROL);
-
-        assert_eq!(map_key_to_msg(event, &keybinds), Some(Msg::NextScramble));
-    }
-
-    #[test]
-    fn repeat_events_are_ignored() {
-        let keybinds = Keybinds::default();
-        let event = KeyEvent {
-            code: KeyCode::Char('q'),
-            modifiers: KeyModifiers::NONE,
-            kind: KeyEventKind::Repeat,
-            state: KeyEventState::NONE,
-        };
-
-        assert_eq!(map_key_to_msg(event, &keybinds), None);
-    }
-}
-
-pub const INSPECTION_LIMIT_MS: u64 = 15_000;
 
 /// Returns whether a message is valid for the currently active modal or screen.
 ///
@@ -211,4 +165,48 @@ pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
         );
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers};
+
+    use super::{Msg, map_key_to_msg};
+    use crate::model::keybinds::Keybinds;
+
+    #[test]
+    fn default_timer_binding_maps_press_and_release() {
+        let keybinds = Keybinds::default();
+        let press = KeyEvent::new(KeyCode::Char(' '), KeyModifiers::NONE);
+        let release = KeyEvent {
+            code: KeyCode::Char(' '),
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Release,
+            state: KeyEventState::NONE,
+        };
+
+        assert_eq!(map_key_to_msg(press, &keybinds), Some(Msg::Press));
+        assert_eq!(map_key_to_msg(release, &keybinds), Some(Msg::Release));
+    }
+
+    #[test]
+    fn custom_binding_maps_with_modifiers() {
+        let keybinds: Keybinds = toml::from_str("next_scramble = \"Ctrl+n\"").unwrap();
+        let event = KeyEvent::new(KeyCode::Char('n'), KeyModifiers::CONTROL);
+
+        assert_eq!(map_key_to_msg(event, &keybinds), Some(Msg::NextScramble));
+    }
+
+    #[test]
+    fn repeat_events_are_ignored() {
+        let keybinds = Keybinds::default();
+        let event = KeyEvent {
+            code: KeyCode::Char('q'),
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Repeat,
+            state: KeyEventState::NONE,
+        };
+
+        assert_eq!(map_key_to_msg(event, &keybinds), None);
+    }
 }
