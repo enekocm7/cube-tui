@@ -247,7 +247,10 @@ impl Default for Keybinds {
         let none = KeyModifiers::empty();
         let bindings = [
             (Action::Quit, KeyBinding::new(KeyCode::Char('q'), none)),
-            (Action::ResetTimer, KeyBinding::new(KeyCode::Char('r'), none)),
+            (
+                Action::ResetTimer,
+                KeyBinding::new(KeyCode::Char('r'), none),
+            ),
             (Action::Timer, KeyBinding::new(KeyCode::Char(' '), none)),
             (Action::SelectUp, KeyBinding::new(KeyCode::Up, none)),
             (Action::SelectDown, KeyBinding::new(KeyCode::Down, none)),
@@ -255,17 +258,47 @@ impl Default for Keybinds {
             (Action::NavigateRight, KeyBinding::new(KeyCode::Right, none)),
             (Action::ToggleFocus, KeyBinding::new(KeyCode::Tab, none)),
             (Action::NextEvent, KeyBinding::new(KeyCode::Char('e'), none)),
-            (Action::PreviousEvent, KeyBinding::new(KeyCode::Char('E'), none)),
-            (Action::NextSession, KeyBinding::new(KeyCode::Char(']'), none)),
-            (Action::PreviousSession, KeyBinding::new(KeyCode::Char('['), none)),
-            (Action::NewSession, KeyBinding::new(KeyCode::Char('s'), none)),
-            (Action::DeleteSession, KeyBinding::new(KeyCode::Char('S'), none)),
-            (Action::NextScramble, KeyBinding::new(KeyCode::Char('n'), none)),
+            (
+                Action::PreviousEvent,
+                KeyBinding::new(KeyCode::Char('E'), none),
+            ),
+            (
+                Action::NextSession,
+                KeyBinding::new(KeyCode::Char(']'), none),
+            ),
+            (
+                Action::PreviousSession,
+                KeyBinding::new(KeyCode::Char('['), none),
+            ),
+            (
+                Action::NewSession,
+                KeyBinding::new(KeyCode::Char('s'), none),
+            ),
+            (
+                Action::DeleteSession,
+                KeyBinding::new(KeyCode::Char('S'), none),
+            ),
+            (
+                Action::NextScramble,
+                KeyBinding::new(KeyCode::Char('n'), none),
+            ),
             (Action::Help, KeyBinding::new(KeyCode::Char('?'), none)),
-            (Action::ToggleInspection, KeyBinding::new(KeyCode::Char('i'), none)),
-            (Action::DetailedStats, KeyBinding::new(KeyCode::Char('a'), none)),
-            (Action::ThemeSelector, KeyBinding::new(KeyCode::Char('t'), none)),
-            (Action::DeleteTime, KeyBinding::new(KeyCode::Char('d'), none)),
+            (
+                Action::ToggleInspection,
+                KeyBinding::new(KeyCode::Char('i'), none),
+            ),
+            (
+                Action::DetailedStats,
+                KeyBinding::new(KeyCode::Char('a'), none),
+            ),
+            (
+                Action::ThemeSelector,
+                KeyBinding::new(KeyCode::Char('t'), none),
+            ),
+            (
+                Action::DeleteTime,
+                KeyBinding::new(KeyCode::Char('d'), none),
+            ),
             (Action::Bluetooth, KeyBinding::new(KeyCode::Char('b'), none)),
             (
                 Action::DisconnectBluetooth,

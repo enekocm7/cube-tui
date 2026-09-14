@@ -432,9 +432,7 @@ mod tests {
     fn starting_after_dnf_limit_finishes_zero_duration_attempt() {
         let mut model = Model::new();
         model.set_timer_state(TimerState::Inspection {
-            time: Instant::now()
-                .checked_sub(Duration::from_secs(18))
-                .unwrap(),
+            time: Instant::now().checked_sub(Duration::from_secs(18)).unwrap(),
             pulsed: true,
             first_audio_played: false,
             second_audio_played: false,

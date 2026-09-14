@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-pub mod runtime;
 pub mod audio;
+pub mod runtime;
 
 /// Returns the number of terminal rows needed to wrap a scramble at `width`.
 pub fn get_scramble_lines(scramble: &str, width: u16) -> u16 {
