@@ -151,11 +151,11 @@ const TICK_RATE: Duration = Duration::from_millis(30);
 
 /// Returns whether a timer state needs periodic frames at `now`.
 ///
-/// A held inspection timer remains animated until its limit so the UI draws
-/// the final zero before switching to event-driven idle rendering.
+/// Inspection remains animated while the user holds beyond the limit because
+/// the eventual `+2` or DNF is determined from the exact timer start instant.
 fn timer_is_animating(state: TimerState) -> bool {
     match state {
-        TimerState::Running(_) | TimerState::Inspection { .. } => true,
+        TimerState::Running { .. } | TimerState::Inspection { .. } => true,
         TimerState::Idle | TimerState::Pulsed => false,
     }
 }
@@ -277,12 +277,16 @@ mod event_loop_tests {
     use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
     use super::*;
+    use crate::widgets::history::Modifier;
 
     #[test]
     fn idle_and_armed_timers_do_not_need_periodic_frames() {
         assert!(!timer_is_animating(TimerState::Idle));
         assert!(!timer_is_animating(TimerState::Pulsed));
-        assert!(timer_is_animating(TimerState::Running(Instant::now())));
+        assert!(timer_is_animating(TimerState::Running {
+            time: Instant::now(),
+            inspection_modifier: Modifier::None,
+        }));
     }
 
     #[test]

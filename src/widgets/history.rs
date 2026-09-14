@@ -38,12 +38,22 @@ impl Time {
         event: WcaEvent,
         scramble: impl Into<Cow<'static, str>>,
     ) -> Self {
+        Self::new_with_modifier(timestamp_in_millis, event, scramble, Modifier::None)
+    }
+
+    /// Creates a solve with an explicit modifier and the current wall-clock time.
+    pub fn new_with_modifier(
+        timestamp_in_millis: u64,
+        event: WcaEvent,
+        scramble: impl Into<Cow<'static, str>>,
+        modifier: Modifier,
+    ) -> Self {
         Self {
             timestamp_in_millis,
             event,
             scramble: scramble.into(),
             solved_at_unix_ms: current_unix_ms(),
-            modifier: Modifier::None,
+            modifier,
         }
     }
 
