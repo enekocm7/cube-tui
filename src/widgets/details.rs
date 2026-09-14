@@ -6,7 +6,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
 use crate::model::settings::ThemeColors;
-use crate::widgets::history::{Modifier, Time};
+use crate::widgets::history::{Modifier, Time, format_millis};
 
 pub struct DetailsWidget<'a> {
     time: Option<&'a Time>,
@@ -39,12 +39,13 @@ impl<'a> DetailsWidget<'a> {
             |time| {
                 let plus_two_checked = matches!(time.modifier(), Modifier::PlusTwo);
                 let dnf_checked = matches!(time.modifier(), Modifier::DNF);
-
+                let time_text = if dnf_checked {
+                    format!("Time: {time} ({})", format_millis(time.raw_ms()))
+                } else {
+                    format!("Time: {time}")
+                };
                 vec![
-                    Line::from(Span::styled(
-                        format!("Time: {time}"),
-                        Style::default().fg(theme.text()),
-                    )),
+                    Line::from(Span::styled(time_text, Style::default().fg(theme.text()))),
                     Line::from(Span::styled(
                         format!("Datetime: {}", format_datetime(time.solved_at_unix_ms())),
                         Style::default().fg(theme.text()),
