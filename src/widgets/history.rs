@@ -157,7 +157,7 @@ impl Display for Time {
                 write!(f, "{}+", format_millis(adjusted))
             }
             Modifier::DNF => {
-                write!(f, "DNF({})", format_millis(self.timestamp_in_millis))
+                write!(f, "DNF")
             }
         }
     }
