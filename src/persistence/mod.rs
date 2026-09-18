@@ -8,7 +8,10 @@ use crate::widgets::history::History;
 
 /// Returns the application data directory for the current platform.
 pub fn data_dir() -> Option<PathBuf> {
-    let dir = dirs::data_dir()?.join("cube-tui");
+    let mut dir = dirs::data_dir()?.join("cube-tui");
+    if cfg!(debug_assertions) {
+        dir = dir.join("debug");
+    }
     fs::create_dir_all(&dir).ok()?;
     Some(dir)
 }
