@@ -122,6 +122,8 @@ impl<'a> StatsWidget<'a> {
                         Style::default().fg(theme.text()),
                     ));
                 }
+                // Add spacing for better appareance
+                spans.push(Span::styled(" ", Style::default().bg(theme.background())));
 
                 if best_selected {
                     spans.push(Span::styled(
