@@ -19,12 +19,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-26.04
             target: x86_64-unknown-linux-gnu
             artifact_name: cube-linux-x86_64
             binary_name: cube
             release_file_name: cube-${{ github.ref_name }}-linux-x86_64
-          - os: ubuntu-latest
+          - os: ubuntu-26.04-arm
             target: aarch64-unknown-linux-gnu
             artifact_name: cube-linux-aarch64
             binary_name: cube
