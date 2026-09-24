@@ -45,6 +45,13 @@ fn get_or_init_jvm() -> &'static Result<JavaVM, String> {
         let jvm_args = InitArgsBuilder::new()
             .version(JNIVersion::V21)
             .option(format!("-Djava.class.path={}", jar_path.display()))
+            // The embedded scrambler does not need the JVM's server-sized
+            // default heap and parallel garbage collector. The bounded heap
+            // leaves room for the native app and other WCA puzzles.
+            .option("-Xms8m")
+            .option("-Xmx64m")
+            .option("-XX:+UseSerialGC")
+            .option("-XX:ActiveProcessorCount=2")
             .build()
             .map_err(|e| format!("failed to build JVM init args: {e}"))?;
 
@@ -76,5 +83,32 @@ const fn event_to_string(event: WcaEvent) -> &'static str {
         WcaEvent::Skewb => "skewb",
         WcaEvent::Square1 => "sq1",
         WcaEvent::Clock => "clock",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{WcaEvent, get_wca_scramble};
+
+    #[test]
+    fn bounded_jvm_generates_every_supported_event() {
+        for event in [
+            WcaEvent::Cube2x2,
+            WcaEvent::Cube3x3,
+            WcaEvent::Cube4x4,
+            WcaEvent::Cube5x5,
+            WcaEvent::Cube6x6,
+            WcaEvent::Cube7x7,
+            WcaEvent::Megaminx,
+            WcaEvent::Pyraminx,
+            WcaEvent::Skewb,
+            WcaEvent::Square1,
+            WcaEvent::Clock,
+        ] {
+            assert!(
+                get_wca_scramble(event).is_some(),
+                "WCA scrambler failed for {event:?}"
+            );
+        }
     }
 }

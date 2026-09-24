@@ -466,7 +466,7 @@ mod tests {
 
     #[test]
     fn inspection_text_stays_yellow_before_dnf_limit() {
-        let model = inspecting_for(Duration::from_secs(16));
+        let model = inspecting_for(Duration::from_secs(14));
 
         let (_, style) = timer_display(&model);
 
