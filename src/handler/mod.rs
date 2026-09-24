@@ -583,6 +583,6 @@ mod tests {
         assert_eq!(model.elapsed_ms(), 0);
         assert_eq!(recorded.raw_ms(), 0);
         assert_eq!(recorded.modifier(), Modifier::DNF);
-        assert_eq!(recorded.to_string(), "DNF(00:00.000)");
+        assert_eq!(recorded.to_string(), "DNF");
     }
 }
