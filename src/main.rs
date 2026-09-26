@@ -195,8 +195,8 @@ fn read_terminal_event(timeout: Option<Duration>) -> std::io::Result<Option<Even
 
 /// Runs the event-driven terminal UI until the user quits or input fails.
 ///
-/// Idle screens block for input. Active timers and Bluetooth receivers wake at
-/// [`TICK_RATE`] so only changing screens incur rendering work.
+/// Idle screens block for input until the next toast expiry, if any. Active
+/// timers and Bluetooth receivers wake at [`TICK_RATE`].
 fn run(terminal: &mut DefaultTerminal) {
     let _keyboard_enhancements = KeyboardEnhancementGuard::enable();
     let mut stdout = std::io::stdout();
@@ -219,6 +219,9 @@ fn run(terminal: &mut DefaultTerminal) {
     let mut timer_was_animating = false;
 
     loop {
+        if model.toasts.remove_expired(Instant::now()) {
+            redraw = true;
+        }
         // Draw the final zero even if an ignored input event returns just as
         // inspection expires, before its next scheduled tick.
         let animate_timer = timer_is_animating(model.timer_state());
@@ -246,6 +249,7 @@ fn run(terminal: &mut DefaultTerminal) {
         // Blocking reads have no periodic wakeups when nothing is changing.
         // Active timers and Bluetooth retain their existing 30 ms tick cadence.
         let timeout = needs_tick.then(|| TICK_RATE.saturating_sub(last_tick.elapsed()));
+        let timeout = next_wakeup(timeout, model.toasts.next_expiration(Instant::now()));
         let Ok(event) = read_terminal_event(timeout) else {
             return;
         };
@@ -272,12 +276,33 @@ fn run(terminal: &mut DefaultTerminal) {
     }
 }
 
+/// Wakes for the earliest animation tick or toast expiry, or blocks if idle.
+fn next_wakeup(tick: Option<Duration>, toast: Option<Duration>) -> Option<Duration> {
+    match (tick, toast) {
+        (Some(tick), Some(toast)) => Some(tick.min(toast)),
+        (timeout, None) | (None, timeout) => timeout,
+    }
+}
+
 #[cfg(test)]
 mod event_loop_tests {
     use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
     use super::*;
     use crate::widgets::history::Modifier;
+
+    #[test]
+    fn toast_expiry_wakes_idle_input_and_preserves_faster_timer_ticks() {
+        let short = Duration::from_secs(3);
+        assert_eq!(next_wakeup(None, None), None);
+        assert_eq!(next_wakeup(None, Some(short)), Some(short));
+        assert_eq!(next_wakeup(Some(TICK_RATE), None), Some(TICK_RATE));
+        assert_eq!(next_wakeup(Some(TICK_RATE), Some(short)), Some(TICK_RATE));
+        assert_eq!(
+            next_wakeup(Some(TICK_RATE), Some(Duration::ZERO)),
+            Some(Duration::ZERO)
+        );
+    }
 
     #[test]
     fn idle_and_armed_timers_do_not_need_periodic_frames() {

@@ -20,10 +20,17 @@ use crate::widgets::stats::StatsWidget;
 
 #[cfg(feature = "bluetooth")]
 use crate::widgets::bluetooth::BluetoothWidget;
+use crate::widgets::toast::render_toasts;
 
-#[allow(clippy::too_many_lines)]
 /// Renders the complete application view into the supplied terminal buffer.
 pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
+    render_screen(area, buf, model);
+    let theme = *model.settings().theme();
+    render_toasts(area, buf, &mut model.toasts, &theme);
+}
+
+#[allow(clippy::too_many_lines)]
+fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     let settings = model.settings();
     let theme = *settings.theme();
     let keybinds = settings.keybinds().clone();

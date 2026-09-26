@@ -1,3 +1,4 @@
+use crate::model::toast::ToastBuffer;
 use crate::scramble::WcaEvent;
 use crate::widgets::history::{History, Modifier, Time};
 use crate::{model::settings::Settings, widgets::theme_selector::ThemeSelector};
@@ -15,6 +16,7 @@ pub mod screen;
 pub mod session;
 pub mod settings;
 pub mod theme_selector;
+pub mod toast;
 
 #[cfg(feature = "bluetooth")]
 use bluetooth::BluetoothState;
@@ -34,6 +36,7 @@ pub struct Model {
     pub(crate) screen: Screen,
     pub(crate) theme_selector: Option<ThemeSelector>,
     pub(crate) confirmation: Option<Confirmation>,
+    pub(crate) toasts: ToastBuffer,
     #[cfg(feature = "bluetooth")]
     pub(crate) bluetooth_state: BluetoothState,
     pub(crate) main_focus: MainFocus,
@@ -50,6 +53,7 @@ impl Model {
             screen: Screen::default(),
             theme_selector: None,
             confirmation: None,
+            toasts: ToastBuffer::default(),
             #[cfg(feature = "bluetooth")]
             bluetooth_state: BluetoothState::default(),
             main_focus: MainFocus::History,
