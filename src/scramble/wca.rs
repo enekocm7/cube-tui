@@ -105,10 +105,8 @@ mod tests {
             WcaEvent::Square1,
             WcaEvent::Clock,
         ] {
-            assert!(
-                get_wca_scramble(event).is_some(),
-                "WCA scrambler failed for {event:?}"
-            );
+            get_wca_scramble(event)
+                .unwrap_or_else(|error| panic!("WCA scrambler failed for {event:?}: {error}"));
         }
     }
 }
