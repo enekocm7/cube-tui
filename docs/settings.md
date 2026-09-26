@@ -38,12 +38,16 @@ layout are visible:
 history = true
 scramble = true
 stats = true
+toasts = true
 ```
 
 `history` controls the solve history panel, `stats` controls the statistics
 panel, and `scramble` controls the scramble display. Hiding the history or
 statistics panel reduces the minimum terminal width. Hiding the scramble
 display reduces the minimum terminal height.
+
+`toasts` controls all toast notifications, including information, warnings,
+and errors. It defaults to `true`; set it to `false` to hide notifications.
 
 ## Timer Settings
 

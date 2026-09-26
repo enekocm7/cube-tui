@@ -8,6 +8,7 @@ use ratatui::widgets::{Block, Borders, Clear, Padding, Paragraph, Widget};
 
 use crate::model::keybinds::{Action, Keybinds};
 use crate::model::settings::ThemeColors;
+use crate::model::toast::{ToastBuffer, ToastDuration, ToastType};
 use crate::persistence::themes_dir;
 use crate::{model::settings::Theme, persistence::load_theme};
 
@@ -19,31 +20,76 @@ pub struct ThemeSelector {
 
 impl ThemeSelector {
     /// Loads theme files and creates a selector at the first entry.
-    pub fn new() -> Self {
-        if let Some(theme_path) = themes_dir() {
-            let mut themes: Vec<Theme> = Vec::new();
-            for entry in fs::read_dir(theme_path)
-                .expect("Should not fail if `themes_dir` creates the dir already")
-            {
-                let entry = entry.expect("Should not fail to read the entries");
-                let entry_name = entry.file_name();
-                let entry_name = entry_name.to_str().unwrap_or("default.toml");
-                let theme = load_theme(entry_name);
-                if let Some(theme) = theme {
-                    themes.push(Theme::new(entry_name, theme));
-                }
-            }
-            return Self {
-                themes,
-                selection: 0,
-                scroll_offset: 0,
-            };
-        }
-        Self {
+    pub fn new(toasts: &mut ToastBuffer) -> Self {
+        let mut selector = Self {
             themes: Vec::new(),
             selection: 0,
             scroll_offset: 0,
+        };
+        let theme_path = match themes_dir() {
+            Ok(path) => path,
+            Err(error) => {
+                toasts.push(format!("{error:#}"), ToastType::Error, ToastDuration::Long);
+                return selector;
+            }
+        };
+        let entries = match fs::read_dir(&theme_path) {
+            Ok(entries) => entries,
+            Err(error) => {
+                toasts.push(
+                    format!("Could not list themes: {error}"),
+                    ToastType::Error,
+                    ToastDuration::Long,
+                );
+                return selector;
+            }
+        };
+        for entry in entries {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(error) => {
+                    toasts.push(
+                        format!("Could not read a theme entry: {error}"),
+                        ToastType::Warning,
+                        ToastDuration::Long,
+                    );
+                    continue;
+                }
+            };
+            let path = entry.path();
+            if !path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"))
+            {
+                continue;
+            }
+            let name = entry.file_name();
+            let Some(name) = name.to_str() else {
+                toasts.push(
+                    "Skipped a theme with an invalid filename",
+                    ToastType::Warning,
+                    ToastDuration::Long,
+                );
+                continue;
+            };
+            match load_theme(name) {
+                Ok(colors) => selector.themes.push(Theme::new(name, colors)),
+                Err(error) => toasts.push(
+                    format!("{error:#}. Theme skipped."),
+                    ToastType::Warning,
+                    ToastDuration::Long,
+                ),
+            }
         }
+        selector.themes.sort_by(|a, b| a.name().cmp(b.name()));
+        if selector.themes.is_empty() {
+            toasts.push(
+                "No usable themes found. Add a TOML theme in the themes folder.",
+                ToastType::Info,
+                ToastDuration::Short,
+            );
+        }
+        selector
     }
 
     /// Moves selection to the next available theme.

@@ -38,30 +38,27 @@ fn main() {
     let cli = Cli::parse();
 
     match cli {
-        Cli { config: true, .. } => {
-            if let Some(path) = persistence::config_file() {
-                print_as_link(&path);
-            } else {
-                eprintln!("Error: Could not determine config file");
+        Cli { config: true, .. } => match persistence::config_file() {
+            Ok(path) => print_as_link(&path),
+            Err(error) => {
+                eprintln!("Error: {error:#}");
                 std::process::exit(1);
             }
-        }
-        Cli { data: true, .. } => {
-            if let Some(dir) = persistence::data_dir() {
-                print_as_link(&dir);
-            } else {
-                eprintln!("Error: Could not determine data directory");
+        },
+        Cli { data: true, .. } => match persistence::data_dir() {
+            Ok(path) => print_as_link(&path),
+            Err(error) => {
+                eprintln!("Error: {error:#}");
                 std::process::exit(1);
             }
-        }
-        Cli { theme: true, .. } => {
-            if let Some(theme_dir) = persistence::themes_dir() {
-                print_as_link(&theme_dir);
-            } else {
-                eprintln!("Error: Could not determine theme directory");
+        },
+        Cli { theme: true, .. } => match persistence::themes_dir() {
+            Ok(path) => print_as_link(&path),
+            Err(error) => {
+                eprintln!("Error: {error:#}");
                 std::process::exit(1);
             }
-        }
+        },
         Cli {
             subcommand: Some(Command::Import { path }),
             ..
@@ -78,7 +75,10 @@ fn main() {
             dashboard::run_dashboard(port);
         }
         _ => {
-            ratatui::run(run);
+            if let Err(error) = ratatui::run(run) {
+                eprintln!("Terminal UI failed: {error}");
+                std::process::exit(1);
+            }
         }
     }
 }
@@ -93,7 +93,10 @@ fn run_import(path: &std::path::Path) -> ! {
         Ok(histories) => {
             let mut model = Model::new();
             model.restore_from_history(histories);
-            persistence::save(&model);
+            if let Err(error) = persistence::save(&model) {
+                eprintln!("Import could not be saved: {error:#}");
+                std::process::exit(1);
+            }
             println!("Imported successfully from: {}", path.display());
         }
         Err(err) => {
@@ -106,7 +109,13 @@ fn run_import(path: &std::path::Path) -> ! {
 
 /// Exports persisted sessions to a csTimer-compatible JSON file.
 fn run_export(path: &std::path::Path) {
-    let histories = persistence::load().unwrap_or_default();
+    let histories = match persistence::load() {
+        Ok(histories) => histories.unwrap_or_default(),
+        Err(error) => {
+            eprintln!("Export failed: {error:#}");
+            std::process::exit(1);
+        }
+    };
     let mut model = Model::new();
     model.restore_from_history(histories);
     match cstimer::export(path, &model) {
@@ -195,30 +204,22 @@ fn read_terminal_event(timeout: Option<Duration>) -> std::io::Result<Option<Even
 
 /// Runs the event-driven terminal UI until the user quits or input fails.
 ///
-/// Idle screens block for input. Active timers and Bluetooth receivers wake at
-/// [`TICK_RATE`] so only changing screens incur rendering work.
-fn run(terminal: &mut DefaultTerminal) {
-    let _keyboard_enhancements = KeyboardEnhancementGuard::enable();
+/// Idle screens block for input until the next toast expiry, if any. Active
+/// timers and Bluetooth receivers wake at [`TICK_RATE`].
+fn run(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
+    let _ = KeyboardEnhancementGuard::enable();
     let mut stdout = std::io::stdout();
 
     let mut model = Model::new();
-    if let Some(data) = persistence::load() {
-        model.restore_from_history(data);
-    }
-    match persistence::load_config() {
-        Ok(Some(settings)) => model.set_settings(settings),
-        Ok(None) => {}
-        Err(error) => {
-            eprintln!(
-                "Warning: {error}. Using default settings; the file will not be overwritten."
-            );
-        }
-    }
+    model.load_persisted_state();
     let mut last_tick = Instant::now();
     let mut redraw = true;
     let mut timer_was_animating = false;
 
     loop {
+        if model.toasts.remove_expired(Instant::now()) {
+            redraw = true;
+        }
         // Draw the final zero even if an ignored input event returns just as
         // inspection expires, before its next scheduled tick.
         let animate_timer = timer_is_animating(model.timer_state());
@@ -229,13 +230,11 @@ fn run(terminal: &mut DefaultTerminal) {
         timer_was_animating = animate_timer;
         if redraw {
             // Include autoresize's clear and the full frame in one visible update.
-            stdout
-                .sync_update(|_| {
-                    terminal
-                        .draw(|frame| view(frame.area(), frame.buffer_mut(), &mut model))
-                        .map(|_| ())
-                })
-                .ok();
+            stdout.sync_update(|_| {
+                terminal
+                    .draw(|frame| view(frame.area(), frame.buffer_mut(), &mut model))
+                    .map(|_| ())
+            })??;
         }
 
         #[cfg(feature = "bluetooth")]
@@ -246,16 +245,15 @@ fn run(terminal: &mut DefaultTerminal) {
         // Blocking reads have no periodic wakeups when nothing is changing.
         // Active timers and Bluetooth retain their existing 30 ms tick cadence.
         let timeout = needs_tick.then(|| TICK_RATE.saturating_sub(last_tick.elapsed()));
-        let Ok(event) = read_terminal_event(timeout) else {
-            return;
-        };
+        let timeout = next_wakeup(timeout, model.toasts.next_expiration(Instant::now()));
+        let event = read_terminal_event(timeout)?;
         if !needs_tick {
             last_tick = Instant::now();
         }
 
         redraw = if let Some(event) = event {
             let ControlFlow::Continue(changed) = handle_terminal_event(&mut model, &event) else {
-                return;
+                return Ok(());
             };
             changed
         } else {
@@ -272,12 +270,33 @@ fn run(terminal: &mut DefaultTerminal) {
     }
 }
 
+/// Wakes for the earliest animation tick or toast expiry, or blocks if idle.
+fn next_wakeup(tick: Option<Duration>, toast: Option<Duration>) -> Option<Duration> {
+    match (tick, toast) {
+        (Some(tick), Some(toast)) => Some(tick.min(toast)),
+        (timeout, None) | (None, timeout) => timeout,
+    }
+}
+
 #[cfg(test)]
 mod event_loop_tests {
     use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
     use super::*;
     use crate::widgets::history::Modifier;
+
+    #[test]
+    fn toast_expiry_wakes_idle_input_and_preserves_faster_timer_ticks() {
+        let short = Duration::from_secs(3);
+        assert_eq!(next_wakeup(None, None), None);
+        assert_eq!(next_wakeup(None, Some(short)), Some(short));
+        assert_eq!(next_wakeup(Some(TICK_RATE), None), Some(TICK_RATE));
+        assert_eq!(next_wakeup(Some(TICK_RATE), Some(short)), Some(TICK_RATE));
+        assert_eq!(
+            next_wakeup(Some(TICK_RATE), Some(Duration::ZERO)),
+            Some(Duration::ZERO)
+        );
+    }
 
     #[test]
     fn idle_and_armed_timers_do_not_need_periodic_frames() {

@@ -39,16 +39,30 @@ fn serve_asset(path: &str) -> Response {
 #[cfg(feature = "dashboard")]
 /// Serializes persisted sessions as the dashboard API response.
 fn api_sessions() -> Response {
-    crate::persistence::load().map_or_else(
-        || Json(Vec::<serde_json::Value>::new()).into_response(),
-        |sessions| Json(sessions).into_response(),
-    )
+    match crate::persistence::load() {
+        Ok(Some(sessions)) => Json(sessions).into_response(),
+        Ok(None) => Json(Vec::<serde_json::Value>::new()).into_response(),
+        Err(error) => {
+            eprintln!("Could not load dashboard sessions: {error:#}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Could not load saved sessions",
+            )
+                .into_response()
+        }
+    }
 }
 
 #[cfg(feature = "dashboard")]
 /// Starts the dashboard server and blocks until it exits or fails.
 pub fn run_dashboard(port: u16) -> ! {
-    let rt = crate::utils::runtime::runtime();
+    let rt = match crate::utils::runtime::runtime() {
+        Ok(rt) => rt,
+        Err(error) => {
+            eprintln!("Dashboard error: {error}");
+            std::process::exit(1);
+        }
+    };
     let result = rt.block_on(async move { run_dashboard_async(port).await });
     match result {
         Ok(()) => std::process::exit(0),

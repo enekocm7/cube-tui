@@ -205,6 +205,7 @@ impl fmt::Display for Modifier {
 pub struct Scramble {
     text: Cow<'static, str>,
     wca: bool,
+    pub warning: Option<String>,
 }
 
 impl Scramble {
@@ -213,6 +214,7 @@ impl Scramble {
         Self {
             text: text.into(),
             wca: false,
+            warning: None,
         }
     }
 
@@ -221,6 +223,7 @@ impl Scramble {
         Self {
             text: text.into(),
             wca: true,
+            warning: None,
         }
     }
 
@@ -253,17 +256,34 @@ impl From<Scramble> for Cow<'static, str> {
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
     //Temporary fix until the official WCA scrambler supports FTO event
     if event == WcaEvent::Fto {
-        return Scramble::new(random_scramble(event));
+        let scramble = Scramble::new(random_scramble(event));
+        #[cfg(feature = "wca-scrambles")]
+        {
+            let mut scramble = scramble;
+            scramble.warning = Some(
+                "The WCA generator does not support FTO. Using the built-in generator.".to_owned(),
+            );
+            return scramble;
+        }
+        #[cfg(not(feature = "wca-scrambles"))]
+        return scramble;
     }
 
     #[cfg(feature = "wca-scrambles")]
-    if let Some(text) = wca::get_wca_scramble(event) {
-        return Scramble::new_wca(text);
+    {
+        match wca::get_wca_scramble(event) {
+            Ok(text) => Scramble::new_wca(text),
+            Err(error) => {
+                let mut scramble = Scramble::new(random_scramble(event));
+                scramble.warning = Some(format!(
+                    "WCA scramble generation failed: {error}. Using the built-in generator."
+                ));
+                scramble
+            }
+        }
     }
-
-    let text = random_scramble(event);
-
-    Scramble::new(text)
+    #[cfg(not(feature = "wca-scrambles"))]
+    Scramble::new(random_scramble(event))
 }
 
 /// Generates a scramble using the built-in event-specific algorithm.

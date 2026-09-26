@@ -35,6 +35,7 @@ pub struct Session {
     pub timer_state: TimerState,
     pub history: History,
     pub scramble: Option<Scramble>,
+    pub generation_warning: Option<String>,
     next_scramble: Arc<Mutex<Option<Scramble>>>,
     next_scramble_tx: flume::Sender<Scramble>,
     next_scramble_rx: flume::Receiver<Scramble>,
@@ -55,6 +56,7 @@ impl Session {
             timer_state: TimerState::Idle,
             history: History::new(),
             scramble: None,
+            generation_warning: None,
             next_scramble: Arc::new(Mutex::new(None)),
             next_scramble_tx: tx,
             next_scramble_rx: rx,
@@ -75,6 +77,7 @@ impl Session {
             timer_state: TimerState::Idle,
             history: History::new(),
             scramble: Some(generate_scramble(WcaEvent::Cube3x3)),
+            generation_warning: None,
             next_scramble: Arc::new(Mutex::new(None)),
             next_scramble_tx: tx,
             next_scramble_rx: rx,
@@ -183,7 +186,15 @@ impl Session {
         let next_scramble = Arc::clone(&self.next_scramble);
         let rx = self.next_scramble_rx.clone();
         let cancelled = Arc::clone(&self.scramble_workers_cancelled);
-        runtime().spawn_blocking(move || {
+        let rt = match runtime() {
+            Ok(rt) => rt,
+            Err(error) => {
+                self.generation_warning =
+                    Some(format!("{error}. Scrambles will be generated on demand."));
+                return;
+            }
+        };
+        rt.spawn_blocking(move || {
             while let Ok(scramble) = rx.recv() {
                 if cancelled.load(Ordering::Acquire) {
                     break;
@@ -202,7 +213,15 @@ impl Session {
         let next_scramble = Arc::clone(&self.next_scramble);
         let cancelled = Arc::clone(&self.scramble_workers_cancelled);
         let event = self.event;
-        runtime().spawn_blocking(move || {
+        let rt = match runtime() {
+            Ok(rt) => rt,
+            Err(error) => {
+                self.generation_warning =
+                    Some(format!("{error}. Scrambles will be generated on demand."));
+                return;
+            }
+        };
+        rt.spawn_blocking(move || {
             while !cancelled.load(Ordering::Acquire) {
                 if next_scramble.lock().unwrap().is_none() {
                     let scramble = generate_scramble(event);
@@ -368,6 +387,18 @@ impl Model {
         let data = data.into_iter();
         self.session_state.sessions.reserve(data.size_hint().0);
         for (index, history) in data.enumerate() {
+            if history.times().iter().any(|time| {
+                let timestamp = time.solved_at_unix_ms();
+                timestamp != 0
+                    && i64::try_from(timestamp)
+                        .ok()
+                        .and_then(chrono::DateTime::from_timestamp_millis)
+                        .is_none()
+            }) {
+                self.toast_warning(
+                    "Some saved solve dates are invalid and will be shown as unavailable.",
+                );
+            }
             let mut session = Session::new();
             if let Some(last_time) = history.last() {
                 let event = last_time.event();
@@ -393,6 +424,11 @@ impl Model {
         }
         self.main_focus = MainFocus::History;
         self.main_stats_selection = MainStatsSelection::default();
+        if self.current_session().scramble.is_none() {
+            self.next_scramble();
+        } else {
+            self.report_scramble_warnings();
+        }
     }
 }
 
@@ -454,6 +490,7 @@ mod tests {
             timer_state: TimerState::Idle,
             history: History::new(),
             scramble: None,
+            generation_warning: None,
             next_scramble: Arc::new(Mutex::new(None)),
             next_scramble_tx: tx,
             next_scramble_rx: rx,

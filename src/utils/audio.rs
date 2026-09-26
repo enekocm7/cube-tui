@@ -24,7 +24,7 @@ impl From<InspectionAudio> for &[u8] {
     }
 }
 
-static MIXER: OnceLock<MixerDeviceSink> = OnceLock::new();
+static MIXER: OnceLock<Result<MixerDeviceSink, String>> = OnceLock::new();
 
 /// Plays the selected embedded inspection cue through the default audio device.
 ///
@@ -33,17 +33,13 @@ static MIXER: OnceLock<MixerDeviceSink> = OnceLock::new();
 ///
 /// # Errors
 ///
-/// Returns an error if Rodio cannot decode or enqueue the embedded MP3 data.
-///
-/// # Panics
-///
-/// Panics if the system's default audio output cannot be opened during mixer
-/// initialization.
+/// Returns an error if the audio output cannot be opened or the embedded MP3
+/// cannot be decoded or queued.
 pub fn play_audio(audio_type: InspectionAudio) -> anyhow::Result<()> {
     let mixer = MIXER
-        .get_or_init(|| {
-            DeviceSinkBuilder::open_default_sink().expect("failed to open default sink")
-        })
+        .get_or_init(|| DeviceSinkBuilder::open_default_sink().map_err(|error| error.to_string()))
+        .as_ref()
+        .map_err(|error| anyhow::anyhow!("Could not open audio output: {error}"))?
         .mixer();
     let audio_bytes: &[u8] = audio_type.into();
     let player = rodio::play(mixer, Cursor::new(audio_bytes))?;

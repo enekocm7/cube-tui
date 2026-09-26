@@ -7,7 +7,7 @@ use crate::{
 impl Model {
     /// Loads available themes and opens the selector at the active theme.
     pub fn open_theme_selector(&mut self) {
-        let mut theme_selector = ThemeSelector::new();
+        let mut theme_selector = ThemeSelector::new(&mut self.toasts);
         let actual_theme_name = self.settings().theme_name();
         theme_selector
             .themes
@@ -55,19 +55,28 @@ impl Model {
     /// Applies a theme and persists the updated setting.
     fn apply_theme(&mut self, theme: &Theme) {
         self.settings.set_theme(theme);
-        persistence::save_config(self.settings());
+        self.save_settings();
     }
 
     /// Opens the selected theme file in the system editor.
-    pub fn open_theme_in_editor(&self) {
-        if let Some(theme_selector) = &self.theme_selector
-            && let Some(theme) = theme_selector.selected()
-        {
-            let name = theme.name();
-            let path = persistence::themes_dir()
-                .expect("Shouldn't fail to get the themes dir")
-                .join(name);
-            open::that(path).unwrap_or_else(|_| eprintln!("Failed to open theme path"));
+    pub fn open_theme_in_editor(&mut self) {
+        let Some(selector) = &self.theme_selector else {
+            return;
+        };
+        let Some(theme) = selector.selected() else {
+            self.toast_info("Select a theme before opening it in the editor.");
+            return;
+        };
+        let dir = match persistence::themes_dir() {
+            Ok(dir) => dir,
+            Err(error) => {
+                self.toast_error(format!("{error:#}"));
+                return;
+            }
+        };
+        let path = dir.join(theme.name());
+        if let Err(error) = open::that(&path) {
+            self.toast_error(format!("Could not open theme {}: {error}", path.display()));
         }
     }
 }

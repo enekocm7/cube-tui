@@ -6,7 +6,6 @@ use crate::model::bluetooth::BluetoothEvent;
 use crate::model::confirmation::ConfirmationAction;
 use crate::model::{Model, TimerState};
 use crate::msg::{Msg, allowed_msg};
-use crate::persistence;
 use crate::utils::audio::InspectionAudio::{EightSeconds, TwelveSeconds};
 use crate::utils::audio::play_audio;
 #[cfg(feature = "bluetooth")]
@@ -21,13 +20,35 @@ pub fn update(model: &mut Model, msg: Msg) -> bool {
     let background_changed = matches!(msg, Msg::Tick) && {
         let scan_changed = model.show_bluetooth() && model.poll_bluetooth();
         let timer_changed = model.bluetooth_timer_active() && model.poll_bluetooth_timer();
-        scan_changed || timer_changed
+        let cleanup_changed = model.poll_bluetooth_cleanup();
+        scan_changed || timer_changed || cleanup_changed
     };
     #[cfg(not(feature = "bluetooth"))]
     let background_changed = false;
 
     if !allowed_msg(model, msg) {
+        if !matches!(msg, Msg::Tick | Msg::Press | Msg::Release) {
+            model.toast_info("Close the current window before using that action.");
+            return true;
+        }
         return background_changed;
+    }
+    if model.timer_state() != TimerState::Idle
+        && matches!(
+            msg,
+            Msg::NextEventOpenEditor
+                | Msg::PrevEvent
+                | Msg::NextSession
+                | Msg::PrevSession
+                | Msg::NewSession
+                | Msg::DeleteSession
+                | Msg::NextScramble
+                | Msg::DeleteTime
+                | Msg::OpenDetailedStats
+        )
+    {
+        model.toast_info("Finish or reset the current attempt before using that action.");
+        return true;
     }
 
     let timer_state = model.timer_state();
@@ -78,7 +99,7 @@ fn handle_press(model: &mut Model) {
         if model.timer_state() == TimerState::Idle {
             let modifier = model.selected_details_modifier();
             model.history_mut().set_modifier(modifier);
-            persistence::save(model);
+            model.save_history();
         }
         return;
     }
@@ -104,7 +125,7 @@ fn handle_press(model: &mut Model) {
             let elapsed_ms = u64::try_from(time.elapsed().as_millis()).unwrap();
             model.record_solve(elapsed_ms);
             model.next_scramble();
-            persistence::save(model);
+            model.save_history();
         }
     }
 }
@@ -123,7 +144,7 @@ fn handle_release(model: &mut Model) {
         TimerState::Pulsed | TimerState::Inspection { pulsed: true, .. }
     ) && !model.start_timer()
     {
-        persistence::save(model);
+        model.save_history();
     }
 }
 
@@ -135,32 +156,38 @@ fn handle_reset(model: &mut Model) {
 /// Advances time-dependent and asynchronous model state by one UI tick.
 fn handle_tick(model: &mut Model) {
     if advance_inspection(model) {
-        persistence::save(model);
+        model.save_history();
     }
 }
 
 /// Advances inspection audio and finishes attempts that reach the DNF limit.
 fn advance_inspection(model: &mut Model) -> bool {
-    if let TimerState::Inspection {
-        time,
-        first_audio_played,
-        second_audio_played,
-        ..
-    } = model.timer_state_mut()
+    let mut cues = [None, None];
+    if model.settings().inspection_audio_enabled()
+        && let TimerState::Inspection {
+            time,
+            first_audio_played,
+            second_audio_played,
+            ..
+        } = model.timer_state_mut()
     {
-        let elapsed_ms = u64::try_from(time.elapsed().as_millis()).unwrap();
-
+        let elapsed_ms = time.elapsed().as_millis();
         if (8_000..8_100).contains(&elapsed_ms) && !*first_audio_played {
-            play_audio(EightSeconds).expect("Failed to play audio");
             *first_audio_played = true;
+            cues[0] = Some(EightSeconds);
         }
-
         if (12_000..12_100).contains(&elapsed_ms) && !*second_audio_played {
-            play_audio(TwelveSeconds).expect("Failed to play audio");
             *second_audio_played = true;
+            cues[1] = Some(TwelveSeconds);
         }
     }
-
+    for cue in cues.into_iter().flatten() {
+        if let Err(error) = play_audio(cue) {
+            model.toast_warning(format!(
+                "Inspection audio could not be played: {error:#}. Timing will continue."
+            ));
+        }
+    }
     model.finish_expired_inspection()
 }
 
@@ -261,6 +288,7 @@ fn handle_next_session(model: &mut Model) {
         if model.current_session().scramble.is_none() {
             model.next_scramble();
         }
+        model.report_scramble_warnings();
     }
 }
 
@@ -271,21 +299,31 @@ fn handle_prev_session(model: &mut Model) {
         if model.current_session().scramble.is_none() {
             model.next_scramble();
         }
+        model.report_scramble_warnings();
     }
 }
 
 /// Creates and activates a session when the configured limit permits it.
 fn handle_new_session(model: &mut Model) {
     if model.timer_state() == TimerState::Idle {
-        model.add_session();
+        if !model.add_session() {
+            model.toast_warning("Cannot create another session: the limit is 99.");
+            return;
+        }
         model.next_scramble();
-        persistence::save(model);
+        if model.save_history() {
+            model.toast_info("New session created.");
+        }
     }
 }
 
 /// Opens confirmation before deleting the active session.
 fn handle_delete_session(model: &mut Model) {
-    if model.timer_state() == TimerState::Idle && model.session_count() > 1 {
+    if model.timer_state() == TimerState::Idle {
+        if model.session_count() <= 1 {
+            model.toast_warning("The last session cannot be deleted.");
+            return;
+        }
         model.open_confirmation(ConfirmationAction::DeleteSession);
     }
 }
@@ -305,40 +343,28 @@ const fn handle_help(model: &mut Model) {
 #[cfg(feature = "bluetooth")]
 /// Opens or closes the Bluetooth device picker and starts discovery.
 fn handle_toggle_bluetooth(model: &mut Model) {
-    if model.show_help() || model.show_details() || model.show_detailed_stats() {
-        return;
-    }
-
     if let Some(tx) = model.toggle_bluetooth() {
-        use std::borrow::Cow;
-
-        use crate::bluetooth::timer::{get_adapter, get_devices};
-
-        runtime().spawn(async move {
-            let adapter = match get_adapter().await {
-                Ok(adapter) => adapter,
-                Err(err) => {
-                    let _ = tx.send(BluetoothEvent::Error(Cow::Owned(err.to_string())));
-                    return;
-                }
-            };
-
-            let _ = tx.send(BluetoothEvent::Adapter(adapter.clone()));
-            let _ = tx.send(BluetoothEvent::Status("Scanning for devices...".into()));
-
-            let mut stream = match get_devices(&adapter).await {
-                Ok(stream) => stream,
-                Err(err) => {
-                    let _ = tx.send(BluetoothEvent::Error(Cow::Owned(err.to_string())));
-                    return;
-                }
-            };
-
-            while let Some(device) = stream.next().await {
-                if tx.send(BluetoothEvent::Device(device)).is_err() {
-                    break;
-                }
+        let rt = match runtime() {
+            Ok(rt) => rt,
+            Err(error) => {
+                model.toast_error(error);
+                model.close_bluetooth();
+                return;
             }
+        };
+        model.toast_info("Scanning for Bluetooth timers...");
+        rt.spawn(async move {
+            let adapter = match crate::bluetooth::timer::get_adapter().await {
+                Ok(adapter) => adapter,
+                Err(error) => {
+                    let _ = tx.send(BluetoothEvent::Error(format!("{error:#}").into()));
+                    return;
+                }
+            };
+            if tx.send(BluetoothEvent::Adapter(adapter.clone())).is_err() {
+                return;
+            }
+            forward_bluetooth_scan(tx, adapter).await;
         });
     }
 }
@@ -346,72 +372,137 @@ fn handle_toggle_bluetooth(model: &mut Model) {
 #[cfg(feature = "bluetooth")]
 /// Requests disconnection from the active Bluetooth timer.
 fn handle_disconnect_bluetooth(model: &mut Model) {
-    if (model.bluetooth_connected() || model.bluetooth_connecting())
-        && let Some((tx, rx, adapter)) = model.disconnect_bluetooth()
-    {
-        restart_bluetooth_scan(tx, rx, adapter);
+    if !model.bluetooth_connected() && !model.bluetooth_connecting() {
+        model.toast_info("No Bluetooth timer is connected.");
+        return;
+    }
+    let scan = model.disconnect_bluetooth();
+    model.toast_info("Bluetooth timer disconnected.");
+    if let Some((tx, _, adapter)) = scan {
+        restart_bluetooth_scan(model, tx, adapter);
     }
 }
 
 #[cfg(feature = "bluetooth")]
-/// Launches a scanner task and forwards its status through `sender`.
-fn restart_bluetooth_scan(
+/// Restarts discovery and reports failures through the scanner channel.
+pub(crate) fn restart_bluetooth_scan(
+    model: &mut Model,
     tx: flume::Sender<BluetoothEvent>,
-    _rx: flume::Receiver<BluetoothEvent>,
     adapter: btleplug::platform::Adapter,
 ) {
-    use crate::bluetooth::timer::get_devices;
-
-    runtime().spawn(async move {
-        let Ok(mut stream) = get_devices(&adapter).await else {
+    let rt = match runtime() {
+        Ok(rt) => rt,
+        Err(error) => {
+            model.toast_error(error);
             return;
-        };
-
-        while let Some(device) = stream.next().await {
-            if tx.send(BluetoothEvent::Device(device)).is_err() {
-                break;
-            }
         }
-    });
+    };
+    rt.spawn(forward_bluetooth_scan(tx, adapter));
+}
+
+#[cfg(feature = "bluetooth")]
+async fn forward_bluetooth_scan(
+    tx: flume::Sender<BluetoothEvent>,
+    adapter: btleplug::platform::Adapter,
+) {
+    if tx
+        .send(BluetoothEvent::Status("Scanning for devices...".into()))
+        .is_err()
+    {
+        return;
+    }
+    let mut stream = match crate::bluetooth::timer::get_devices(&adapter).await {
+        Ok(stream) => stream,
+        Err(error) => {
+            let _ = tx.send(BluetoothEvent::Error(
+                format!("Could not scan for Bluetooth timers: {error:#}").into(),
+            ));
+            return;
+        }
+    };
+    while let Some(result) = stream.next().await {
+        let event = match result {
+            Ok(device) => BluetoothEvent::Device(device),
+            Err(error) => BluetoothEvent::Warning(format!("{error:#}").into()),
+        };
+        if tx.send(event).is_err() {
+            return;
+        }
+    }
 }
 
 #[cfg(feature = "bluetooth")]
 /// Starts a connection to the selected Bluetooth timer.
 fn handle_bluetooth_connect(model: &mut Model) {
-    use std::borrow::Cow;
-
     use crate::bluetooth::timer::{TimerState as BtTimerState, connect, disconnect};
 
     let Some(device) = model.bluetooth_selected_device().cloned() else {
+        model.toast_info(
+            "No Bluetooth timer is available. Turn on your timer and wait for discovery.",
+        );
         return;
     };
-
+    let rt = match runtime() {
+        Ok(rt) => rt,
+        Err(error) => {
+            model.toast_error(error);
+            return;
+        }
+    };
     let Some((tx, adapter, conn_tx)) = model.connect_bluetooth_device() else {
+        model.toast_warning("The timer is not ready to connect. Wait for discovery or the current connection attempt.");
         return;
     };
-
+    let (cleanup_tx, cleanup_rx) = flume::unbounded();
+    model.bluetooth_state.cleanup_rx = Some(cleanup_rx);
+    model.toast_info("Connecting to Bluetooth timer...");
     let device_id = device.id;
-    runtime().spawn(async move {
-        let mut stream = match connect(&device_id, &adapter).await {
-            Ok(s) => s,
-            Err(e) => {
-                let _ = tx.send(BtTimerState::Error(Cow::Owned(e.to_string())));
-                let _ = tx.send(BtTimerState::Disconnected);
-                return;
-            }
+    rt.spawn(async move {
+        let stream = match tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            connect(&device_id, &adapter),
+        )
+        .await
+        {
+            Ok(result) => result,
+            Err(_) => Err(anyhow::anyhow!(
+                "Bluetooth connection timed out. Check that the timer is on and try again."
+            )),
         };
-
-        let _ = conn_tx.send(());
-
-        loop {
-            if let Some(state) = stream.next().await
-                && tx.send(state).is_err()
-            {
-                break;
+        match stream {
+            Ok(mut stream) => {
+                if conn_tx.send(()).is_ok() {
+                    while !tx.is_disconnected() {
+                        // Wake periodically to notice a user-requested disconnect,
+                        // even if the timer is sending no notifications.
+                        match tokio::time::timeout(
+                            std::time::Duration::from_millis(100),
+                            stream.next(),
+                        )
+                        .await
+                        {
+                            Ok(Some(state)) => {
+                                if tx.send(state).is_err() {
+                                    break;
+                                }
+                            }
+                            Ok(None) => break,
+                            Err(_) => {}
+                        }
+                    }
+                }
+            }
+            Err(error) => {
+                let _ = tx.send(BtTimerState::Error(
+                    format!("Could not connect to Bluetooth timer: {error:#}").into(),
+                ));
             }
         }
-
-        let _ = disconnect(&device_id, &adapter).await;
+        if let Err(error) = disconnect(&device_id, &adapter).await {
+            let _ = cleanup_tx.send(format!(
+                "Could not disconnect the Bluetooth device: {error:#}"
+            ));
+        }
         let _ = tx.send(BtTimerState::Disconnected);
     });
 }
@@ -419,13 +510,23 @@ fn handle_bluetooth_connect(model: &mut Model) {
 /// Toggles inspection timing and persists the new setting.
 fn handle_toggle_inspection(model: &mut Model) {
     model.toggle_inspection();
-    persistence::save_config(model.settings());
+    model.save_settings();
+    if model.inspection_enabled() {
+        model.toast_info("Inspection enabled.");
+    } else {
+        model.toast_info("Inspection disabled.");
+    }
 }
 
 /// Toggles zen mode and persists the new setting.
 fn handle_toggle_zen(model: &mut Model) {
     model.toggle_zen();
-    persistence::save_config(model.settings());
+    model.save_settings();
+    if model.zen_enabled() {
+        model.toast_info("Zen mode enabled.");
+    } else {
+        model.toast_info("Zen mode disabled.");
+    }
 }
 
 /// Confirms the context-sensitive action for the active screen.
@@ -451,12 +552,18 @@ fn handle_enter(model: &mut Model) {
                         if model.current_session().scramble.is_none() {
                             model.next_scramble();
                         }
-                        persistence::save(model);
+                        if model.save_history() {
+                            model.toast_info("Session deleted.");
+                        }
+                    } else {
+                        model.toast_warning("The last session cannot be deleted.");
                     }
                 }
                 ConfirmationAction::DeleteTime => {
                     model.history_mut().delete_selected();
-                    persistence::save(model);
+                    if model.save_history() {
+                        model.toast_info("Solve deleted.");
+                    }
                     if model.show_details() && model.history().is_empty() {
                         model.close_current_screen();
                     }
@@ -471,7 +578,9 @@ fn handle_enter(model: &mut Model) {
     }
 
     if model.show_mean_detail() {
-        model.open_details_for_selected_mean_time();
+        if !model.open_details_for_selected_mean_time() {
+            model.toast_info("The selected solve is no longer available.");
+        }
         return;
     }
     if model.show_detailed_stats() && !model.show_mean_detail() {
@@ -479,17 +588,27 @@ fn handle_enter(model: &mut Model) {
         return;
     }
     if model.main_focus_is_stats() {
-        model.open_mean_detail_from_stats();
+        if !model.open_mean_detail_from_stats() {
+            model.toast_info("There are not enough solves for the selected statistic yet.");
+        }
         return;
     }
-    if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
+    if model.timer_state() == TimerState::Idle {
+        if model.history().is_empty() {
+            model.toast_info("No solves yet. Complete a solve to view its details.");
+            return;
+        }
         model.open_details();
     }
 }
 
 /// Opens the detailed statistics screen for the active session.
 fn handle_open_detailed_stats(model: &mut Model) {
-    if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
+    if model.timer_state() == TimerState::Idle {
+        if model.history().is_empty() {
+            model.toast_info("No solves yet. Complete a solve to view statistics.");
+            return;
+        }
         model.open_detailed_stats();
     }
 }
@@ -528,7 +647,11 @@ fn handle_esc(model: &mut Model) {
 
 /// Opens confirmation before deleting the selected solve.
 fn handle_delete_time(model: &mut Model) {
-    if model.timer_state() == TimerState::Idle && !model.history().is_empty() {
+    if model.timer_state() == TimerState::Idle {
+        if model.history().is_empty() {
+            model.toast_info("There is no solve to delete.");
+            return;
+        }
         model.open_confirmation(ConfirmationAction::DeleteTime);
     }
 }
@@ -565,6 +688,72 @@ mod tests {
 
     use super::*;
     use crate::widgets::history::Modifier;
+
+    #[test]
+    fn unavailable_actions_report_toasts_without_changing_state() {
+        let mut model = Model::new();
+        let sessions = model.session_count();
+        handle_delete_session(&mut model);
+        handle_delete_time(&mut model);
+        handle_open_detailed_stats(&mut model);
+        assert_eq!(model.session_count(), sessions);
+        assert!(model.history().is_empty());
+        assert!(!model.show_detailed_stats());
+        let kinds: Vec<_> = model.toasts.iter_mut().map(|toast| toast.kind).collect();
+        assert!(kinds.contains(&crate::model::toast::ToastType::Warning));
+        assert!(kinds.contains(&crate::model::toast::ToastType::Info));
+    }
+
+    #[test]
+    fn blocked_action_during_a_solve_requests_a_frame_for_its_toast() {
+        let mut model = Model::new();
+        model.set_timer_state(TimerState::Running {
+            time: Instant::now(),
+            inspection_modifier: Modifier::None,
+        });
+        let count = model.session_count();
+        assert!(update(&mut model, Msg::NewSession));
+        assert_eq!(model.session_count(), count);
+        assert!(
+            model
+                .toasts
+                .iter_mut()
+                .any(|toast| toast.message.contains("Finish or reset"))
+        );
+    }
+
+    #[test]
+    fn invalid_saved_dates_report_a_warning_without_losing_solves() {
+        let mut model = Model::new();
+        let mut history = crate::widgets::history::History::new();
+        history.add(crate::widgets::history::Time::new_with_meta(
+            1_000,
+            crate::scramble::WcaEvent::Cube3x3,
+            "R U".into(),
+            u64::MAX,
+            Modifier::None,
+        ));
+        model.restore_from_history([history]);
+        assert_eq!(model.history().len(), 1);
+        assert!(
+            model
+                .toasts
+                .iter_mut()
+                .any(|toast| toast.message.contains("solve dates are invalid"))
+        );
+    }
+
+    #[test]
+    fn unreadable_history_blocks_saving_and_reports_why() {
+        let mut model = Model::new();
+        model.history_load_failed = true;
+        assert!(!model.save_history());
+        assert!(model.toasts.iter_mut().any(|toast| {
+            toast
+                .message
+                .contains("existing history could not be loaded")
+        }));
+    }
 
     #[test]
     fn tick_finishes_expired_inspection_as_zero_duration_dnf() {

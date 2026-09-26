@@ -37,44 +37,66 @@ pub async fn get_adapter() -> anyhow::Result<Adapter> {
 /// # Errors
 /// - If scanning cannot be started.
 /// - If adapter events cannot be subscribed to.
-pub async fn get_devices(adapter: &Adapter) -> anyhow::Result<impl Stream<Item = DeviceInfo>> {
+pub async fn get_devices(
+    adapter: &Adapter,
+) -> anyhow::Result<impl Stream<Item = anyhow::Result<DeviceInfo>>> {
     adapter.start_scan(ScanFilter::default()).await?;
-
+    let mut events = adapter.events().await?;
     let (tx, rx) = flume::bounded(32);
     let adapter = adapter.clone();
-
     tokio::spawn(async move {
-        let Ok(mut events) = adapter.events().await else {
-            return;
-        };
-
-        loop {
-            while let Some(event) = events.next().await {
-                match event {
-                    CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id) => {
-                        if let Ok(peripheral) = adapter.peripheral(&id).await {
-                            let props = peripheral.properties().await.unwrap_or(None);
-                            let name = props.as_ref().and_then(|p| p.local_name.clone());
-                            let is_gan = name
-                                .as_ref()
-                                .is_some_and(|n| n.to_lowercase().contains("gan"));
-                            if is_gan {
-                                let device = DeviceInfo {
-                                    id: id.clone(),
-                                    name,
-                                };
-                                if tx.send_async(device).await.is_err() {
-                                    break;
-                                }
-                            }
-                        }
+        while let Some(event) = events.next().await {
+            let (CentralEvent::DeviceDiscovered(id) | CentralEvent::DeviceUpdated(id)) = event
+            else {
+                continue;
+            };
+            let peripheral = match adapter.peripheral(&id).await {
+                Ok(peripheral) => peripheral,
+                Err(error) => {
+                    if tx
+                        .send_async(Err(anyhow::anyhow!(
+                            "Could not inspect a Bluetooth device: {error}"
+                        )))
+                        .await
+                        .is_err()
+                    {
+                        return;
                     }
-                    _ => {}
+                    continue;
+                }
+            };
+            let props = match peripheral.properties().await {
+                Ok(props) => props,
+                Err(error) => {
+                    if tx
+                        .send_async(Err(anyhow::anyhow!(
+                            "Could not read Bluetooth device properties: {error}"
+                        )))
+                        .await
+                        .is_err()
+                    {
+                        return;
+                    }
+                    continue;
+                }
+            };
+            let name = props.and_then(|props| props.local_name);
+            if name
+                .as_ref()
+                .is_some_and(|name| name.to_lowercase().contains("gan"))
+            {
+                let device = DeviceInfo { id, name };
+                if tx.send_async(Ok(device)).await.is_err() {
+                    return; // The picker was closed or a connection was started.
                 }
             }
         }
+        let _ = tx
+            .send_async(Err(anyhow::anyhow!(
+                "Bluetooth discovery stopped unexpectedly"
+            )))
+            .await;
     });
-
     Ok(rx.into_stream())
 }
 
@@ -146,29 +168,53 @@ pub async fn connect(
 
     tokio::spawn(async move {
         while let Some(event) = notifications.next().await {
-            let state = match event.value[3] {
-                1 => Some(TimerState::GetSet),
-                2 => Some(TimerState::HandsOff),
-                3 => Some(TimerState::Running),
-                5 => Some(TimerState::Idle),
-                6 => Some(TimerState::HandsOn),
-                7 => {
-                    if let Ok(time) = peripheral.read(&time_characteristic).await
-                        && let Ok(bytes) = <[u8; 4]>::try_from(&time[0..4])
-                    {
-                        Some(TimerState::Finished(time_array_to_ms(bytes)))
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
+            if event.uuid != state_uuid {
+                continue;
+            }
+            let Some(&state_byte) = event.value.get(3) else {
+                let _ = tx
+                    .send_async(TimerState::Warning(
+                        "Received an incomplete Bluetooth timer update".into(),
+                    ))
+                    .await;
+                continue;
             };
-            if let Some(state) = state
-                && tx.send_async(state).await.is_err()
-            {
-                break;
+            let state = match state_byte {
+                1 => TimerState::GetSet,
+                2 => TimerState::HandsOff,
+                3 => TimerState::Running,
+                5 => TimerState::Idle,
+                6 => TimerState::HandsOn,
+                7 => match peripheral.read(&time_characteristic).await {
+                    Ok(time) => match parse_time(&time) {
+                        Some(time_ms) => TimerState::Finished(time_ms),
+                        None => TimerState::Error(
+                            "The timer returned an incomplete solve time. The solve was not saved."
+                                .into(),
+                        ),
+                    },
+                    Err(error) => TimerState::Error(
+                        format!(
+                            "Could not read the finished solve: {error}. The solve was not saved."
+                        )
+                        .into(),
+                    ),
+                },
+                _ => {
+                    let _ = tx
+                        .send_async(TimerState::Warning(
+                            format!("Received an unsupported Bluetooth timer state: {state_byte}")
+                                .into(),
+                        ))
+                        .await;
+                    continue;
+                }
+            };
+            if tx.send_async(state).await.is_err() {
+                return; // The connection was closed by the user.
             }
         }
+        let _ = tx.send_async(TimerState::Disconnected).await;
     });
 
     Ok(rx.into_stream())
@@ -195,4 +241,23 @@ fn time_array_to_ms(t: [u8; 4]) -> u64 {
     (u64::from(t[0]) * 60_000)
         + (u64::from(t[1]) * 1_000)
         + u64::from(u16::from_le_bytes([t[2], t[3]]))
+}
+
+/// Validates the time payload before converting it to milliseconds.
+fn parse_time(bytes: &[u8]) -> Option<u64> {
+    let time: [u8; 4] = bytes.get(..4)?.try_into().ok()?;
+    Some(time_array_to_ms(time))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn incomplete_timer_payloads_are_rejected_without_panicking() {
+        for bytes in [vec![], vec![1], vec![1, 2], vec![1, 2, 3]] {
+            assert_eq!(parse_time(&bytes), None);
+        }
+        assert_eq!(parse_time(&[1, 2, 232, 3]), Some(63_000));
+    }
 }
