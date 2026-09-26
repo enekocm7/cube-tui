@@ -9,3 +9,4 @@ pub mod mean_detail;
 pub mod scramble;
 pub mod stats;
 pub mod theme_selector;
+pub mod toast;

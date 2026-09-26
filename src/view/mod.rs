@@ -7,6 +7,7 @@ use ratatui::widgets::{Block, Borders, Paragraph, Widget, Wrap};
 
 use crate::model::keybinds::Action;
 use crate::model::settings::{Settings, ThemeColors};
+use crate::model::toast::ToastBuffer;
 use crate::model::{Model, TimerState};
 use crate::utils::{format_elapsed, get_scramble_lines};
 use crate::widgets::confirmation::ConfirmationWidget;
@@ -20,10 +21,21 @@ use crate::widgets::stats::StatsWidget;
 
 #[cfg(feature = "bluetooth")]
 use crate::widgets::bluetooth::BluetoothWidget;
+use crate::widgets::toast::render_toasts;
 
-#[allow(clippy::too_many_lines)]
 /// Renders the complete application view into the supplied terminal buffer.
 pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
+    render_screen(area, buf, model);
+    if model.settings().toasts() {
+        let theme = *model.settings().theme();
+        render_toasts(area, buf, &mut model.toasts, &theme);
+    } else {
+        model.toasts = ToastBuffer::default();
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     let settings = model.settings();
     let theme = *settings.theme();
     let keybinds = settings.keybinds().clone();

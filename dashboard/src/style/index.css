@@ -59,27 +59,30 @@ html:not(.dark) {
    Map to Tailwind tokens
 ───────────────────────────────────────── */
 @theme inline {
-  --font-sans:
-    "Space Grotesk Variable", "Space Grotesk", system-ui, Avenir, Helvetica, Arial, sans-serif;
-  --font-mono: "Geist Mono Variable", "Geist Mono", "JetBrains Mono", "Fira Code", monospace;
-  --color-matte: var(--matte);
-  --color-surface: var(--surface);
-  --color-raised: var(--raised);
-  --color-cell: var(--cell);
-  --color-border: var(--border);
-  --color-border-hover: var(--border-hover);
-  --color-ink: var(--ink);
-  --color-muted: var(--muted);
-  --color-dim: var(--dim);
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-good: var(--good);
-  --color-bad: var(--bad);
-  --color-warn: var(--warn);
-  --color-header-bg: var(--header-bg);
-  --color-moon: var(--moon-color);
-  --color-sun: var(--sun-color);
-  --color-thumb: var(--thumb-bg);
+	--font-sans:
+		"Space Grotesk Variable", "Space Grotesk", system-ui, Avenir, Helvetica,
+		Arial, sans-serif;
+	--font-mono:
+		"Geist Mono Variable", "Geist Mono", "JetBrains Mono", "Fira Code",
+		monospace;
+	--color-matte: var(--matte);
+	--color-surface: var(--surface);
+	--color-raised: var(--raised);
+	--color-cell: var(--cell);
+	--color-border: var(--border);
+	--color-border-hover: var(--border-hover);
+	--color-ink: var(--ink);
+	--color-muted: var(--muted);
+	--color-dim: var(--dim);
+	--color-accent: var(--accent);
+	--color-accent-hover: var(--accent-hover);
+	--color-good: var(--good);
+	--color-bad: var(--bad);
+	--color-warn: var(--warn);
+	--color-header-bg: var(--header-bg);
+	--color-moon: var(--moon-color);
+	--color-sun: var(--sun-color);
+	--color-thumb: var(--thumb-bg);
 }
 
 /* ─────────────────────────────────────────

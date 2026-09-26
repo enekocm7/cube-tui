@@ -27,12 +27,18 @@ jobs:
         #It needs bun in order to build dashboard in the build.rs script
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
-        
+
+      - name: Install JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "25"
+
       - name: Cache cargo registry and build
         uses: Swatinem/rust-cache@v2
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev libasound2-dev pkg-config
 
       - name: Check formatting
         run: cargo fmt --all -- --check

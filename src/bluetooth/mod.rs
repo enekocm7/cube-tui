@@ -11,6 +11,7 @@ pub enum BtTimerState {
     Idle,
     HandsOn,
     Finished(u64),
+    Warning(std::borrow::Cow<'static, str>),
     Error(std::borrow::Cow<'static, str>),
 }
 

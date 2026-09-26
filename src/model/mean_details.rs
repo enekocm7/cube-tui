@@ -26,6 +26,8 @@ impl Model {
                 selected_index: 0,
                 from_stats_column: false,
             };
+        } else {
+            self.toast_info("There are not enough solves for the selected average yet.");
         }
     }
 
