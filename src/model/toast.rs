@@ -1,8 +1,9 @@
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
 
+use super::Model;
+
 /// Severity displayed in a toast's title and border.
-#[allow(dead_code)] // Producers will be connected in a later change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToastType {
     Info,
@@ -11,7 +12,6 @@ pub enum ToastType {
 }
 
 /// How long a toast stays visible, starting with its first rendered frame.
-#[allow(dead_code)] // Producers will be connected in a later change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToastDuration {
     Short,
@@ -83,9 +83,56 @@ impl ToastBuffer {
     }
 }
 
+impl Model {
+    /// Shows a short informational message.
+    pub fn toast_info(&mut self, message: impl Into<String>) {
+        self.notify(message.into(), ToastType::Info, ToastDuration::Short);
+    }
+
+    /// Shows a long warning about a fallback or incomplete action.
+    pub fn toast_warning(&mut self, message: impl Into<String>) {
+        self.notify(message.into(), ToastType::Warning, ToastDuration::Long);
+    }
+
+    /// Shows a long error about a failed operation.
+    pub fn toast_error(&mut self, message: impl Into<String>) {
+        self.notify(message.into(), ToastType::Error, ToastDuration::Long);
+    }
+
+    /// Avoids filling the queue with the same recurring failure.
+    fn notify(&mut self, message: String, kind: ToastType, duration: ToastDuration) {
+        if !self.settings().toasts() {
+            return;
+        }
+        for toast in &self.toasts.entries {
+            if toast.message == message && toast.kind == kind {
+                return;
+            }
+        }
+        self.toasts.push(message, kind, duration);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn repeated_failures_are_deduplicated_and_severity_controls_duration() {
+        let mut model = Model::new();
+        model.toasts.entries.clear();
+        model.toast_error("save failed");
+        model.toast_error("save failed");
+        model.toast_warning("using defaults");
+        model.toast_info("nothing to delete");
+        assert_eq!(model.toasts.entries.len(), 3);
+        assert_eq!(model.toasts.entries[0].kind, ToastType::Error);
+        assert_eq!(model.toasts.entries[0].duration, ToastDuration::Long);
+        assert_eq!(model.toasts.entries[1].kind, ToastType::Warning);
+        assert_eq!(model.toasts.entries[1].duration, ToastDuration::Long);
+        assert_eq!(model.toasts.entries[2].kind, ToastType::Info);
+        assert_eq!(model.toasts.entries[2].duration, ToastDuration::Short);
+    }
 
     #[test]
     fn mixed_durations_expire_independently_at_the_deadline() {

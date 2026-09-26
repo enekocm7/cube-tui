@@ -44,6 +44,11 @@ impl Settings {
         self.timer.zen = zen;
     }
 
+    /// Returns whether inspection audio cues are enabled.
+    pub const fn inspection_audio_enabled(&self) -> bool {
+        self.timer.inspection_audio
+    }
+
     /// Returns whether zen mode is enabled.
     pub const fn zen(&self) -> bool {
         self.timer.zen
@@ -62,6 +67,11 @@ impl Settings {
     /// Returns whether the scramble panel is visible.
     pub const fn scramble(&self) -> bool {
         self.display.scramble
+    }
+
+    /// Returns whether toast notifications are visible.
+    pub const fn toasts(&self) -> bool {
+        self.display.toasts
     }
 
     /// Returns the colors of the active theme.
@@ -233,7 +243,7 @@ impl ColorSettings {
     /// Parses a six-digit `#RRGGBB` color.
     pub fn from_hex(s: &str) -> Option<Self> {
         let s = s.strip_prefix('#')?;
-        if s.len() != 6 {
+        if s.len() != 6 || !s.is_ascii() {
             return None;
         }
         Some(Self {
@@ -276,15 +286,17 @@ pub struct DisplaySettings {
     history: bool,
     scramble: bool,
     stats: bool,
+    toasts: bool,
 }
 
 impl Default for DisplaySettings {
-    /// Makes the history, scramble, and statistics panels visible.
+    /// Makes the history, scramble, statistics, and toast notifications visible.
     fn default() -> Self {
         Self {
             history: true,
             scramble: true,
             stats: true,
+            toasts: true,
         }
     }
 }

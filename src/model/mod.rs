@@ -1,4 +1,5 @@
 use crate::model::toast::ToastBuffer;
+use crate::persistence;
 use crate::scramble::WcaEvent;
 use crate::widgets::history::{History, Modifier, Time};
 use crate::{model::settings::Settings, widgets::theme_selector::ThemeSelector};
@@ -37,6 +38,7 @@ pub struct Model {
     pub(crate) theme_selector: Option<ThemeSelector>,
     pub(crate) confirmation: Option<Confirmation>,
     pub(crate) toasts: ToastBuffer,
+    pub(crate) history_load_failed: bool,
     #[cfg(feature = "bluetooth")]
     pub(crate) bluetooth_state: BluetoothState,
     pub(crate) main_focus: MainFocus,
@@ -46,7 +48,7 @@ pub struct Model {
 impl Model {
     /// Creates a model with one fresh session and default UI settings.
     pub fn new() -> Self {
-        Self {
+        let mut model = Self {
             session_state: SessionState::new(),
             settings: Settings::default(),
             help_state: HelpState::default(),
@@ -54,10 +56,73 @@ impl Model {
             theme_selector: None,
             confirmation: None,
             toasts: ToastBuffer::default(),
+            history_load_failed: false,
             #[cfg(feature = "bluetooth")]
             bluetooth_state: BluetoothState::default(),
             main_focus: MainFocus::History,
             main_stats_selection: MainStatsSelection::default(),
+        };
+        model.report_scramble_warnings();
+        model
+    }
+
+    /// Reports runtime and generator fallbacks when a scramble becomes current.
+    pub fn report_scramble_warnings(&mut self) {
+        if let Some(warning) = self.current_session_mut().generation_warning.take() {
+            self.toast_warning(warning);
+        }
+        let warning = self
+            .current_session_mut()
+            .scramble
+            .as_mut()
+            .and_then(|scramble| scramble.warning.take());
+        if let Some(warning) = warning {
+            self.toast_warning(warning);
+        }
+    }
+
+    /// Loads saved state and reports failures without replacing unreadable history.
+    pub fn load_persisted_state(&mut self) {
+        match persistence::load() {
+            Ok(Some(data)) => self.restore_from_history(data),
+            Ok(None) => {}
+            Err(error) => {
+                self.history_load_failed = true;
+                self.toast_error(format!("{error:#}. Existing history will not be overwritten. New solves will stay in memory."));
+            }
+        }
+        if let Err(error) = persistence::ensure_default_theme() {
+            self.toast_warning(format!("{error:#}. Using built-in colors if needed."));
+        }
+        match persistence::load_config() {
+            Ok(Some(settings)) => self.set_settings(settings),
+            Ok(None) => {}
+            Err(error) => self.toast_warning(format!(
+                "{error:#}. Using default settings; the file will not be overwritten."
+            )),
+        }
+        if let Err(error) = persistence::load_theme(self.settings().theme_name()) {
+            self.toast_warning(format!("{error:#}. Using built-in colors."));
+        }
+    }
+
+    /// Saves solves and reports when they only remain in memory.
+    pub fn save_history(&mut self) -> bool {
+        if self.history_load_failed {
+            self.toast_warning("Solves were not saved because the existing history could not be loaded. Repair the history file and restart the app.");
+            return false;
+        }
+        if let Err(error) = crate::persistence::save(self) {
+            self.toast_error(format!("{error:#}. Changes are only in memory."));
+            return false;
+        }
+        true
+    }
+
+    /// Saves settings and reports when changes only apply to this run.
+    pub fn save_settings(&mut self) {
+        if let Err(error) = crate::persistence::save_config(self.settings()) {
+            self.toast_warning(format!("{error:#}. Changes apply only to this run."));
         }
     }
 
@@ -143,6 +208,9 @@ impl Model {
             false
         } else {
             self.current_session_mut().start_timer(modifier);
+            if modifier == Modifier::PlusTwo {
+                self.toast_warning("Inspection exceeded the limit. A +2 penalty will be applied.");
+            }
             true
         }
     }
@@ -185,6 +253,7 @@ impl Model {
     /// Advances the active session to a newly generated scramble.
     pub fn next_scramble(&mut self) {
         self.current_session_mut().next_scramble();
+        self.report_scramble_warnings();
     }
 
     /// Records a completed solve and consumes its displayed scramble.
@@ -218,6 +287,7 @@ impl Model {
     fn finish_inspection_dnf(&mut self) {
         self.record_solve_with_modifier(0, Modifier::DNF);
         self.next_scramble();
+        self.toast_warning("Inspection time exceeded. The attempt was recorded as DNF.");
     }
 
     /// Records a completed solve with an explicit modifier.
@@ -239,11 +309,13 @@ impl Model {
     /// Selects the next puzzle event and generates its scramble.
     pub fn next_event(&mut self) {
         self.current_session_mut().next_event();
+        self.report_scramble_warnings();
     }
 
     /// Selects the previous puzzle event and generates its scramble.
     pub fn prev_event(&mut self) {
         self.current_session_mut().prev_event();
+        self.report_scramble_warnings();
     }
 
     /// Returns the active session's timer state.

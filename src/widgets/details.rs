@@ -102,11 +102,11 @@ fn format_datetime(unix_ms: u64) -> String {
         return "-".to_string();
     }
 
-    Local
-        .timestamp_millis_opt(i64::try_from(unix_ms).expect("Failed to parse time"))
-        .single()
-        .map_or_else(
-            || "-".to_string(),
-            |dt| dt.format("%Y-%m-%d %H:%M:%S").to_string(),
-        )
+    let Ok(unix_ms) = i64::try_from(unix_ms) else {
+        return "-".to_string();
+    };
+    Local.timestamp_millis_opt(unix_ms).single().map_or_else(
+        || "-".to_string(),
+        |dt| dt.format("%Y-%m-%d %H:%M:%S").to_string(),
+    )
 }

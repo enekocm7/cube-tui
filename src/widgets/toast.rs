@@ -4,7 +4,7 @@ use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::{Color, Style},
-    widgets::{Block, Borders, Clear, Paragraph, Widget, Wrap},
+    widgets::{Block, Borders, Clear, Padding, Paragraph, Widget, Wrap},
 };
 
 use crate::model::{
@@ -15,10 +15,17 @@ use crate::model::{
 /// Renders buffered toasts from the bottom right upward, oldest first.
 /// Overflow waits in the buffer until a later frame has room for it.
 pub fn render_toasts(area: Rect, buf: &mut Buffer, toasts: &mut ToastBuffer, theme: &ThemeColors) {
-    let width = area.width.min(48);
+    let area = Rect::new(
+        area.x,
+        area.y,
+        area.width.saturating_sub(u16::from(area.width > 3)),
+        area.height.saturating_sub(u16::from(area.height > 5)),
+    );
+    let width = area.width.min(36);
     if width < 3 {
         return;
     }
+    let vertical_padding = u16::from(area.height >= 5);
     let now = Instant::now();
     let mut bottom = area.bottom();
     for toast in toasts.iter_mut() {
@@ -34,7 +41,10 @@ pub fn render_toasts(area: Rect, buf: &mut Buffer, toasts: &mut ToastBuffer, the
         let paragraph = Paragraph::new(toast.message.as_str())
             .style(Style::default().fg(theme.text()).bg(theme.background()))
             .wrap(Wrap { trim: false });
-        let required_height = paragraph.line_count(width - 2).max(1).saturating_add(2);
+        let required_height = paragraph
+            .line_count(width - 2)
+            .max(1)
+            .saturating_add(2 + usize::from(vertical_padding) * 2);
         // Wait for enough room to show the whole message. A single message
         // taller than the terminal must be clipped to the viewport.
         if required_height > usize::from(available) && bottom != area.bottom() {
@@ -47,6 +57,7 @@ pub fn render_toasts(area: Rect, buf: &mut Buffer, toasts: &mut ToastBuffer, the
             .block(
                 Block::default()
                     .borders(Borders::ALL)
+                    .padding(Padding::vertical(vertical_padding))
                     .title(title)
                     .border_style(Style::default().fg(color)),
             )
@@ -75,17 +86,21 @@ mod tests {
         toasts.push("second", ToastType::Warning, ToastDuration::Long);
         toasts.push("third", ToastType::Error, ToastDuration::Short);
         render_toasts(area, &mut buf, &mut toasts, Settings::default().theme());
-        let x = area.right() - 48;
+        let x = area.right() - 37;
         for (offset, color, first_letter) in [
             (0, Color::Cyan, "f"),
-            (4, Color::Yellow, "s"),
-            (8, Color::Red, "t"),
+            (6, Color::Yellow, "s"),
+            (12, Color::Red, "t"),
         ] {
-            let y = area.bottom() - 3 - offset;
+            let y = area.bottom() - 6 - offset;
             assert_eq!(buf[(x, y)].fg, color);
-            assert_eq!(buf[(x + 1, y + 1)].symbol(), first_letter);
-            assert_eq!(buf[(area.right() - 2, y + 1)].symbol(), " ");
+            assert_eq!(buf[(x + 1, y + 1)].symbol(), " ");
+            assert_eq!(buf[(x + 1, y + 2)].symbol(), first_letter);
+            assert_eq!(buf[(x + 1, y + 3)].symbol(), " ");
+            assert_eq!(buf[(area.right() - 3, y + 2)].symbol(), " ");
+            assert_eq!(buf[(area.right() - 1, y + 2)].symbol(), "x");
         }
+        assert_eq!(buf[(x, area.bottom() - 1)].symbol(), "x");
         assert_eq!(buf[(area.x, area.y)].symbol(), "x");
     }
 
@@ -107,7 +122,7 @@ mod tests {
 
     #[test]
     fn wrapped_messages_wait_for_enough_room() {
-        let area = Rect::new(2, 3, 10, 7);
+        let area = Rect::new(2, 3, 11, 8);
         let mut buf = Buffer::empty(area);
         let mut toasts = ToastBuffer::default();
         toasts.push("first", ToastType::Info, ToastDuration::Short);
@@ -117,8 +132,8 @@ mod tests {
         assert_eq!(toasts.iter_mut().count(), 1);
         assert_eq!(toasts.next_expiration(Instant::now()), None);
         render_toasts(area, &mut buf, &mut toasts, Settings::default().theme());
-        assert_eq!(buf[(3, area.bottom() - 3)].symbol(), "a");
-        assert_eq!(buf[(3, area.bottom() - 2)].symbol(), "i");
+        assert_eq!(buf[(3, area.bottom() - 5)].symbol(), "a");
+        assert_eq!(buf[(3, area.bottom() - 4)].symbol(), "i");
     }
 
     #[test]

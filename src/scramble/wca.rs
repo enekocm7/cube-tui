@@ -14,9 +14,9 @@ const SCRAMBLE_JAR: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/lib-all.ja
 static JVM: OnceLock<Result<JavaVM, String>> = OnceLock::new();
 
 /// Generates an official scramble through the bundled TNoodle-compatible JAR.
-pub fn get_wca_scramble(event: WcaEvent) -> Option<String> {
+pub fn get_wca_scramble(event: WcaEvent) -> Result<String, String> {
     let event_str = event_to_string(event);
-    let jvm = get_or_init_jvm().as_ref().ok()?;
+    let jvm = get_or_init_jvm().as_ref().map_err(Clone::clone)?;
 
     let result = jvm
         .attach_current_thread(|env| -> errors::Result<String> {
@@ -33,9 +33,9 @@ pub fn get_wca_scramble(event: WcaEvent) -> Option<String> {
             let output = env.cast_local::<JString>(obj)?;
             output.try_to_string(env)
         })
-        .ok()?;
+        .map_err(|error| error.to_string())?;
 
-    Some(result)
+    Ok(result)
 }
 
 /// Returns the lazily initialized JVM, retaining any initialization error.

@@ -18,6 +18,7 @@ pub type BluetoothConnection = (
 pub enum BluetoothEvent {
     Status(Cow<'static, str>),
     Error(Cow<'static, str>),
+    Warning(Cow<'static, str>),
     Device(DeviceInfo),
     Adapter(btleplug::platform::Adapter),
 }
@@ -40,6 +41,7 @@ pub struct BluetoothState {
     pub rx: Option<flume::Receiver<BluetoothEvent>>,
     pub timer_rx: Option<flume::Receiver<BtTimerState>>,
     pub connected_rx: Option<flume::Receiver<()>>,
+    pub cleanup_rx: Option<flume::Receiver<String>>,
     pub adapter: Option<btleplug::platform::Adapter>,
     pub connected_device_name: Option<String>,
     pub connected_device_id: Option<PeripheralId>,
@@ -58,7 +60,8 @@ impl Model {
         let timer = self.bluetooth_timer_active()
             && (state.timer_rx.as_ref().is_some_and(receiver_active)
                 || state.connected_rx.as_ref().is_some_and(receiver_active));
-        scanning || timer
+        let cleanup = state.cleanup_rx.as_ref().is_some_and(receiver_active);
+        scanning || timer || cleanup
     }
 
     /// Returns whether the Bluetooth device panel is visible.
@@ -130,11 +133,16 @@ impl Model {
                 BluetoothEvent::Status(status) => {
                     self.bluetooth_state.status = Some(status);
                 }
+                BluetoothEvent::Warning(warning) => {
+                    self.toast_warning(warning.to_string());
+                }
                 BluetoothEvent::Error(error) => {
                     if error.contains("No Bluetooth adapters found") {
+                        self.toast_warning(error.to_string());
                         self.bluetooth_state.status =
                             Some(Cow::Borrowed("⚠ No Bluetooth adapters found"));
                     } else {
+                        self.toast_error(error.to_string());
                         self.bluetooth_state.status = Some(Cow::Owned(format!("Error: {error}")));
                     }
                 }
@@ -258,7 +266,9 @@ impl Model {
                 .connected_device_name
                 .as_deref()
                 .unwrap_or("device");
-            self.bluetooth_state.status = Some(Cow::Owned(format!("✓ Connected to {name}")));
+            let message = format!("Connected to {name}");
+            self.bluetooth_state.status = Some(Cow::Owned(format!("✓ {message}")));
+            self.toast_info(message);
             self.bluetooth_state.connected_rx = None;
         }
 
@@ -292,13 +302,18 @@ impl Model {
                 BtTimerState::Finished(time_ms) => {
                     self.record_solve(time_ms);
                     self.next_scramble();
-                    crate::persistence::save(self);
+                    self.save_history();
                 }
                 BtTimerState::Disconnected => {
+                    self.toast_warning("Bluetooth timer connection was lost. Any unfinished attempt was not saved.");
                     disconnected = true;
                     break;
                 }
+                BtTimerState::Warning(warning) => {
+                    self.toast_warning(warning.to_string());
+                }
                 BtTimerState::Error(err) => {
+                    self.toast_error(err.to_string());
                     self.bluetooth_state.status = Some(Cow::Owned(format!("Error: {err}")));
                     disconnected = true;
                     break;
@@ -307,9 +322,27 @@ impl Model {
         }
 
         if disconnected {
-            self.disconnect_bluetooth();
+            if let Some((tx, _, adapter)) = self.disconnect_bluetooth() {
+                crate::handler::restart_bluetooth_scan(self, tx, adapter);
+            }
         } else {
             self.bluetooth_state.timer_rx = Some(rx);
+        }
+        changed
+    }
+
+    /// Reports cleanup failures even after the Bluetooth panel is closed.
+    pub fn poll_bluetooth_cleanup(&mut self) -> bool {
+        let Some(rx) = self.bluetooth_state.cleanup_rx.take() else {
+            return false;
+        };
+        let mut changed = false;
+        while let Ok(error) = rx.try_recv() {
+            self.toast_error(error);
+            changed = true;
+        }
+        if !rx.is_disconnected() {
+            self.bluetooth_state.cleanup_rx = Some(rx);
         }
         changed
     }
@@ -360,6 +393,8 @@ impl Model {
         flume::Receiver<BluetoothEvent>,
         btleplug::platform::Adapter,
     )> {
+        self.stop_timer();
+        self.bluetooth_state.screen_state = BluetoothScreenState::Searching;
         self.bluetooth_state.timer_rx = None;
         self.bluetooth_state.connected_rx = None;
         self.bluetooth_state.connected_device_name = None;
@@ -391,6 +426,41 @@ mod tests {
     use super::*;
     use crate::handler::update;
     use crate::msg::Msg;
+
+    #[test]
+    fn scan_errors_are_reported_as_toasts() {
+        let mut model = Model::new();
+        let tx = model.toggle_bluetooth().unwrap();
+        tx.send(BluetoothEvent::Error("adapter failed".into()))
+            .unwrap();
+        assert!(update(&mut model, Msg::Tick));
+        assert!(
+            model
+                .toasts
+                .iter_mut()
+                .any(|toast| toast.kind == crate::model::toast::ToastType::Error
+                    && toast.message == "adapter failed")
+        );
+    }
+
+    #[test]
+    fn disconnect_cleanup_errors_redraw_after_panel_is_closed() {
+        let mut model = Model::new();
+        let (tx, rx) = flume::unbounded();
+        model.bluetooth_state.cleanup_rx = Some(rx);
+        assert!(!model.show_bluetooth());
+        assert!(model.bluetooth_needs_poll());
+        tx.send("disconnect failed".to_string()).unwrap();
+        drop(tx);
+        assert!(update(&mut model, Msg::Tick));
+        assert!(!model.bluetooth_needs_poll());
+        assert!(
+            model
+                .toasts
+                .iter_mut()
+                .any(|toast| toast.message == "disconnect failed")
+        );
+    }
 
     #[test]
     fn scan_waits_for_events_without_requesting_unchanged_frames() {
