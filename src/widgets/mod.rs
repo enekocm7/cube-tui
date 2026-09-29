@@ -7,6 +7,7 @@ pub mod help;
 pub mod history;
 pub mod mean_detail;
 pub mod scramble;
+pub mod solve_editor;
 pub mod stats;
 pub mod text_input;
 pub mod theme_selector;

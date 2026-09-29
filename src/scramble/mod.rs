@@ -24,6 +24,21 @@ pub enum WcaEvent {
 }
 
 impl WcaEvent {
+    pub const ALL: [Self; 12] = [
+        Self::Cube2x2,
+        Self::Cube3x3,
+        Self::Cube4x4,
+        Self::Cube5x5,
+        Self::Cube6x6,
+        Self::Cube7x7,
+        Self::Megaminx,
+        Self::Pyraminx,
+        Self::Fto,
+        Self::Skewb,
+        Self::Square1,
+        Self::Clock,
+    ];
+
     /// Returns the human-readable puzzle name used by the UI.
     pub const fn name(self) -> &'static str {
         match self {

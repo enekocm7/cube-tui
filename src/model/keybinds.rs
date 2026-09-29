@@ -29,6 +29,7 @@ pub enum Action {
     DetailedStats,
     ThemeSelector,
     DeleteTime,
+    EditSolve,
     Bluetooth,
     DisconnectBluetooth,
     ToggleZen,
@@ -285,6 +286,7 @@ impl Default for Keybinds {
             ),
             (Action::Help, KeyBinding::new(KeyCode::Char('?'), none)),
             (Action::RenameSession, KeyBinding::new(KeyCode::F(2), none)),
+            (Action::EditSolve, KeyBinding::new(KeyCode::Char('h'), none)),
             (
                 Action::ToggleInspection,
                 KeyBinding::new(KeyCode::Char('i'), none),

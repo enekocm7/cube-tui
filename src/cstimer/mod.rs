@@ -137,7 +137,8 @@ pub fn import(path: &Path) -> anyhow::Result<impl Iterator<Item = History>> {
                 solve.scramble.into(),
                 solved_at_ms,
                 modifier,
-            );
+            )
+            .with_comment(solve.comment);
             history.add(time);
         }
         history
@@ -170,7 +171,7 @@ pub fn export(path: &Path, model: &Model) -> anyhow::Result<PathBuf> {
             solves_export.push(CstimerSolveExport(
                 [penalty_ms, time_ms],
                 time.scramble().to_string(),
-                String::new(),
+                time.comment().to_owned(),
                 timestamp,
             ));
         }
@@ -205,6 +206,20 @@ mod tests {
 
     fn import_histories(path: &Path) -> Vec<History> {
         import(path).unwrap().collect()
+    }
+
+    #[test]
+    fn comments_survive_import_and_export() {
+        let path = write_temp_json(r#"{"session1": [[[0, 1234], "R U", "PB 界 👩‍💻", 1700000000]]}"#);
+        let histories = import_histories(&path);
+        assert_eq!(histories[0].last().unwrap().comment(), "PB 界 👩‍💻");
+        assert!(histories[0].last().unwrap().changes().is_empty());
+        let mut model = Model::new();
+        model.restore_from_history(histories);
+        export(&path, &model).unwrap();
+        let restored = import_histories(&path);
+        assert_eq!(restored[0].last().unwrap().comment(), "PB 界 👩‍💻");
+        std::fs::remove_file(path).unwrap();
     }
 
     #[rstest]

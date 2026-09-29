@@ -27,6 +27,7 @@ pub enum Msg {
     OpenDetailedStats,
     OpenThemeSelector,
     DeleteTime,
+    EditSolve,
     NavLeft,
     NavRight,
     ToggleFocus,
@@ -74,6 +75,7 @@ pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
         Action::DetailedStats => Some(Msg::OpenDetailedStats),
         Action::ThemeSelector => Some(Msg::OpenThemeSelector),
         Action::DeleteTime => Some(Msg::DeleteTime),
+        Action::EditSolve => Some(Msg::EditSolve),
         #[cfg(feature = "bluetooth")]
         Action::Bluetooth => Some(Msg::ToggleBluetooth),
         #[cfg(feature = "bluetooth")]
@@ -92,6 +94,9 @@ pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
 /// Modal interfaces capture input so unrelated global actions cannot mutate the
 /// obscured main screen; ticking and quitting remain available everywhere.
 pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
+    if model.solve_editor.is_some() {
+        return matches!(msg, Msg::Tick | Msg::Quit);
+    }
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
         return matches!(
@@ -142,6 +147,7 @@ pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
                 | Msg::Press
                 | Msg::Release
                 | Msg::DeleteTime
+                | Msg::EditSolve
                 | Msg::Esc
                 | Msg::Tick
                 | Msg::Quit
@@ -166,7 +172,7 @@ pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
                 | Msg::Quit
         );
     }
-    true
+    !matches!(msg, Msg::EditSolve)
 }
 
 #[cfg(test)]
