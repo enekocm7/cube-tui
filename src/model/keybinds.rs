@@ -21,6 +21,7 @@ pub enum Action {
     NextSession,
     PreviousSession,
     NewSession,
+    RenameSession,
     DeleteSession,
     NextScramble,
     Help,
@@ -283,6 +284,7 @@ impl Default for Keybinds {
                 KeyBinding::new(KeyCode::Char('n'), none),
             ),
             (Action::Help, KeyBinding::new(KeyCode::Char('?'), none)),
+            (Action::RenameSession, KeyBinding::new(KeyCode::F(2), none)),
             (
                 Action::ToggleInspection,
                 KeyBinding::new(KeyCode::Char('i'), none),

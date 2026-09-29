@@ -302,6 +302,67 @@ mod event_loop_tests {
     use crate::widgets::text_input::TextInputResult;
 
     #[test]
+    fn rename_shortcut_edits_only_the_current_session_and_cancellation_preserves_it() {
+        let mut model = Model::new();
+        // Exercise submission without writing to the user's actual history file.
+        model.history_load_failed = true;
+        model.history_mut().set_session_name("First".into());
+        model.add_session();
+        let rename = Event::Key(KeyEvent::new(KeyCode::F(2), KeyModifiers::NONE));
+        assert_eq!(
+            handle_terminal_event(&mut model, &rename),
+            ControlFlow::Continue(true)
+        );
+        assert!(model.text_input.is_some());
+        let _ = handle_terminal_event(&mut model, &Event::Paste("  Practice 界  ".into()));
+        let enter = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        let _ = handle_terminal_event(&mut model, &enter);
+        assert!(model.text_input.is_none());
+        assert_eq!(model.history().session_name(), "Practice 界");
+
+        let _ = handle_terminal_event(&mut model, &rename);
+        let _ = handle_terminal_event(&mut model, &enter);
+        assert_eq!(
+            model.history().session_name(),
+            "Practice 界",
+            "prompt should prefill the existing name"
+        );
+        let _ = handle_terminal_event(&mut model, &rename);
+        let _ = handle_terminal_event(&mut model, &Event::Paste("discard".into()));
+        let escape = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        let _ = handle_terminal_event(&mut model, &escape);
+        assert_eq!(model.history().session_name(), "Practice 界");
+        model.prev_session();
+        assert_eq!(model.history().session_name(), "First");
+    }
+
+    #[test]
+    fn rename_is_blocked_outside_idle_main_and_rejects_blank_names() {
+        let mut model = Model::new();
+        model.history_load_failed = true;
+        let rename = Event::Key(KeyEvent::new(KeyCode::F(2), KeyModifiers::NONE));
+        model.toggle_help();
+        let _ = handle_terminal_event(&mut model, &rename);
+        assert!(model.text_input.is_none());
+        model.toggle_help();
+        model.set_timer_state(TimerState::Pulsed);
+        let _ = handle_terminal_event(&mut model, &rename);
+        assert!(model.text_input.is_none());
+        model.reset_timer();
+        let _ = handle_terminal_event(&mut model, &rename);
+        let _ = handle_terminal_event(&mut model, &Event::Paste("   ".into()));
+        let enter = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        let _ = handle_terminal_event(&mut model, &enter);
+        assert_eq!(model.history().session_name(), "");
+        assert!(
+            model
+                .toasts
+                .iter_mut()
+                .any(|toast| toast.message.contains("cannot be empty"))
+        );
+    }
+
+    #[test]
     fn prompt_captures_shortcuts_and_returns_text_to_its_caller() {
         let mut model = Model::new();
         model.toggle_help();

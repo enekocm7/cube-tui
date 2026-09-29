@@ -18,6 +18,7 @@ pub enum Msg {
     NextSession,
     PrevSession,
     NewSession,
+    RenameSession,
     DeleteSession,
     ToggleInspection,
     NextScramble,
@@ -65,6 +66,7 @@ pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
         Action::NextSession => Some(Msg::NextSession),
         Action::PreviousSession => Some(Msg::PrevSession),
         Action::NewSession => Some(Msg::NewSession),
+        Action::RenameSession => Some(Msg::RenameSession),
         Action::DeleteSession => Some(Msg::DeleteSession),
         Action::NextScramble => Some(Msg::NextScramble),
         Action::Help => Some(Msg::Help),
@@ -195,6 +197,24 @@ mod tests {
         let event = KeyEvent::new(KeyCode::Char('n'), KeyModifiers::CONTROL);
 
         assert_eq!(map_key_to_msg(event, &keybinds), Some(Msg::NextScramble));
+    }
+
+    #[test]
+    fn rename_binding_defaults_to_f2_and_can_be_overridden() {
+        let default = KeyEvent::new(KeyCode::F(2), KeyModifiers::NONE);
+        assert_eq!(
+            map_key_to_msg(default, &Keybinds::default()),
+            Some(Msg::RenameSession)
+        );
+        let keybinds: Keybinds = toml::from_str("rename_session = \"Ctrl+r\"").unwrap();
+        assert_eq!(map_key_to_msg(default, &keybinds), None);
+        assert_eq!(
+            map_key_to_msg(
+                KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL),
+                &keybinds
+            ),
+            Some(Msg::RenameSession)
+        );
     }
 
     #[test]

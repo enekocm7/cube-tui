@@ -437,6 +437,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn session_names_round_trip_with_history_and_legacy_files_still_load() {
+        let legacy: History = serde_json::from_str(r#"{"times":[]}"#).unwrap();
+        assert_eq!(legacy.session_name(), "");
+        let mut named = History::new();
+        named.set_session_name("Practice 界".into());
+        let json = serde_json::to_string(&vec![legacy, named]).unwrap();
+        let restored: Vec<History> = serde_json::from_str(&json).unwrap();
+        let mut model = Model::new();
+        model.restore_from_history(restored);
+        assert_eq!(model.history().session_name(), "");
+        model.next_session();
+        assert_eq!(model.history().session_name(), "Practice 界");
+    }
+
+    #[test]
     fn inspection_modifier_uses_wca_boundaries() {
         assert_eq!(inspection_modifier(14_999, 15_000), Modifier::None);
         assert_eq!(inspection_modifier(15_000, 15_000), Modifier::PlusTwo);

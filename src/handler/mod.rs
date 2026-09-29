@@ -41,6 +41,7 @@ pub fn update(model: &mut Model, msg: Msg) -> bool {
                 | Msg::NextSession
                 | Msg::PrevSession
                 | Msg::NewSession
+                | Msg::RenameSession
                 | Msg::DeleteSession
                 | Msg::NextScramble
                 | Msg::DeleteTime
@@ -71,6 +72,7 @@ impl Msg {
             Self::NextSession => handle_next_session(model),
             Self::PrevSession => handle_prev_session(model),
             Self::NewSession => handle_new_session(model),
+            Self::RenameSession => handle_rename_session(model),
             Self::DeleteSession => handle_delete_session(model),
             Self::NextScramble => handle_next_scramble(model),
             Self::Help => handle_help(model),
@@ -315,6 +317,34 @@ fn handle_new_session(model: &mut Model) {
             model.toast_info("New session created.");
         }
     }
+}
+
+/// Prompts for a session name on the idle main screen (F2 by default).
+///
+/// Prefills the current name, trims surrounding whitespace, and rejects blank
+/// submissions. Cancellation leaves the name intact. Accepted changes are saved
+/// with the session history so they survive restarting the application.
+fn handle_rename_session(model: &mut Model) {
+    use crate::widgets::text_input::TextInputResult;
+
+    let initial = model.history().session_name().to_owned();
+    model.request_text_input("Rename session", &initial, |model, result| {
+        let TextInputResult::Submitted(text) = result else {
+            return;
+        };
+        let name = text.trim();
+        if name.is_empty() {
+            model.toast_warning("Session name cannot be empty.");
+            return;
+        }
+        if name == model.history().session_name() {
+            return;
+        }
+        model.history_mut().set_session_name(name.to_owned());
+        if model.save_history() {
+            model.toast_info("Session renamed.");
+        }
+    });
 }
 
 /// Opens confirmation before deleting the active session.

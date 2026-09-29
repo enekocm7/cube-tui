@@ -34,6 +34,10 @@ const HELP_TEXT: &[HelpLine] = &[
         "Previous / Next session",
     ),
     HelpLine::Body(Action::NewSession, "Create new session"),
+    HelpLine::Body(
+        Action::RenameSession,
+        "Rename current session (main screen)",
+    ),
     HelpLine::Body(Action::DeleteSession, "Delete current session"),
     HelpLine::Empty,
     HelpLine::Header("INSPECTION"),

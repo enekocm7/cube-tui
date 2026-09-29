@@ -257,7 +257,7 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         .render_with_theme(outer_layout[0], buf, &theme);
     }
 
-    let history_title = format!(
+    let mut history_title = format!(
         "Session: {:02}/{:02}{}",
         model.current_session_index() + 1,
         model.session_count(),
@@ -267,6 +267,10 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
             ""
         }
     );
+    let session_name = model.history().session_name();
+    if !session_name.is_empty() {
+        history_title = format!("{session_name} | {history_title}");
+    }
     if let Some(index) = history_area_index {
         let history_block = Block::default()
             .title(history_title)

@@ -175,6 +175,9 @@ impl Display for Time {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct History {
+    /// Session metadata is persisted alongside solves; older files omit it.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    session_name: String,
     times: Vec<Time>,
     #[serde(skip)]
     fastest_time: OnceLock<Option<usize>>,
@@ -188,11 +191,22 @@ impl History {
     /// Creates an empty history with uninitialized statistics caches.
     pub const fn new() -> Self {
         Self {
+            session_name: String::new(),
             times: Vec::new(),
             fastest_time: OnceLock::new(),
             fastest_averages: [const { OnceLock::new() }; AVERAGE_SIZES.len()],
             selected: None,
         }
+    }
+
+    /// Returns the custom session name, or an empty string for an unnamed session.
+    pub fn session_name(&self) -> &str {
+        &self.session_name
+    }
+
+    /// Sets the session label without affecting solves or statistics caches.
+    pub fn set_session_name(&mut self, name: String) {
+        self.session_name = name;
     }
 
     /// Creates and appends a solve from its duration, event, and scramble.
