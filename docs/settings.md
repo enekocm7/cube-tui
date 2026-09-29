@@ -37,6 +37,7 @@ layout are visible:
 [display]
 history = true
 scramble = true
+scramble_preview = false
 stats = true
 toasts = true
 ```
@@ -45,6 +46,20 @@ toasts = true
 panel, and `scramble` controls the scramble display. Hiding the history or
 statistics panel reduces the minimum terminal width. Hiding the scramble
 display reduces the minimum terminal height.
+
+`scramble_preview` shows a colored ASCII net of the current scramble in the
+bottom-right corner. Press `v` to toggle it; the choice is saved. Previews are
+available for 2x2 through 7x7 cubes. Other events show "Preview is not available
+for this puzzle". Cubes start with white on top and green in front, and sticker
+letters identify colors. The preview refreshes when the scramble, event, or
+session changes. Puzzle states and sticker geometry are computed directly in
+Rust; the preview needs no generated move tables or external tooling.
+
+The preview sits below statistics, or at the bottom right of the timer when
+statistics are hidden. If there is not enough room for the complete net, it
+shows a resize hint and keeps the stats visible. Larger puzzles widen the
+right column and need more terminal rows. With the default layout, use a
+terminal at least 27 rows tall for the 3x3 net.
 
 `toasts` controls all toast notifications, including information, warnings,
 and errors. It defaults to `true`; set it to `false` to hide notifications.
@@ -69,6 +84,7 @@ Add a `[keybinds]` table containing only the bindings you want to change:
 ```toml
 [keybinds]
 next_scramble = "Ctrl+n"
+toggle_scramble_preview = "Ctrl+v"
 help = "F1"
 theme_selector = "Alt+t"
 edit_solve = "F3"
@@ -83,7 +99,7 @@ character, for example `?`. The timer binding must be an unmodified key.
 Available actions are `quit`, `reset_timer`, `timer`, `select_up`,
 `select_down`, `navigate_left`, `navigate_right`, `toggle_focus`, `next_event`,
 `previous_event`, `next_session`, `previous_session`, `new_session`,
-`delete_session`, `next_scramble`, `help`, `toggle_inspection`,
+`delete_session`, `next_scramble`, `toggle_scramble_preview`, `help`, `toggle_inspection`,
 `detailed_stats`, `theme_selector`, `delete_time`, `edit_solve`, `bluetooth`,
 `disconnect_bluetooth`, `toggle_zen`, `enter`, and `back`.
 

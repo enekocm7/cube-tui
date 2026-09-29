@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::fmt;
 
+pub(crate) mod square1;
+pub mod visualization;
+
 #[cfg(feature = "wca-scrambles")]
 mod wca;
 
@@ -625,16 +628,24 @@ fn skewb_scramble(length: usize) -> String {
 fn square1_scramble(length: usize) -> String {
     let mut rng = rand::rng();
     let mut parts = Vec::with_capacity(length * 2);
+    let mut state = square1::Square1State::new();
     for _ in 0..length {
         let (a, b) = loop {
             let a = rng.random_range(-5..=6);
             let b = rng.random_range(-5..=6);
             if a != 0 || b != 0 {
-                break (a, b);
+                let mut candidate = state.clone();
+                candidate.rotate(a, b);
+                if candidate.can_slice() {
+                    state = candidate;
+                    break (a, b);
+                }
             }
         };
         parts.push(format!("({a},{b})"));
         parts.push("/".to_string());
+        let sliced = state.slice();
+        debug_assert!(sliced, "generated Square-1 cuts must lie between pieces");
     }
     parts.join(" ")
 }

@@ -69,6 +69,16 @@ impl Settings {
         self.display.scramble
     }
 
+    /// Returns whether the ASCII scramble preview is enabled.
+    pub const fn scramble_preview(&self) -> bool {
+        self.display.scramble_preview
+    }
+
+    /// Sets whether the ASCII scramble preview is enabled.
+    pub const fn set_scramble_preview(&mut self, visible: bool) {
+        self.display.scramble_preview = visible;
+    }
+
     /// Returns whether toast notifications are visible.
     pub const fn toasts(&self) -> bool {
         self.display.toasts
@@ -285,6 +295,7 @@ impl<'de> Deserialize<'de> for ColorSettings {
 pub struct DisplaySettings {
     history: bool,
     scramble: bool,
+    scramble_preview: bool,
     stats: bool,
     toasts: bool,
 }
@@ -295,6 +306,7 @@ impl Default for DisplaySettings {
         Self {
             history: true,
             scramble: true,
+            scramble_preview: false,
             stats: true,
             toasts: true,
         }
@@ -353,6 +365,18 @@ mod tests {
         assert!(!settings.display.history);
         assert!(settings.display.scramble);
         assert!(settings.display.stats);
+        assert!(!settings.scramble_preview());
+    }
+
+    #[test]
+    fn scramble_preview_preference_survives_config_round_trip() {
+        let mut settings = Settings::default();
+        settings.set_scramble_preview(true);
+        let restored: Settings = toml::from_str(&toml::to_string(&settings).unwrap()).unwrap();
+        assert!(restored.scramble_preview());
+        settings.set_scramble_preview(false);
+        let restored: Settings = toml::from_str(&toml::to_string(&settings).unwrap()).unwrap();
+        assert!(!restored.scramble_preview());
     }
 
     #[test]
