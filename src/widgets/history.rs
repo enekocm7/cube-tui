@@ -29,6 +29,28 @@ pub struct Time {
     solved_at_unix_ms: u64,
     #[serde(default)]
     modifier: Modifier,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    comment: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    changes: Vec<SolveChange>,
+}
+
+/// Editable metadata, without recursively copying the audit trail.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SolveSnapshot {
+    pub time_ms: u64,
+    pub event: WcaEvent,
+    pub scramble: String,
+    pub solved_at_unix_ms: u64,
+    pub modifier: Modifier,
+    pub comment: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SolveChange {
+    pub changed_at_unix_ms: u64,
+    pub before: SolveSnapshot,
+    pub after: SolveSnapshot,
 }
 
 impl Time {
@@ -54,6 +76,8 @@ impl Time {
             scramble: scramble.into(),
             solved_at_unix_ms: current_unix_ms(),
             modifier,
+            comment: String::new(),
+            changes: Vec::new(),
         }
     }
 
@@ -71,6 +95,8 @@ impl Time {
             scramble,
             solved_at_unix_ms,
             modifier,
+            comment: String::new(),
+            changes: Vec::new(),
         }
     }
 
@@ -99,13 +125,60 @@ impl Time {
         self.event
     }
 
+    pub fn comment(&self) -> &str {
+        &self.comment
+    }
+
+    /// Supplies an imported comment without recording an edit.
+    pub fn with_comment(mut self, comment: String) -> Self {
+        self.comment = comment;
+        self
+    }
+
+    pub fn changes(&self) -> &[SolveChange] {
+        &self.changes
+    }
+
+    pub fn snapshot(&self) -> SolveSnapshot {
+        SolveSnapshot {
+            time_ms: self.timestamp_in_millis,
+            event: self.event,
+            scramble: self.scramble().to_owned(),
+            solved_at_unix_ms: self.solved_at_unix_ms,
+            modifier: self.modifier,
+            comment: self.comment.clone(),
+        }
+    }
+
+    /// Applies an atomic edit and retains both versions; no-op saves are ignored.
+    fn edit(&mut self, after: SolveSnapshot) -> bool {
+        let before = self.snapshot();
+        if before == after {
+            return false;
+        }
+        self.timestamp_in_millis = after.time_ms;
+        self.event = after.event;
+        self.scramble = after.scramble.clone().into();
+        self.solved_at_unix_ms = after.solved_at_unix_ms;
+        self.modifier = after.modifier;
+        self.comment.clone_from(&after.comment);
+        self.changes.push(SolveChange {
+            changed_at_unix_ms: current_unix_ms(),
+            before,
+            after,
+        });
+        true
+    }
+
     /// Toggles `modifier`, clearing it when it is already selected.
     pub fn set_modifier(&mut self, modifier: Modifier) {
-        if self.modifier == modifier {
-            self.modifier = Modifier::None;
+        let mut after = self.snapshot();
+        after.modifier = if self.modifier == modifier {
+            Modifier::None
         } else {
-            self.modifier = modifier;
-        }
+            modifier
+        };
+        self.edit(after);
     }
 
     /// Returns the penalty-adjusted duration, or `None` for a DNF.
@@ -330,6 +403,20 @@ impl History {
     /// Returns the currently selected solve.
     pub fn selected_time(&self) -> Option<&Time> {
         self.selected.and_then(|selected| self.times.get(selected))
+    }
+
+    /// Edits a fixed solve index and invalidates all derived statistics.
+    pub fn edit_solve(&mut self, index: usize, after: SolveSnapshot) -> bool {
+        if self
+            .times
+            .get_mut(index)
+            .is_some_and(|time| time.edit(after))
+        {
+            self.invalidate_fastest();
+            true
+        } else {
+            false
+        }
     }
 
     /// Deletes the selected solve and invalidates derived statistics.

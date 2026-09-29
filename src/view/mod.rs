@@ -63,6 +63,18 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         return;
     }
 
+    if let Some(editor) = &mut model.solve_editor {
+        crate::widgets::solve_editor::render(
+            editor,
+            &model.session_state.sessions[editor.session].history,
+            area,
+            buf,
+            &theme,
+            &keybinds,
+        );
+        return;
+    }
+
     #[cfg(feature = "bluetooth")]
     if model.show_bluetooth() {
         use crate::model::bluetooth::BluetoothScreenState;
@@ -172,6 +184,10 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
             Span::styled("↑/↓: select modifier  ", Style::default().fg(theme.text())),
             Span::styled("←/→: navigate times  ", Style::default().fg(theme.text())),
             Span::styled("d: delete  ", Style::default().fg(theme.text())),
+            Span::styled(
+                format!("{}: edit  ", keybinds.label(Action::EditSolve)),
+                Style::default().fg(theme.text()),
+            ),
             Span::styled("Esc: close", Style::default().fg(theme.text())),
         ]);
         Paragraph::new(details_help)

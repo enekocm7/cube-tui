@@ -189,6 +189,9 @@ fn handle_terminal_event(model: &mut Model, event: &Event) -> ControlFlow<(), bo
     if let Some(changed) = model.handle_text_input_event(event) {
         return ControlFlow::Continue(changed);
     }
+    if let Some(changed) = model.handle_solve_editor_event(event) {
+        return ControlFlow::Continue(changed);
+    }
     match event {
         Event::Key(key) => {
             let Some(msg) = map_key_to_msg(*key, model.settings().keybinds()) else {

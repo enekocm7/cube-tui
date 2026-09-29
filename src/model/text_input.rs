@@ -15,10 +15,12 @@ use crate::model::Model;
 use crate::widgets::text_input::{TextInput, TextInputResult};
 
 type OnComplete = Box<dyn FnOnce(&mut Model, TextInputResult)>;
+type Validator = Box<dyn Fn(&str) -> Result<(), String>>;
 
 pub struct TextInputPrompt {
     pub input: TextInput,
     on_complete: OnComplete,
+    validator: Option<Validator>,
 }
 
 impl Model {
@@ -61,7 +63,25 @@ impl Model {
         self.text_input = Some(TextInputPrompt {
             input: TextInput::new(title, initial),
             on_complete: Box::new(on_complete),
+            validator: None,
         });
+        true
+    }
+
+    /// Opens an input that retains invalid submissions with an inline error.
+    pub fn request_validated_text_input(
+        &mut self,
+        title: impl Into<String>,
+        initial: &str,
+        validator: impl Fn(&str) -> Result<(), String> + 'static,
+        on_complete: impl FnOnce(&mut Self, TextInputResult) + 'static,
+    ) -> bool {
+        if !self.request_text_input(title, initial, on_complete) {
+            return false;
+        }
+        if let Some(prompt) = &mut self.text_input {
+            prompt.validator = Some(Box::new(validator));
+        }
         true
     }
 
@@ -75,6 +95,13 @@ impl Model {
         match prompt.input.handle_event(event) {
             ControlFlow::Continue(changed) => Some(changed),
             ControlFlow::Break(result) => {
+                if let TextInputResult::Submitted(text) = &result
+                    && let Some(validate) = &prompt.validator
+                    && let Err(error) = validate(text)
+                {
+                    prompt.input.set_error(error);
+                    return Some(true);
+                }
                 let prompt = self.text_input.take().expect("text prompt is open");
                 (prompt.on_complete)(self, result);
                 Some(true)

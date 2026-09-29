@@ -106,7 +106,7 @@ impl Model {
     }
 
     /// Updates the dialog selection to match the underlying solve modifier.
-    fn sync_details_modifier(&mut self) {
+    pub(crate) fn sync_details_modifier(&mut self) {
         let new_index = match self.history().selected_time().map(Time::modifier) {
             Some(Modifier::DNF) => 1,
             _ => 0,

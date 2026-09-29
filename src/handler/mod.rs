@@ -28,7 +28,11 @@ pub fn update(model: &mut Model, msg: Msg) -> bool {
 
     if !allowed_msg(model, msg) {
         if !matches!(msg, Msg::Tick | Msg::Press | Msg::Release) {
-            model.toast_info("Close the current window before using that action.");
+            model.toast_info(if msg == Msg::EditSolve {
+                "Open a solve's details to edit it."
+            } else {
+                "Close the current window before using that action."
+            });
             return true;
         }
         return background_changed;
@@ -45,6 +49,7 @@ pub fn update(model: &mut Model, msg: Msg) -> bool {
                 | Msg::DeleteSession
                 | Msg::NextScramble
                 | Msg::DeleteTime
+                | Msg::EditSolve
                 | Msg::OpenDetailedStats
         )
     {
@@ -82,6 +87,7 @@ impl Msg {
             Self::OpenDetailedStats => handle_open_detailed_stats(model),
             Self::OpenThemeSelector => handle_open_theme_selector(model),
             Self::DeleteTime => handle_delete_time(model),
+            Self::EditSolve => model.open_solve_editor(),
             Self::NavLeft => handle_nav_left(model),
             Self::NavRight => handle_nav_right(model),
             Self::ToggleFocus => handle_toggle_focus(model),

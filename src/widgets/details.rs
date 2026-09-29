@@ -72,6 +72,18 @@ impl<'a> DetailsWidget<'a> {
                         theme,
                     ),
                     checkbox_line("DNF", dnf_checked, self.selected_modifier_index == 1, theme),
+                    Line::from(""),
+                    Line::from(Span::styled(
+                        format!("Comment: {}", time.comment()),
+                        Style::default().fg(theme.text()),
+                    )),
+                    Line::from(Span::styled(
+                        format!(
+                            "Saved edits: {} (view change history in the solve editor)",
+                            time.changes().len()
+                        ),
+                        Style::default().fg(theme.text()),
+                    )),
                 ]
             },
         );

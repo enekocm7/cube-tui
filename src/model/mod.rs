@@ -1,3 +1,4 @@
+use crate::model::solve_editor::SolveEditor;
 use crate::model::text_input::TextInputPrompt;
 use crate::model::toast::ToastBuffer;
 use crate::persistence;
@@ -17,6 +18,7 @@ pub mod mean_details;
 pub mod screen;
 pub mod session;
 pub mod settings;
+pub mod solve_editor;
 pub mod text_input;
 pub mod theme_selector;
 pub mod toast;
@@ -40,6 +42,7 @@ pub struct Model {
     pub(crate) theme_selector: Option<ThemeSelector>,
     pub(crate) confirmation: Option<Confirmation>,
     pub(crate) text_input: Option<TextInputPrompt>,
+    pub(crate) solve_editor: Option<SolveEditor>,
     pub(crate) toasts: ToastBuffer,
     pub(crate) history_load_failed: bool,
     #[cfg(feature = "bluetooth")]
@@ -59,6 +62,7 @@ impl Model {
             theme_selector: None,
             confirmation: None,
             text_input: None,
+            solve_editor: None,
             toasts: ToastBuffer::default(),
             history_load_failed: false,
             #[cfg(feature = "bluetooth")]

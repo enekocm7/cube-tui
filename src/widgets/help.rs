@@ -101,6 +101,10 @@ const HELP_TEXT: &[HelpLine] = &[
         "Select +2 / DNF modifier",
     ),
     HelpLine::Body(Action::Timer, "Toggle selected modifier"),
+    HelpLine::Body(
+        Action::EditSolve,
+        "Edit solve fields, comment, and view change history",
+    ),
     HelpLine::Body(Action::DeleteTime, "Delete selected time"),
     HelpLine::Body(Action::Back, "Close details screen"),
     HelpLine::Empty,

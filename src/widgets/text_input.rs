@@ -49,6 +49,7 @@ pub struct TextInput {
     text: String,
     // Byte offset, always at an extended grapheme boundary.
     cursor: usize,
+    error: Option<String>,
 }
 
 impl TextInput {
@@ -60,6 +61,7 @@ impl TextInput {
             title: title.into(),
             cursor: text.len(),
             text,
+            error: None,
         }
     }
 
@@ -85,7 +87,6 @@ impl TextInput {
                 return ControlFlow::Break(TextInputResult::Cancelled);
             }
             if key.code == KeyCode::Enter && key.modifiers.is_empty() {
-                self.cursor = 0;
                 return ControlFlow::Break(TextInputResult::Submitted(self.text.clone()));
             }
         }
@@ -132,6 +133,11 @@ impl TextInput {
             .map_or(0, |(index, _)| index)
     }
 
+    /// Keeps a rejected submission editable and displays its validation error.
+    pub fn set_error(&mut self, error: String) {
+        self.error = Some(error);
+    }
+
     fn next_boundary(&self) -> usize {
         self.text[self.cursor..]
             .graphemes(true)
@@ -164,7 +170,7 @@ impl TextInput {
     /// Paints an opaque, centered popup. Call last to place it over other UI.
     pub fn render_with_theme(&self, area: Rect, buf: &mut Buffer, theme: &ThemeColors) {
         let width = area.width.min(64);
-        let height = area.height.min(5);
+        let height = area.height.min(if self.error.is_some() { 8 } else { 5 });
         let popup = Rect::new(
             area.x + (area.width - width) / 2,
             area.y + (area.height - height) / 2,
@@ -221,6 +227,16 @@ impl TextInput {
         if inner.height >= 3 {
             Paragraph::new("Enter: submit  Esc: cancel  \u{2190}/\u{2192}: move")
                 .render(Rect::new(inner.x, inner.y + 2, inner.width, 1), buf);
+        }
+        if inner.height > 3
+            && let Some(error) = &self.error
+        {
+            Paragraph::new(error.as_str())
+                .wrap(ratatui::widgets::Wrap { trim: false })
+                .render(
+                    Rect::new(inner.x, inner.y + 3, inner.width, inner.height - 3),
+                    buf,
+                );
         }
     }
 }
