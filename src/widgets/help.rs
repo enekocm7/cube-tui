@@ -19,6 +19,10 @@ const HELP_TEXT: &[HelpLine] = &[
     HelpLine::Body(Action::Timer, "Hold and release to start/stop timer"),
     HelpLine::Body(Action::ResetTimer, "Reset timer"),
     HelpLine::Body(Action::NextScramble, "Next scramble"),
+    HelpLine::Body(
+        Action::ToggleScramblePreview,
+        "Show / Hide ASCII scramble preview",
+    ),
     HelpLine::Empty,
     HelpLine::Header("EVENT NAVIGATION"),
     HelpLine::Pair(

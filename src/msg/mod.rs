@@ -22,6 +22,7 @@ pub enum Msg {
     DeleteSession,
     ToggleInspection,
     NextScramble,
+    ToggleScramblePreview,
     Enter,
     Esc,
     OpenDetailedStats,
@@ -70,6 +71,7 @@ pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
         Action::RenameSession => Some(Msg::RenameSession),
         Action::DeleteSession => Some(Msg::DeleteSession),
         Action::NextScramble => Some(Msg::NextScramble),
+        Action::ToggleScramblePreview => Some(Msg::ToggleScramblePreview),
         Action::Help => Some(Msg::Help),
         Action::ToggleInspection => Some(Msg::ToggleInspection),
         Action::DetailedStats => Some(Msg::OpenDetailedStats),
@@ -203,6 +205,33 @@ mod tests {
         let event = KeyEvent::new(KeyCode::Char('n'), KeyModifiers::CONTROL);
 
         assert_eq!(map_key_to_msg(event, &keybinds), Some(Msg::NextScramble));
+    }
+
+    #[test]
+    fn preview_toggle_uses_configured_binding_and_ignores_holds() {
+        let default = KeyEvent::new(KeyCode::Char('v'), KeyModifiers::NONE);
+        assert_eq!(
+            map_key_to_msg(default, &Keybinds::default()),
+            Some(Msg::ToggleScramblePreview)
+        );
+        let custom: Keybinds = toml::from_str("toggle_scramble_preview = \"Ctrl+v\"").unwrap();
+        assert_eq!(map_key_to_msg(default, &custom), None);
+        let press = KeyEvent::new(KeyCode::Char('v'), KeyModifiers::CONTROL);
+        assert_eq!(
+            map_key_to_msg(press, &custom),
+            Some(Msg::ToggleScramblePreview)
+        );
+        for kind in [KeyEventKind::Repeat, KeyEventKind::Release] {
+            assert_eq!(map_key_to_msg(KeyEvent { kind, ..press }, &custom), None);
+        }
+    }
+
+    #[test]
+    fn preview_toggle_is_captured_by_modal_screens() {
+        let mut model = crate::model::Model::new();
+        assert!(super::allowed_msg(&model, Msg::ToggleScramblePreview));
+        model.toggle_help();
+        assert!(!super::allowed_msg(&model, Msg::ToggleScramblePreview));
     }
 
     #[test]

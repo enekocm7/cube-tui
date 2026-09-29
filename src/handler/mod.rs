@@ -80,6 +80,7 @@ impl Msg {
             Self::RenameSession => handle_rename_session(model),
             Self::DeleteSession => handle_delete_session(model),
             Self::NextScramble => handle_next_scramble(model),
+            Self::ToggleScramblePreview => handle_toggle_scramble_preview(model),
             Self::Help => handle_help(model),
             Self::ToggleInspection => handle_toggle_inspection(model),
             Self::Enter => handle_enter(model),
@@ -552,6 +553,13 @@ fn handle_toggle_inspection(model: &mut Model) {
     } else {
         model.toast_info("Inspection disabled.");
     }
+}
+
+/// Toggles the scramble preview and persists the new setting.
+fn handle_toggle_scramble_preview(model: &mut Model) {
+    let visible = !model.settings().scramble_preview();
+    model.settings.set_scramble_preview(visible);
+    model.save_settings();
 }
 
 /// Toggles zen mode and persists the new setting.

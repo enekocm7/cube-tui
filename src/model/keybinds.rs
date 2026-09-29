@@ -24,6 +24,7 @@ pub enum Action {
     RenameSession,
     DeleteSession,
     NextScramble,
+    ToggleScramblePreview,
     Help,
     ToggleInspection,
     DetailedStats,
@@ -285,6 +286,10 @@ impl Default for Keybinds {
                 KeyBinding::new(KeyCode::Char('n'), none),
             ),
             (Action::Help, KeyBinding::new(KeyCode::Char('?'), none)),
+            (
+                Action::ToggleScramblePreview,
+                KeyBinding::new(KeyCode::Char('v'), none),
+            ),
             (Action::RenameSession, KeyBinding::new(KeyCode::F(2), none)),
             (Action::EditSolve, KeyBinding::new(KeyCode::Char('h'), none)),
             (

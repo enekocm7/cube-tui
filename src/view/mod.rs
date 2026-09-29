@@ -17,6 +17,7 @@ use crate::widgets::help::HelpWidget;
 use crate::widgets::history::Modifier as SolveModifier;
 use crate::widgets::mean_detail::MeanDetailWidget;
 use crate::widgets::scramble::ScrambleWidget;
+use crate::widgets::scramble_preview::ScramblePreviewWidget;
 use crate::widgets::stats::StatsWidget;
 
 #[cfg(feature = "bluetooth")]
@@ -221,6 +222,9 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
     let show_scramble = settings.scramble();
     let show_history = settings.history();
     let show_stats = settings.stats();
+    let preview_widget = settings
+        .scramble_preview()
+        .then(|| ScramblePreviewWidget::new(model.event(), model.scramble()));
 
     let outer_constraints = if show_scramble {
         let scramble_lines = get_scramble_lines(model.scramble(), area.width);
@@ -256,13 +260,40 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
 
     if show_stats {
         stats_area_index = Some(main_constraints.len());
-        main_constraints.push(Constraint::Length(30));
+        let desired_width = preview_widget
+            .as_ref()
+            .map_or(30, |widget| widget.width().max(30));
+        let available_width = outer_layout[main_area_index]
+            .width
+            .saturating_sub(if show_history { 24 } else { 0 })
+            .saturating_sub(10);
+        main_constraints.push(Constraint::Length(desired_width.min(available_width)));
     }
 
     let main_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(main_constraints)
         .split(outer_layout[main_area_index]);
+
+    let mut timer_area = main_layout[timer_area_index];
+    let mut stats_area = stats_area_index.map(|index| main_layout[index]);
+    let preview = preview_widget.map(|widget| {
+        // Use the existing right column when stats are visible. Otherwise,
+        // reserve the bottom of the timer pane and align the net to its right.
+        let host_area = stats_area.unwrap_or(timer_area);
+        let reserved_height = if stats_area.is_some() { 9 } else { 3 };
+        let preview_height = widget.height_for(host_area.height.saturating_sub(reserved_height));
+        let split = Layout::vertical([Constraint::Fill(1), Constraint::Length(preview_height)])
+            .split(host_area);
+        if stats_area.is_some() {
+            stats_area = Some(split[0]);
+        } else {
+            timer_area = split[0];
+        }
+        let width = split[1].width.min(widget.width().max(30));
+        let preview_area = Rect::new(split[1].right() - width, split[1].y, width, split[1].height);
+        (widget, preview_area)
+    });
 
     if show_scramble {
         ScrambleWidget::new(
@@ -327,16 +358,25 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         .block(timer_block)
         .alignment(Alignment::Center)
         .wrap(Wrap { trim: true })
-        .render(main_layout[timer_area_index], buf);
+        .render(timer_area, buf);
 
-    if let Some(index) = stats_area_index {
+    if let Some(stats_area) = stats_area {
         let history = model.history();
         let stats_widget = if model.main_focus_is_stats() {
             StatsWidget::new(history).with_selection(model.main_stats_row(), model.main_stats_col())
         } else {
             StatsWidget::new(history)
         };
-        stats_widget.render(main_layout[index], buf, &theme);
+        stats_widget.render(stats_area, buf, &theme);
+    }
+
+    if let Some((widget, preview_area)) = preview {
+        widget.render(
+            preview_area,
+            buf,
+            &theme,
+            &keybinds.label(Action::ToggleScramblePreview),
+        );
     }
 
     let mut help_spans = vec![
@@ -354,6 +394,13 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         ),
         Span::styled(
             format!("{}: quit  ", keybinds.label(Action::Quit)),
+            Style::default().fg(theme.text()),
+        ),
+        Span::styled(
+            format!(
+                "{}: preview  ",
+                keybinds.label(Action::ToggleScramblePreview)
+            ),
             Style::default().fg(theme.text()),
         ),
         Span::styled(
@@ -479,6 +526,165 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::*;
+
+    fn preview_model() -> Model {
+        let mut model = Model::new();
+        model.settings.set_scramble_preview(true);
+        model.current_session_mut().scramble = Some(crate::scramble::Scramble::new("R"));
+        model
+    }
+
+    fn render_model(model: &mut Model, area: Rect) -> ratatui::buffer::Buffer {
+        let mut buf = ratatui::buffer::Buffer::empty(area);
+        view(area, &mut buf, model);
+        buf
+    }
+
+    fn buffer_text(buf: &ratatui::buffer::Buffer) -> String {
+        buf.content
+            .iter()
+            .map(ratatui::buffer::Cell::symbol)
+            .collect()
+    }
+
+    #[test]
+    fn preview_renders_current_scramble_at_bottom_right_below_stats() {
+        let mut model = preview_model();
+        let area = Rect::new(4, 2, 100, 32);
+        let buf = render_model(&mut model, area);
+        let text = buffer_text(&buf);
+        assert!(text.contains("Preview [v]"));
+        assert!(!text.contains("U / L F R B / D"));
+        assert!(text.contains("ao100"));
+        // The U face's right column turns green after R. The last panel border
+        // ends above the footer, at the right edge of the main layout.
+        let net_y = area.bottom() - 12;
+        assert_eq!(buf[(area.right() - 22, net_y)].symbol(), "W");
+        assert_eq!(buf[(area.right() - 18, net_y)].symbol(), "G");
+        assert_eq!(buf[(area.right() - 2, area.bottom() - 3)].symbol(), "┘");
+
+        model.settings.set_scramble_preview(false);
+        let hidden = render_model(&mut model, area);
+        assert!(!buffer_text(&hidden).contains("Preview ["));
+        assert!(buffer_text(&hidden).contains("ao100"));
+        assert_ne!(hidden[(area.right() - 18, net_y)].symbol(), "G");
+    }
+
+    #[test]
+    fn preview_tracks_new_scrambles_sessions_and_events() {
+        let mut model = preview_model();
+        let area = Rect::new(0, 0, 100, 32);
+        let sticker = (area.right() - 18, area.bottom() - 12);
+        assert_eq!(render_model(&mut model, area)[sticker].symbol(), "G");
+        model.current_session_mut().scramble = Some(crate::scramble::Scramble::new("U"));
+        assert_eq!(render_model(&mut model, area)[sticker].symbol(), "W");
+
+        model.add_session();
+        model.current_session_mut().scramble = Some(crate::scramble::Scramble::new("R"));
+        assert_eq!(render_model(&mut model, area)[sticker].symbol(), "G");
+        model.prev_session();
+        assert_eq!(render_model(&mut model, area)[sticker].symbol(), "W");
+
+        model.current_session_mut().event = crate::scramble::WcaEvent::Cube2x2;
+        let smaller_cube = render_model(&mut model, area);
+        assert!(buffer_text(&smaller_cube).contains("Preview [v]"));
+        assert!(!buffer_text(&smaller_cube).contains("not available"));
+        assert_ne!(smaller_cube[sticker].symbol(), "W");
+
+        model.current_session_mut().event = crate::scramble::WcaEvent::Pyraminx;
+        assert!(buffer_text(&render_model(&mut model, area)).contains("not available"));
+        model.current_session_mut().event = crate::scramble::WcaEvent::Cube3x3;
+        assert!(!buffer_text(&render_model(&mut model, area)).contains("not available"));
+    }
+
+    #[test]
+    fn small_terminal_keeps_stats_and_shows_resize_hint() {
+        let mut model = preview_model();
+        let area = Rect::new(0, 0, 82, 20);
+        let buf = render_model(&mut model, area);
+        let text = buffer_text(&buf);
+        assert!(text.contains("Resize to see preview"));
+        assert!(text.contains("ao100"));
+    }
+
+    #[rstest::rstest]
+    #[case(true, true)]
+    #[case(true, false)]
+    #[case(false, true)]
+    #[case(false, false)]
+    fn preview_handles_panel_combinations_and_minimum_sizes(
+        #[case] history: bool,
+        #[case] stats: bool,
+    ) {
+        let mut model = preview_model();
+        model.set_settings(
+            toml::from_str(&format!(
+                "[display]\nhistory = {history}\nstats = {stats}\nscramble_preview = true"
+            ))
+            .unwrap(),
+        );
+        let min_area = Rect::new(
+            3,
+            5,
+            model.settings().minimum_terminal_width(),
+            model.settings().minimum_terminal_height(),
+        );
+        assert!(buffer_text(&render_model(&mut model, min_area)).contains("Preview [v]"));
+        let large_area = Rect::new(3, 5, 100, 32);
+        let buf = render_model(&mut model, large_area);
+        assert_eq!(
+            buf[(large_area.right() - 18, large_area.bottom() - 12)].symbol(),
+            "G"
+        );
+        assert_eq!(
+            buf[(large_area.right() - 2, large_area.bottom() - 3)].symbol(),
+            "┘"
+        );
+    }
+
+    #[test]
+    fn every_event_renders_at_bottom_right_and_large_puzzles_widen_the_column() {
+        let mut model = preview_model();
+        let area = Rect::new(2, 3, 100, 65);
+        for event in crate::scramble::WcaEvent::ALL {
+            model.current_session_mut().event = event;
+            model.current_session_mut().scramble = Some(crate::scramble::generate_scramble(event));
+            let buf = render_model(&mut model, area);
+            let text = buffer_text(&buf);
+            assert!(text.contains("Preview [v]"), "{event:?}");
+            assert!(!text.contains("Resize to see preview"), "{event:?}");
+            assert!(text.contains("ao100"), "{event:?}");
+            if matches!(
+                event,
+                crate::scramble::WcaEvent::Pyraminx
+                    | crate::scramble::WcaEvent::Skewb
+                    | crate::scramble::WcaEvent::Megaminx
+                    | crate::scramble::WcaEvent::Fto
+                    | crate::scramble::WcaEvent::Square1
+                    | crate::scramble::WcaEvent::Clock
+            ) {
+                assert!(text.contains("Preview is not available for"), "{event:?}");
+                assert!(text.contains("this puzzle"), "{event:?}");
+            } else {
+                assert!(!text.contains("not available"), "{event:?}");
+            }
+            assert_eq!(
+                buf[(area.right() - 2, area.bottom() - 3)].symbol(),
+                "┘",
+                "{event:?}"
+            );
+            if matches!(event, crate::scramble::WcaEvent::Cube7x7) {
+                let left_border =
+                    area.right() - 2 - ScramblePreviewWidget::new(event, model.scramble()).width()
+                        + 1;
+                assert_eq!(
+                    buf[(left_border, area.bottom() - 3)].symbol(),
+                    "└",
+                    "{event:?}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn text_prompt_renders_above_help_and_toasts() {
