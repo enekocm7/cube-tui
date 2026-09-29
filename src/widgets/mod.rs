@@ -8,5 +8,6 @@ pub mod history;
 pub mod mean_detail;
 pub mod scramble;
 pub mod stats;
+pub mod text_input;
 pub mod theme_selector;
 pub mod toast;

@@ -32,6 +32,11 @@ pub fn view(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Model) {
     } else {
         model.toasts = ToastBuffer::default();
     }
+    if let Some(prompt) = &model.text_input {
+        prompt
+            .input
+            .render_with_theme(area, buf, model.settings().theme());
+    }
 }
 
 #[allow(clippy::too_many_lines)]
@@ -454,6 +459,28 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use super::*;
+
+    #[test]
+    fn text_prompt_renders_above_help_and_toasts() {
+        let mut model = Model::new();
+        model.toggle_help();
+        model.toast_info("Background notification");
+        model.request_text_input("Topmost prompt", "visible input", |_, _| {});
+        let area = Rect::new(0, 0, 70, 9);
+        let mut buf = ratatui::buffer::Buffer::empty(area);
+        view(area, &mut buf, &mut model);
+        let mut expected = ratatui::buffer::Buffer::empty(area);
+        model.text_input.as_ref().unwrap().input.render_with_theme(
+            area,
+            &mut expected,
+            model.settings().theme(),
+        );
+        for y in 2..7 {
+            for x in 3..67 {
+                assert_eq!(buf[(x, y)], expected[(x, y)]);
+            }
+        }
+    }
 
     fn inspecting_for(elapsed: Duration) -> Model {
         let mut model = Model::new();

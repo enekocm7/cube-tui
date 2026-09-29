@@ -22,7 +22,10 @@ use ratatui::DefaultTerminal;
 use ratatui::crossterm::event::{self, Event};
 use ratatui::crossterm::{
     SynchronizedUpdate,
-    event::{KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags},
+    event::{
+        DisableBracketedPaste, EnableBracketedPaste, KeyboardEnhancementFlags,
+        PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+    },
     execute,
 };
 
@@ -129,28 +132,37 @@ fn run_export(path: &std::path::Path) {
     }
 }
 
-struct KeyboardEnhancementGuard {
+struct TerminalInputGuard {
     stdout: Stdout,
-    active: bool,
+    keyboard_active: bool,
+    paste_active: bool,
 }
 
-impl KeyboardEnhancementGuard {
-    /// Enables press/release keyboard events and remembers whether it succeeded.
+impl TerminalInputGuard {
+    /// Enables press/release events and bracketed paste until the guard drops.
     fn enable() -> Self {
         let mut stdout = std::io::stdout();
-        let active = execute!(
+        let keyboard_active = execute!(
             stdout,
             PushKeyboardEnhancementFlags(KeyboardEnhancementFlags::REPORT_EVENT_TYPES)
         )
         .is_ok();
-        Self { stdout, active }
+        let paste_active = execute!(stdout, EnableBracketedPaste).is_ok();
+        Self {
+            stdout,
+            keyboard_active,
+            paste_active,
+        }
     }
 }
 
-impl Drop for KeyboardEnhancementGuard {
+impl Drop for TerminalInputGuard {
     /// Restores the terminal keyboard protocol when the guard leaves scope.
     fn drop(&mut self) {
-        if self.active {
+        if self.paste_active {
+            let _ = execute!(self.stdout, DisableBracketedPaste);
+        }
+        if self.keyboard_active {
             let _ = execute!(self.stdout, PopKeyboardEnhancementFlags);
         }
     }
@@ -174,6 +186,9 @@ fn timer_is_animating(state: TimerState) -> bool {
 /// `ControlFlow::Break` requests application exit. A continued `true` value
 /// means the event changed visible state, including resize and focus events.
 fn handle_terminal_event(model: &mut Model, event: &Event) -> ControlFlow<(), bool> {
+    if let Some(changed) = model.handle_text_input_event(event) {
+        return ControlFlow::Continue(changed);
+    }
     match event {
         Event::Key(key) => {
             let Some(msg) = map_key_to_msg(*key, model.settings().keybinds()) else {
@@ -207,7 +222,7 @@ fn read_terminal_event(timeout: Option<Duration>) -> std::io::Result<Option<Even
 /// Idle screens block for input until the next toast expiry, if any. Active
 /// timers and Bluetooth receivers wake at [`TICK_RATE`].
 fn run(terminal: &mut DefaultTerminal) -> std::io::Result<()> {
-    let _ = KeyboardEnhancementGuard::enable();
+    let _input_guard = TerminalInputGuard::enable();
     let mut stdout = std::io::stdout();
 
     let mut model = Model::new();
@@ -284,6 +299,74 @@ mod event_loop_tests {
 
     use super::*;
     use crate::widgets::history::Modifier;
+    use crate::widgets::text_input::TextInputResult;
+
+    #[test]
+    fn prompt_captures_shortcuts_and_returns_text_to_its_caller() {
+        let mut model = Model::new();
+        model.toggle_help();
+        assert!(model.request_text_input("Input", "", |model, result| {
+            assert!(model.text_input.is_none());
+            assert!(model.show_help());
+            assert_eq!(result, TextInputResult::Submitted("q ?pasted".into()));
+            model.set_last_time_ms(123);
+        }));
+        for character in ['q', ' ', '?'] {
+            let event = Event::Key(KeyEvent::new(KeyCode::Char(character), KeyModifiers::NONE));
+            assert_eq!(
+                handle_terminal_event(&mut model, &event),
+                ControlFlow::Continue(true)
+            );
+        }
+        assert_eq!(model.timer_state(), TimerState::Idle);
+        assert!(model.show_help());
+        assert_eq!(
+            handle_terminal_event(&mut model, &Event::Paste("pasted".into())),
+            ControlFlow::Continue(true)
+        );
+        let enter = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        assert_eq!(
+            handle_terminal_event(&mut model, &enter),
+            ControlFlow::Continue(true)
+        );
+        assert_eq!(model.elapsed_ms(), 123);
+        assert!(model.text_input.is_none());
+        let quit = Event::Key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE));
+        assert_eq!(
+            handle_terminal_event(&mut model, &quit),
+            ControlFlow::Break(())
+        );
+    }
+
+    #[test]
+    fn cancellation_preserves_underlying_screen_and_can_open_the_next_prompt() {
+        let mut model = Model::new();
+        model.toggle_help();
+        assert!(
+            model.request_text_input("First", "discard", |model, result| {
+                assert_eq!(result, TextInputResult::Cancelled);
+                assert!(model.request_text_input("Second", "", |model, result| {
+                    assert_eq!(result, TextInputResult::Submitted(String::new()));
+                    model.set_last_time_ms(456);
+                }));
+            })
+        );
+        assert!(!model.request_text_input("Rejected", "", |_, _| panic!("replaced active prompt")));
+        let escape = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        assert_eq!(
+            handle_terminal_event(&mut model, &escape),
+            ControlFlow::Continue(true)
+        );
+        assert!(model.show_help());
+        assert!(model.text_input.is_some());
+        let enter = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        assert_eq!(
+            handle_terminal_event(&mut model, &enter),
+            ControlFlow::Continue(true)
+        );
+        assert!(model.text_input.is_none());
+        assert_eq!(model.elapsed_ms(), 456);
+    }
 
     #[test]
     fn toast_expiry_wakes_idle_input_and_preserves_faster_timer_ticks() {
