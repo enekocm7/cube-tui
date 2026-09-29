@@ -185,6 +185,32 @@ fn event_changes_revalidate_scrambles_and_zero_times_require_dnf() {
 }
 
 #[test]
+fn home_and_end_jump_to_editor_and_event_picker_boundaries() {
+    let mut model = model_with_solve();
+    key(&mut model, KeyCode::End);
+    assert_eq!(
+        model.solve_editor.as_ref().unwrap().selected,
+        FIELD_NAMES.len() - 1
+    );
+    key(&mut model, KeyCode::Home);
+    assert_eq!(model.solve_editor.as_ref().unwrap().selected, 0);
+    key(&mut model, KeyCode::Down);
+    key(&mut model, KeyCode::Enter);
+    key(&mut model, KeyCode::End);
+    assert_eq!(
+        model.solve_editor.as_ref().unwrap().event_selection,
+        WcaEvent::ALL.len() - 1
+    );
+    key(&mut model, KeyCode::Home);
+    assert_eq!(model.solve_editor.as_ref().unwrap().event_selection, 0);
+    key(&mut model, KeyCode::Enter);
+    assert_eq!(
+        model.solve_editor.as_ref().unwrap().draft.event,
+        WcaEvent::Cube2x2
+    );
+}
+
+#[test]
 fn editor_is_details_only_and_honors_the_configured_shortcut() {
     let mut model = Model::new();
     let settings = toml::from_str("[keybinds]\nedit_solve = 'Ctrl+e'").unwrap();
