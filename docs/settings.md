@@ -102,7 +102,7 @@ Add a `[keybinds]` table containing only the bindings you want to change:
 [keybinds]
 next_scramble = "Ctrl+n"
 toggle_scramble_preview = "Ctrl+v"
-toggle_toasts = "Ctrl+o"
+toggle_toasts = "o"
 help = "F1"
 theme_selector = "Alt+t"
 edit_solve = "F3"
