@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize, de::Error};
 
 use crate::model::keybinds::Keybinds;
 use crate::persistence;
+use crate::widgets::stats::StatsWidget;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -334,11 +335,10 @@ impl DisplaySettings {
     const fn minimum_terminal_width(self) -> u16 {
         const BASE_WIDTH: u16 = 28;
         const HISTORY_WIDTH: u16 = 24;
-        const STATS_WIDTH: u16 = 30;
 
         BASE_WIDTH
             + if self.history { HISTORY_WIDTH } else { 0 }
-            + if self.stats { STATS_WIDTH } else { 0 }
+            + if self.stats { StatsWidget::WIDTH } else { 0 }
     }
 
     /// Computes the height required with or without the scramble panel.
@@ -424,10 +424,10 @@ mod tests {
     #[test]
     fn minimum_width_accounts_for_visible_side_panels() {
         let mut display = DisplaySettings::default();
-        assert_eq!(display.minimum_terminal_width(), 82);
+        assert_eq!(display.minimum_terminal_width(), 84);
 
         display.history = false;
-        assert_eq!(display.minimum_terminal_width(), 58);
+        assert_eq!(display.minimum_terminal_width(), 60);
 
         display.stats = false;
         assert_eq!(display.minimum_terminal_width(), 28);

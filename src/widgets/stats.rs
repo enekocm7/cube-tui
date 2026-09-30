@@ -15,6 +15,9 @@ pub struct StatsWidget<'a> {
 }
 
 impl<'a> StatsWidget<'a> {
+    /// Width needed for the labels, two time columns, spacing, and borders.
+    pub const WIDTH: u16 = 32;
+
     /// Creates a statistics widget for a solve history.
     pub const fn new(history: &'a History) -> Self {
         Self {
@@ -126,8 +129,7 @@ impl<'a> StatsWidget<'a> {
                         .add_modifier(ratatui::style::Modifier::BOLD);
                 }
                 spans.push(Span::styled(format!("{current:>10}"), current_style));
-                // Add spacing for better appareance
-                spans.push(Span::styled(" ", Style::default().bg(theme.background())));
+                spans.push(Span::styled("  ", Style::default().bg(theme.background())));
 
                 if best_selected {
                     spans.push(Span::styled(
@@ -148,7 +150,7 @@ impl<'a> StatsWidget<'a> {
 
         let text = vec![
             Line::from(Span::styled(
-                format!("{:8}{:>10}{:>10}", "", "current", "best"),
+                format!("{:8}{:>10}  {:>10}", "", "current", "best"),
                 Style::default().fg(theme.text()),
             )),
             row_line("time", current_time, best_time, 0),
@@ -178,14 +180,14 @@ mod tests {
             history.add_ms(millis, WcaEvent::Cube3x3, "");
         }
         let theme = ThemeColors::default();
-        let area = Rect::new(2, 3, 31, 10);
+        let area = Rect::new(2, 3, StatsWidget::WIDTH, 10);
         let mut buf = Buffer::empty(area);
         StatsWidget::new(&history)
             .with_selection(1, 0)
             .render(area, &mut buf, &theme);
         assert_eq!(buf[(11, 6)].fg, theme.accent());
         assert_eq!(buf[(11, 6)].bg, theme.selection());
-        assert_eq!(buf[(22, 6)].fg, theme.text());
+        assert_eq!(buf[(23, 6)].fg, theme.text());
         assert_eq!(buf[(11, 5)].fg, theme.text());
         assert_eq!(buf[(11, 7)].fg, theme.text());
         assert!(!history.last().unwrap().was_single_record());
@@ -194,13 +196,13 @@ mod tests {
         let mut buf = Buffer::empty(area);
         StatsWidget::new(&history).render(area, &mut buf, &theme);
         assert_eq!(buf[(11, 6)].fg, theme.text());
-        assert_eq!(buf[(22, 6)].fg, theme.text());
+        assert_eq!(buf[(23, 6)].fg, theme.text());
     }
 
     #[test]
     fn incomplete_dnf_and_tied_averages_do_not_use_accent() {
         let theme = ThemeColors::default();
-        let area = Rect::new(0, 0, 31, 10);
+        let area = Rect::new(0, 0, StatsWidget::WIDTH, 10);
         let mut history = History::new();
         for modifier in [Modifier::None, Modifier::None, Modifier::DNF] {
             history.add(Time::new_with_modifier(
@@ -220,6 +222,6 @@ mod tests {
         let mut buf = Buffer::empty(area);
         StatsWidget::new(&history).render(area, &mut buf, &theme);
         assert_eq!(buf[(9, 3)].fg, theme.text());
-        assert_eq!(buf[(20, 3)].fg, theme.text());
+        assert_eq!(buf[(21, 3)].fg, theme.text());
     }
 }
