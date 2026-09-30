@@ -37,6 +37,7 @@ pub enum Msg {
     #[cfg(feature = "bluetooth")]
     DisconnectBluetooth,
     ToggleZen,
+    ToggleToasts,
 }
 
 /// Maps a terminal key event to the configured application message.
@@ -85,6 +86,7 @@ pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
         #[cfg(not(feature = "bluetooth"))]
         Action::Bluetooth | Action::DisconnectBluetooth => None,
         Action::ToggleZen => Some(Msg::ToggleZen),
+        Action::ToggleToasts => Some(Msg::ToggleToasts),
         Action::Enter => Some(Msg::Enter),
         Action::Back => Some(Msg::Esc),
         Action::Timer => unreachable!(),

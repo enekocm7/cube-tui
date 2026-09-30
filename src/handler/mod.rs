@@ -97,6 +97,7 @@ impl Msg {
             #[cfg(feature = "bluetooth")]
             Self::DisconnectBluetooth => handle_disconnect_bluetooth(model),
             Self::ToggleZen => handle_toggle_zen(model),
+            Self::ToggleToasts => handle_toggle_toasts(model),
             Self::Quit => {}
         }
     }
@@ -570,6 +571,15 @@ fn handle_toggle_zen(model: &mut Model) {
         model.toast_info("Zen mode enabled.");
     } else {
         model.toast_info("Zen mode disabled.");
+    }
+}
+
+/// Toggles toast notifications and persists the new setting.
+fn handle_toggle_toasts(model: &mut Model) {
+    model.toggle_toasts();
+    model.save_settings();
+    if model.settings().toasts() {
+        model.toast_info("Toast notifications enabled.");
     }
 }
 
