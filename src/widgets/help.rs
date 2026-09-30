@@ -114,6 +114,7 @@ const HELP_TEXT: &[HelpLine] = &[
     HelpLine::Empty,
     HelpLine::Header("INTERFACE"),
     HelpLine::Body(Action::Help, "Show / Hide this help screen"),
+    HelpLine::Body(Action::ToggleToasts, "Show / Hide toast notifications"),
     HelpLine::Body(Action::Quit, "Quit application"),
     HelpLine::Empty,
     HelpLine::Header("ZEN MODE"),

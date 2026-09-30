@@ -84,6 +84,11 @@ impl Settings {
         self.display.toasts
     }
 
+    /// Sets whether toast notifications are visible.
+    pub const fn set_toasts(&mut self, visible: bool) {
+        self.display.toasts = visible;
+    }
+
     /// Returns the colors of the active theme.
     pub const fn theme(&self) -> &ThemeColors {
         &self.theme.theme

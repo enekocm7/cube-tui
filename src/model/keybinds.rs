@@ -34,6 +34,7 @@ pub enum Action {
     Bluetooth,
     DisconnectBluetooth,
     ToggleZen,
+    ToggleToasts,
     Enter,
     Back,
 }
@@ -314,6 +315,10 @@ impl Default for Keybinds {
                 KeyBinding::new(KeyCode::Char('x'), none),
             ),
             (Action::ToggleZen, KeyBinding::new(KeyCode::Char('z'), none)),
+            (
+                Action::ToggleToasts,
+                KeyBinding::new(KeyCode::Char('o'), none),
+            ),
             (Action::Enter, KeyBinding::new(KeyCode::Enter, none)),
             (Action::Back, KeyBinding::new(KeyCode::Esc, none)),
         ];

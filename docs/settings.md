@@ -62,7 +62,9 @@ right column and need more terminal rows. With the default layout, use a
 terminal at least 27 rows tall for the 3x3 net.
 
 `toasts` controls all toast notifications, including information, warnings,
-and errors. It defaults to `true`; set it to `false` to hide notifications.
+and errors. It defaults to `true`; press `o` to toggle notifications and save
+the choice, or set it to `false` to hide notifications in the configuration.
+Turning notifications off clears any visible or queued toasts.
 
 ## Timer Settings
 
@@ -85,6 +87,7 @@ Add a `[keybinds]` table containing only the bindings you want to change:
 [keybinds]
 next_scramble = "Ctrl+n"
 toggle_scramble_preview = "Ctrl+v"
+toggle_toasts = "Ctrl+o"
 help = "F1"
 theme_selector = "Alt+t"
 edit_solve = "F3"
@@ -101,7 +104,7 @@ Available actions are `quit`, `reset_timer`, `timer`, `select_up`,
 `previous_event`, `next_session`, `previous_session`, `new_session`,
 `delete_session`, `next_scramble`, `toggle_scramble_preview`, `help`, `toggle_inspection`,
 `detailed_stats`, `theme_selector`, `delete_time`, `edit_solve`, `bluetooth`,
-`disconnect_bluetooth`, `toggle_zen`, `enter`, and `back`.
+`disconnect_bluetooth`, `toggle_zen`, `toggle_toasts`, `enter`, and `back`.
 
 Bindings are global and must be unique. Some actions are contextual: `timer`
 also toggles a modifier in solve details, while `next_event` opens the selected

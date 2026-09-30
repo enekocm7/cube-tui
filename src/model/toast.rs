@@ -84,6 +84,15 @@ impl ToastBuffer {
 }
 
 impl Model {
+    /// Toggles notifications, discarding queued messages when they are hidden.
+    pub fn toggle_toasts(&mut self) {
+        let visible = !self.settings().toasts();
+        self.settings.set_toasts(visible);
+        if !visible {
+            self.toasts = ToastBuffer::default();
+        }
+    }
+
     /// Shows a short informational message.
     pub fn toast_info(&mut self, message: impl Into<String>) {
         self.notify(message.into(), ToastType::Info, ToastDuration::Short);
