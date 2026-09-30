@@ -33,6 +33,9 @@ pub struct Time {
     comment: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     changes: Vec<SolveChange>,
+    /// Persisted display marker for a single that improved the session best.
+    #[serde(default)]
+    was_single_record: bool,
 }
 
 /// Editable metadata, without recursively copying the audit trail.
@@ -78,6 +81,7 @@ impl Time {
             modifier,
             comment: String::new(),
             changes: Vec::new(),
+            was_single_record: false,
         }
     }
 
@@ -97,6 +101,7 @@ impl Time {
             modifier,
             comment: String::new(),
             changes: Vec::new(),
+            was_single_record: false,
         }
     }
 
@@ -123,6 +128,10 @@ impl Time {
     /// Returns the puzzle event solved by this attempt.
     pub const fn event(&self) -> WcaEvent {
         self.event
+    }
+
+    pub const fn was_single_record(&self) -> bool {
+        self.was_single_record
     }
 
     pub fn comment(&self) -> &str {
@@ -216,6 +225,18 @@ pub fn format_millis(ms: u64) -> String {
     format!("{minutes:02}:{seconds:02}.{millis:03}")
 }
 
+fn mark_single_records(times: &mut [Time]) {
+    let mut best = None;
+    for time in times {
+        time.was_single_record = time
+            .effective_ms()
+            .is_some_and(|millis| best.is_none_or(|previous| millis < previous));
+        if time.was_single_record {
+            best = time.effective_ms();
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum AverageValue {
     Time(u64),
@@ -293,7 +314,11 @@ impl History {
     }
 
     /// Appends a solve, selects it, and incrementally updates initialized caches.
-    pub fn add(&mut self, item: Time) {
+    pub fn add(&mut self, mut item: Time) {
+        let previous_best = self.get_fastest_time().and_then(Time::effective_ms);
+        item.was_single_record = item
+            .effective_ms()
+            .is_some_and(|millis| previous_best.is_none_or(|best| millis < best));
         self.times.push(item);
         self.selected = Some(self.times.len() - 1);
         self.update_fastest_after_append();
@@ -336,6 +361,7 @@ impl History {
 
     /// Clears derived statistics after an edit that can reorder results.
     fn invalidate_fastest(&mut self) {
+        mark_single_records(&mut self.times);
         self.fastest_time.take();
         for cache in &mut self.fastest_averages {
             cache.take();
@@ -577,6 +603,10 @@ impl History {
         }
 
         let attempts = self.times.get(index.saturating_sub(n)..index)?;
+        Some(Self::average_value(attempts.iter(), n))
+    }
+
+    fn average_value<'a>(attempts: impl Iterator<Item = &'a Time>, n: usize) -> AverageValue {
         // Trimming only the best and worst needs their extrema, not a sorted
         // allocation. A wider sum also accommodates large discarded values.
         let mut sum = 0_u128;
@@ -596,24 +626,20 @@ impl History {
 
         if n == 3 {
             if dnf_count > 0 {
-                return Some(AverageValue::Dnf);
+                return AverageValue::Dnf;
             }
-            return Some(AverageValue::Time(
-                u64::try_from(sum / 3).expect("the mean fits in u64"),
-            ));
+            return AverageValue::Time(u64::try_from(sum / 3).expect("the mean fits in u64"));
         }
 
         if dnf_count >= 2 {
-            return Some(AverageValue::Dnf);
+            return AverageValue::Dnf;
         }
 
         sum -= u128::from(best);
         if dnf_count == 0 {
             sum -= u128::from(worst);
         }
-        Some(AverageValue::Time(
-            u64::try_from(sum / (n - 2) as u128).expect("the mean fits in u64"),
-        ))
+        AverageValue::Time(u64::try_from(sum / (n - 2) as u128).expect("the mean fits in u64"))
     }
 
     /// Converts an average result to the text shown in statistics views.
@@ -712,6 +738,14 @@ impl History {
     /// Returns the ending solve index of the cached fastest average.
     fn fastest_average_index(&self, n: usize) -> Option<usize> {
         self.fastest_average(n).map(|best| best.solve_index)
+    }
+
+    /// Whether the latest complete average strictly improved the session best.
+    pub fn latest_average_is_record(&self, n: usize) -> bool {
+        self.times
+            .len()
+            .checked_sub(1)
+            .is_some_and(|latest| self.fastest_average_index(n) == Some(latest))
     }
 
     /// Returns the ending solve index of the fastest mean of three.
@@ -815,11 +849,28 @@ impl History {
             } else {
                 ratatui::style::Style::default().fg(theme.text())
             };
-            buf.set_string(
+            let prefix = format!("{}: ", i + 1);
+            let (time_x, _) = buf.set_stringn(
                 area.x,
                 area.y + row_offset,
-                format!("{}: {item}", i + 1),
+                &prefix,
+                usize::from(area.width),
                 style,
+            );
+            let is_record = item.was_single_record();
+            let time_style = if is_record {
+                style
+                    .fg(theme.accent())
+                    .add_modifier(ratatui::style::Modifier::BOLD)
+            } else {
+                style
+            };
+            buf.set_stringn(
+                time_x,
+                area.y + row_offset,
+                item.to_string(),
+                usize::from(area.right().saturating_sub(time_x)),
+                time_style,
             );
         }
 
@@ -842,6 +893,96 @@ mod tests {
 
     fn time_with_ms(ms: u64) -> Time {
         Time::new_with_meta(ms, Cube3x3, Cow::Borrowed(""), 0, Modifier::None)
+    }
+
+    #[test]
+    fn single_record_flags_exclude_average_records_and_persist_in_history() {
+        let mut h = history(
+            [12_000, 10_000, 14_000, 15_000, 16_000, 8_000]
+                .into_iter()
+                .map(time_with_ms)
+                .collect(),
+        );
+        let flags: Vec<_> = h.times().iter().map(Time::was_single_record).collect();
+        assert_eq!(flags, [true, true, false, false, false, true]);
+        assert_eq!(h.ao5_at(4).as_deref(), Some("00:13.666"));
+        let encoded = serde_json::to_string(&h).unwrap();
+        assert!(encoded.contains("\"was_single_record\":true"));
+        assert!(encoded.contains("\"was_single_record\":false"));
+        let restored: History = serde_json::from_str(&encoded).unwrap();
+        let restored_flags: Vec<_> = restored
+            .times()
+            .iter()
+            .map(Time::was_single_record)
+            .collect();
+        assert_eq!(restored_flags, flags);
+
+        let mut edited = h.times()[1].snapshot();
+        edited.time_ms = 20_000;
+        h.edit_solve(1, edited);
+        assert!(!h.times()[1].was_single_record());
+        h.select_index(0);
+        h.delete_selected();
+        assert!(h.times()[0].was_single_record());
+        assert!(h.times()[1].was_single_record());
+    }
+
+    #[test]
+    fn saved_single_record_flags_are_restored_and_legacy_solves_default_to_false() {
+        let mut h = history(vec![time_with_ms(1_000), time_with_ms(2_000)]);
+        // Loading preserves the saved markers rather than recomputing them.
+        h.times[0].was_single_record = false;
+        h.times[1].was_single_record = true;
+        let restored: History = serde_json::from_str(&serde_json::to_string(&h).unwrap()).unwrap();
+        assert!(!restored.times()[0].was_single_record());
+        assert!(restored.times()[1].was_single_record());
+
+        let mut legacy = serde_json::to_value(time_with_ms(1_000)).unwrap();
+        legacy.as_object_mut().unwrap().remove("was_single_record");
+        let restored: Time = serde_json::from_value(legacy).unwrap();
+        assert!(!restored.was_single_record());
+    }
+
+    #[test]
+    fn single_record_flags_respect_penalties_dnfs_and_ties() {
+        let h = history(vec![
+            time_with_ms(10_000),
+            time_with_modifier(9_000, Modifier::PlusTwo),
+            time_with_modifier(1, Modifier::DNF),
+            time_with_ms(9_000),
+            time_with_ms(9_000),
+        ]);
+        let flags: Vec<_> = h.times().iter().map(Time::was_single_record).collect();
+        assert_eq!(flags, [true, false, false, true, false]);
+    }
+
+    #[test]
+    fn record_times_use_accent_while_selection_and_row_numbers_keep_their_style() {
+        let h = history(vec![
+            time_with_ms(2_000),
+            time_with_ms(1_000),
+            time_with_ms(3_000),
+        ]);
+        let theme = ThemeColors::default();
+        let area = Rect::new(2, 3, 22, 5);
+        let mut buf = Buffer::empty(area);
+        h.render_with_theme(area, &mut buf, &theme, Some(true));
+        // Earlier records stay accented after a faster single is added.
+        assert_eq!(buf[(5, 3)].fg, theme.accent());
+        assert_eq!(buf[(2, 4)].fg, theme.text());
+        assert_eq!(buf[(5, 4)].fg, theme.accent());
+        assert!(
+            buf[(5, 4)]
+                .modifier
+                .contains(ratatui::style::Modifier::BOLD)
+        );
+        // An average record does not accent the single; selection still works.
+        assert!(h.latest_average_is_record(3));
+        assert_eq!(buf[(5, 5)].fg, theme.selection_text());
+        assert_eq!(buf[(5, 5)].bg, theme.selection());
+        assert_eq!(buf[(2, 5)].fg, theme.selection_text());
+        let mut narrow = Buffer::empty(Rect::new(0, 0, 2, 5));
+        h.render_with_theme(narrow.area, &mut narrow, &theme, Some(false));
     }
 
     fn time_with_modifier(ms: u64, modifier: Modifier) -> Time {
