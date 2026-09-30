@@ -15,6 +15,7 @@ pub mod help;
 pub mod keybinds;
 pub mod main_focus;
 pub mod mean_details;
+mod personal_bests;
 pub mod screen;
 pub mod session;
 pub mod settings;
@@ -312,6 +313,7 @@ impl Model {
             .history
             .add(Time::new_with_modifier(time_ms, event, scramble, modifier));
         session.stop_timer();
+        self.notify_personal_bests();
     }
 
     /// Selects the next puzzle event and generates its scramble.

@@ -203,6 +203,8 @@ impl Default for Theme {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ColorGetters)]
 pub struct ThemeColors {
+    #[serde(default = "default_accent")]
+    accent: ColorSettings,
     background: ColorSettings,
     border: ColorSettings,
     scramble: ColorSettings,
@@ -215,6 +217,7 @@ impl Default for ThemeColors {
     /// Returns the built-in high-contrast dark palette.
     fn default() -> Self {
         Self {
+            accent: default_accent(),
             background: ColorSettings::BLACK,
             border: ColorSettings::WHITE,
             scramble: ColorSettings::WHITE,
@@ -222,6 +225,14 @@ impl Default for ThemeColors {
             selection_text: ColorSettings::BLACK,
             text: ColorSettings::WHITE,
         }
+    }
+}
+
+const fn default_accent() -> ColorSettings {
+    ColorSettings {
+        r: 255,
+        g: 215,
+        b: 0,
     }
 }
 
@@ -334,6 +345,18 @@ impl DisplaySettings {
 #[cfg(test)]
 mod tests {
     use super::{DisplaySettings, Settings};
+
+    #[test]
+    fn older_themes_default_the_accent_and_custom_accents_round_trip() {
+        let old_theme = "background = '#000000'\nborder = '#FFFFFF'\nscramble = '#FFFFFF'\nselection = '#3399FF'\nselection_text = '#000000'\ntext = '#FFFFFF'";
+        let colors: super::ThemeColors = toml::from_str(old_theme).unwrap();
+        assert_eq!(colors.accent(), super::default_accent().to_color());
+        let colors: super::ThemeColors =
+            toml::from_str(&format!("{old_theme}\naccent = '#00FF00'")).unwrap();
+        let restored: super::ThemeColors =
+            toml::from_str(&toml::to_string(&colors).unwrap()).unwrap();
+        assert_eq!(restored.accent(), ratatui::style::Color::Rgb(0, 255, 0));
+    }
 
     #[test]
     fn documented_timer_config_keeps_default_inspection_limit() {

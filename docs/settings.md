@@ -15,6 +15,7 @@ scramble = "#FFFFFF"
 selection = "#3399FF"
 selection_text = "#000000"
 text = "#FFFFFF"
+accent = "#FFD700"
 ```
 
 Create a `.toml` file in the themes directory using this format. Open the
@@ -63,6 +64,20 @@ terminal at least 27 rows tall for the 3x3 net.
 
 `toasts` controls all toast notifications, including information, warnings,
 and errors. It defaults to `true`; set it to `false` to hide notifications.
+
+Completing a solve that sets a session best single, mo3, ao5, ao12, ao50, or
+ao100 shows a toast. Records use the session's existing single and average statistics.
+The first valid result establishes a record; ties do not count, and +2/DNF
+penalties apply. Loading, importing, editing, and deleting do not trigger toasts.
+
+Solves that set a **single** record use the theme's `accent` color in history,
+even after a later solve beats them. A display flag on each solve tracks this;
+it is saved with the solve and restored when loading history. Edits and deletions
+recalculate the flags. Older solves without this field default to unmarked.
+Average records use the accent only in the **current** stats
+column while the latest average is a new session best. The **best** column
+keeps its usual style. The accent defaults to gold for older themes that omit
+it; selected record values stay bold and retain the selection background.
 
 ## Timer Settings
 

@@ -109,19 +109,23 @@ impl<'a> StatsWidget<'a> {
                     format!("{label:8}"),
                     Style::default().fg(theme.text()),
                 )];
-                if current_selected {
-                    spans.push(Span::styled(
-                        format!("{current:>10}"),
-                        Style::default()
-                            .bg(theme.selection())
-                            .fg(theme.selection_text()),
-                    ));
+                let mut current_style = if current_selected {
+                    Style::default()
+                        .bg(theme.selection())
+                        .fg(theme.selection_text())
                 } else {
-                    spans.push(Span::styled(
-                        format!("{current:>10}"),
-                        Style::default().fg(theme.text()),
-                    ));
+                    Style::default().fg(theme.text())
+                };
+                if row > 0
+                    && self
+                        .history
+                        .latest_average_is_record([3, 5, 12, 50, 100][row - 1])
+                {
+                    current_style = current_style
+                        .fg(theme.accent())
+                        .add_modifier(ratatui::style::Modifier::BOLD);
                 }
+                spans.push(Span::styled(format!("{current:>10}"), current_style));
                 // Add spacing for better appareance
                 spans.push(Span::styled(" ", Style::default().bg(theme.background())));
 
@@ -156,5 +160,66 @@ impl<'a> StatsWidget<'a> {
         ];
 
         Paragraph::new(text).block(block).render(area, buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        scramble::WcaEvent,
+        widgets::history::{Modifier, Time},
+    };
+
+    #[test]
+    fn only_current_record_averages_use_accent_and_keep_selection() {
+        let mut history = History::new();
+        for millis in [12_000, 10_000, 14_000] {
+            history.add_ms(millis, WcaEvent::Cube3x3, "");
+        }
+        let theme = ThemeColors::default();
+        let area = Rect::new(2, 3, 31, 10);
+        let mut buf = Buffer::empty(area);
+        StatsWidget::new(&history)
+            .with_selection(1, 0)
+            .render(area, &mut buf, &theme);
+        assert_eq!(buf[(11, 6)].fg, theme.accent());
+        assert_eq!(buf[(11, 6)].bg, theme.selection());
+        assert_eq!(buf[(22, 6)].fg, theme.text());
+        assert_eq!(buf[(11, 5)].fg, theme.text());
+        assert_eq!(buf[(11, 7)].fg, theme.text());
+        assert!(!history.last().unwrap().was_single_record());
+
+        history.add_ms(15_000, WcaEvent::Cube3x3, "");
+        let mut buf = Buffer::empty(area);
+        StatsWidget::new(&history).render(area, &mut buf, &theme);
+        assert_eq!(buf[(11, 6)].fg, theme.text());
+        assert_eq!(buf[(22, 6)].fg, theme.text());
+    }
+
+    #[test]
+    fn incomplete_dnf_and_tied_averages_do_not_use_accent() {
+        let theme = ThemeColors::default();
+        let area = Rect::new(0, 0, 31, 10);
+        let mut history = History::new();
+        for modifier in [Modifier::None, Modifier::None, Modifier::DNF] {
+            history.add(Time::new_with_modifier(
+                10_000,
+                WcaEvent::Cube3x3,
+                "",
+                modifier,
+            ));
+            let mut buf = Buffer::empty(area);
+            StatsWidget::new(&history).render(area, &mut buf, &theme);
+            assert_eq!(buf[(9, 3)].fg, theme.text());
+        }
+        let mut history = History::new();
+        for _ in 0..4 {
+            history.add_ms(10_000, WcaEvent::Cube3x3, "");
+        }
+        let mut buf = Buffer::empty(area);
+        StatsWidget::new(&history).render(area, &mut buf, &theme);
+        assert_eq!(buf[(9, 3)].fg, theme.text());
+        assert_eq!(buf[(20, 3)].fg, theme.text());
     }
 }
