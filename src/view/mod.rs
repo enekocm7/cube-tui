@@ -262,7 +262,9 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         stats_area_index = Some(main_constraints.len());
         let desired_width = preview_widget
             .as_ref()
-            .map_or(30, |widget| widget.width().max(30));
+            .map_or(StatsWidget::WIDTH, |widget| {
+                widget.width().max(StatsWidget::WIDTH)
+            });
         let available_width = outer_layout[main_area_index]
             .width
             .saturating_sub(if show_history { 24 } else { 0 })
@@ -600,7 +602,7 @@ mod tests {
     #[test]
     fn small_terminal_keeps_stats_and_shows_resize_hint() {
         let mut model = preview_model();
-        let area = Rect::new(0, 0, 82, 20);
+        let area = Rect::new(0, 0, model.settings().minimum_terminal_width(), 20);
         let buf = render_model(&mut model, area);
         let text = buffer_text(&buf);
         assert!(text.contains("Resize to see preview"));
