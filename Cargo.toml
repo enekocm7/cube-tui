@@ -35,7 +35,7 @@ path = "src/main.rs"
 [dependencies]
 anyhow = "1.0.104"
 axum = { version = "0.8.9", optional = true }
-btleplug = { version = "0.13.2", optional = true }
+btleplug = { version = "0.13.3", optional = true }
 chrono = "0.4.45"
 clap = { version = "4.6.7", features = ["derive", "color"] }
 cube-tui-macros = { path = "macros", version = "0.1.0" }
