@@ -307,7 +307,12 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
     }
 
     let mut history_title = format!(
-        "Session: {:02}/{:02}{}",
+        "{}{:02}/{:02}{}",
+        if model.history().session_name().is_empty() {
+            "Session: "
+        } else {
+            ""
+        },
         model.current_session_index() + 1,
         model.session_count(),
         if model.is_at_max_sessions() {
