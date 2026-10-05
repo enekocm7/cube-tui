@@ -19,6 +19,7 @@ public class Library {
             case "skewb" -> PuzzleRegistry.SKEWB.getScrambler();
             case "sq1" -> PuzzleRegistry.SQ1.getScrambler();
             case "clock" -> PuzzleRegistry.CLOCK.getScrambler();
+            case "fto" -> PuzzleRegistry.FTO.getScrambler();
             default -> PuzzleRegistry.THREE.getScrambler();
         };
     }

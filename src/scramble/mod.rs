@@ -272,21 +272,6 @@ impl From<Scramble> for Cow<'static, str> {
 
 /// Generates a scramble for `event`, preferring the optional WCA backend.
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
-    //Temporary fix until the official WCA scrambler supports FTO event
-    if event == WcaEvent::Fto {
-        let scramble = Scramble::new(random_scramble(event));
-        #[cfg(feature = "wca-scrambles")]
-        {
-            let mut scramble = scramble;
-            scramble.warning = Some(
-                "The WCA generator does not support FTO. Using the built-in generator.".to_owned(),
-            );
-            return scramble;
-        }
-        #[cfg(not(feature = "wca-scrambles"))]
-        return scramble;
-    }
-
     #[cfg(feature = "wca-scrambles")]
     {
         match wca::get_wca_scramble(event) {
@@ -937,10 +922,6 @@ mod tests {
 
         for _ in 0..20 {
             let scramble = generate_scramble(WcaEvent::Fto);
-            assert!(
-                !scramble.is_wca(),
-                "FTO currently uses the built-in generator"
-            );
 
             let tokens: Vec<&str> = scramble.as_str().split_whitespace().collect();
             assert!(
