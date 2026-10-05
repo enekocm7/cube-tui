@@ -155,7 +155,7 @@ mod tests {
     #[test]
     fn official_cube_scrambles_can_be_visualized() {
         for event in CUBES {
-            let scramble = crate::scramble::wca::get_wca_scramble(event).unwrap();
+            let scramble = crate::scramble::wca::get_wca_scramble(event);
             visualize(event, &scramble)
                 .unwrap_or_else(|error| panic!("{event:?}: {scramble}: {error}"));
         }

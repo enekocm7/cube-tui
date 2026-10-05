@@ -28,12 +28,6 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Install JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: "temurin"
-          java-version: "25"
-
       - name: Cache cargo registry and build
         uses: Swatinem/rust-cache@v2
 
@@ -44,10 +38,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
       - name: Test
-        run: cargo test --all-features --locked
+        run: cargo test --workspace --all-features --locked
 
       - name: Build
         run: cargo build --release --all-features --locked

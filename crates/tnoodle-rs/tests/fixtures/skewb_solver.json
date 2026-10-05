@@ -1,0 +1,381 @@
+{
+  "random": [
+    {
+      "seed": 0,
+      "state": [240, 499],
+      "solveIn": "L' R' L B U R' U' B",
+      "exactly": "R' B' L B' L' R B L R' L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 1,
+      "state": [2265, 1729],
+      "solveIn": "R' L U' B R L B' R U'",
+      "exactly": "B' L' B R' L R B L' U L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 2,
+      "state": [508, 1347],
+      "solveIn": "L U' L R' B R' U R' U",
+      "exactly": "B' L U' L' B' U B' U' L' R' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 3,
+      "state": [2534, 1681],
+      "solveIn": "L B L B' R L",
+      "exactly": "B U L R U' B R' B' L' U' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 4,
+      "state": [4022, 1407],
+      "solveIn": "R L R' L R' U L U",
+      "exactly": "R L' U B R' L' U L R' U' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 5,
+      "state": [1727, 1416],
+      "solveIn": "B R L U' R' U B L' R",
+      "exactly": "R' U' R U B' L' B L B' L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 6,
+      "state": [4291, 242],
+      "solveIn": "L' B' R' U' B U' R B",
+      "exactly": "L R B' U' B' L B' U R L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 7,
+      "state": [1996, 164],
+      "solveIn": "R U B' R' B L R'",
+      "exactly": "U L U B L B L' B' U R B'",
+      "tooShort": null
+    },
+    {
+      "seed": 8,
+      "state": [3484, 1590],
+      "solveIn": "B' R' L' R' L' B' L",
+      "exactly": "R B' U L U' L' U B R' U' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 9,
+      "state": [1189, 1759],
+      "solveIn": "B R U' L R B L' B R",
+      "exactly": "R' B' L' B U' L' B L R' L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 10,
+      "state": [3753, 1365],
+      "solveIn": "B' L' B' L' B' U R' U B'",
+      "exactly": "L U R U R L R U B' L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 11,
+      "state": [1458, 975],
+      "solveIn": "L U L B' R' L' B' R B'",
+      "exactly": "L B L' U' B R B R' B R' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 12,
+      "state": [2946, 1310],
+      "solveIn": "B' R L B L R B' R'",
+      "exactly": "B' U B' L U' B' U R' B' L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 13,
+      "state": [652, 1298],
+      "solveIn": "B' U' L B' R' U' B'",
+      "exactly": "L' R' L B' U R U L B' L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 14,
+      "state": [3215, 431],
+      "solveIn": "R' L' B' R' L' R U B' R",
+      "exactly": "B' R' B U B R B' U' R' L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 15,
+      "state": [921, 172],
+      "solveIn": "B' R' B' R' U' B' R U B'",
+      "exactly": "L R U' R' L' R' U R B' R B'",
+      "tooShort": null
+    },
+    {
+      "seed": 16,
+      "state": [2391, 1384],
+      "solveIn": "U B' R' U' R' B R U",
+      "exactly": "L R' B' U B' L B' L' B L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 17,
+      "state": [96, 855],
+      "solveIn": "U' R' U' B' R L R B' L'",
+      "exactly": "B' U' L B R' L B R' B' L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 18,
+      "state": [2660, 1335],
+      "solveIn": "L R U B U R' U' B L R",
+      "exactly": "L' U' L' U' B' U L' U' L' R' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 19,
+      "state": [365, 1073],
+      "solveIn": "R' L' B L' R U R L",
+      "exactly": "L U B R' L' B R L' B U' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 20,
+      "state": [1853, 905],
+      "solveIn": "U' B L' U L' B U L",
+      "exactly": "U' L' U R U B' R' L' U' R' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 21,
+      "state": [3878, 302],
+      "solveIn": "U R U' R B' R' U R' B",
+      "exactly": "L U R L' U' B U R' L' U' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 22,
+      "state": [2122, 1796],
+      "solveIn": "L' B L' U B L U' R",
+      "exactly": "R U B U' B U R' L R' L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 23,
+      "state": [4147, 1766],
+      "solveIn": "R U B' U R L R' L",
+      "exactly": "L U L' B' R L U L' U' L' B'",
+      "tooShort": null
+    },
+    {
+      "seed": 24,
+      "state": [1315, 441],
+      "solveIn": "L' R U' L' U' L' B' R L'",
+      "exactly": "B' U' B' U L' R' L' B U' R' B'",
+      "tooShort": null
+    }
+  ],
+  "conversions": [
+    {
+      "moves": [],
+      "state": [0, 0],
+      "solveIn": ""
+    },
+    {
+      "moves": ["U'"],
+      "state": [14, 1026],
+      "solveIn": "U"
+    },
+    {
+      "moves": ["B", "R"],
+      "state": [3184, 1875],
+      "solveIn": "R' B'"
+    },
+    {
+      "moves": ["R'", "U'", "L"],
+      "state": [794, 871],
+      "solveIn": "L' U R"
+    },
+    {
+      "moves": ["L", "R'", "R'", "L'"],
+      "state": [454, 1461],
+      "solveIn": "L R' L'"
+    },
+    {
+      "moves": ["R'", "B", "R", "R", "B'"],
+      "state": [2357, 413],
+      "solveIn": "B R B' R"
+    },
+    {
+      "moves": ["U'", "L'", "B'", "B", "R'", "U'"],
+      "state": [1579, 1169],
+      "solveIn": "U R L U"
+    },
+    {
+      "moves": ["R", "R'", "L'", "L'", "U'", "R'", "U'"],
+      "state": [1853, 844],
+      "solveIn": "U R U L'"
+    },
+    {
+      "moves": ["L'", "R'", "B'", "U", "R'", "L", "L'", "L"],
+      "state": [2494, 1806],
+      "solveIn": "L' R U' B R L"
+    },
+    {
+      "moves": ["U", "R", "R", "R'", "L", "B", "U'", "L'", "R'"],
+      "state": [2957, 1062],
+      "solveIn": "R L U B' L' R' U'"
+    },
+    {
+      "moves": ["U'", "L", "L'", "L'", "L", "L", "L", "R", "U'", "R"],
+      "state": [2289, 1088],
+      "solveIn": "R' U R' L U"
+    },
+    {
+      "moves": ["U'", "L", "B'", "R", "L", "L", "L", "U'", "R", "R", "R'"],
+      "state": [2955, 1722],
+      "solveIn": "R' U R' B L' U"
+    },
+    {
+      "moves": ["R'", "L'", "R'", "U", "R", "R'", "B", "U'", "U'", "U", "L", "U'"],
+      "state": [4146, 1367],
+      "solveIn": "U R B U B L' U"
+    },
+    {
+      "moves": ["B", "L'", "U", "U", "R", "R", "U", "B'", "R", "B'", "U", "U'", "B'"],
+      "state": [3708, 368],
+      "solveIn": "B L R' U B' U B' U'"
+    },
+    {
+      "moves": ["B", "U", "B'", "B", "R", "B", "B'", "R", "U'", "B'", "R", "U", "U", "R'"],
+      "state": [133, 137],
+      "solveIn": "U R B U' R B'"
+    },
+    {
+      "moves": [],
+      "state": [0, 0],
+      "solveIn": ""
+    },
+    {
+      "moves": ["U"],
+      "state": [25, 1971],
+      "solveIn": "U'"
+    },
+    {
+      "moves": ["L", "B'"],
+      "state": [467, 531],
+      "solveIn": "B L'"
+    },
+    {
+      "moves": ["U'", "R", "L"],
+      "state": [1181, 2002],
+      "solveIn": "L' R' U"
+    },
+    {
+      "moves": ["U'", "U'", "L'", "U"],
+      "state": [3666, 785],
+      "solveIn": "U' L U'"
+    },
+    {
+      "moves": ["U'", "U", "R'", "R", "L'"],
+      "state": [2200, 1055],
+      "solveIn": "L"
+    },
+    {
+      "moves": ["B", "B", "R", "R'", "B'", "B'"],
+      "state": [0, 0],
+      "solveIn": ""
+    },
+    {
+      "moves": ["L", "U'", "R'", "R'", "B'", "R", "U'"],
+      "state": [459, 1801],
+      "solveIn": "U R' B R' U L'"
+    },
+    {
+      "moves": ["R'", "R", "U", "B", "L'", "R", "R'", "B'"],
+      "state": [632, 1296],
+      "solveIn": "B L B' U'"
+    },
+    {
+      "moves": ["R'", "L", "R", "B", "R", "L'", "U", "L'", "L'"],
+      "state": [3162, 1338],
+      "solveIn": "L' U' L R' B' R' L' R"
+    },
+    {
+      "moves": ["U", "R", "L'", "B", "R", "B", "R", "B'", "B'", "R"],
+      "state": [4037, 1761],
+      "solveIn": "R B U' R U L' R' L' B'"
+    },
+    {
+      "moves": ["B'", "U", "R'", "R", "B", "R", "R", "U'", "R", "B'", "R"],
+      "state": [2040, 369],
+      "solveIn": "R' B R' U R B' U' B"
+    },
+    {
+      "moves": ["L'", "L", "L'", "U'", "B'", "B'", "B", "U", "L", "R", "L'", "U'"],
+      "state": [1957, 315],
+      "solveIn": "U R' B' R L' R' B' U'"
+    },
+    {
+      "moves": ["L", "R'", "R'", "B", "B", "L", "U", "U'", "B", "U'", "R'", "L", "L'"],
+      "state": [1294, 2164],
+      "solveIn": "R U B' L' B R' L'"
+    },
+    {
+      "moves": ["L", "R'", "R'", "L", "R'", "R", "B", "B'", "U'", "U'", "B", "R'", "U'", "B"],
+      "state": [1818, 1344],
+      "solveIn": "B' U R B' U' L' R' L'"
+    },
+    {
+      "moves": [],
+      "state": [0, 0],
+      "solveIn": ""
+    },
+    {
+      "moves": ["U"],
+      "state": [25, 1971],
+      "solveIn": "U'"
+    },
+    {
+      "moves": ["B'", "L'"],
+      "state": [2189, 2045],
+      "solveIn": "L B"
+    },
+    {
+      "moves": ["U", "B", "U'"],
+      "state": [1006, 712],
+      "solveIn": "U B' U'"
+    },
+    {
+      "moves": ["U'", "U'", "R'", "L"],
+      "state": [1390, 601],
+      "solveIn": "L' R U'"
+    },
+    {
+      "moves": ["B'", "R", "L'", "B'", "B"],
+      "state": [2618, 590],
+      "solveIn": "L R' B"
+    },
+    {
+      "moves": ["B'", "R", "B'", "R", "R'", "R'"],
+      "state": [2530, 1879],
+      "solveIn": "R B R' B"
+    },
+    {
+      "moves": ["L'", "L'", "L", "R'", "B'", "R", "L'"],
+      "state": [1439, 1534],
+      "solveIn": "L R' B R L"
+    },
+    {
+      "moves": ["U'", "U'", "B'", "L'", "U'", "U", "L", "U'"],
+      "state": [3511, 399],
+      "solveIn": "U B U'"
+    },
+    {
+      "moves": ["B'", "L", "U'", "U", "L", "R'", "R", "L'", "L'"],
+      "state": [595, 828],
+      "solveIn": "B"
+    }
+  ]
+}

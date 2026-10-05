@@ -274,16 +274,7 @@ impl From<Scramble> for Cow<'static, str> {
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
     #[cfg(feature = "wca-scrambles")]
     {
-        match wca::get_wca_scramble(event) {
-            Ok(text) => Scramble::new_wca(text),
-            Err(error) => {
-                let mut scramble = Scramble::new(random_scramble(event));
-                scramble.warning = Some(format!(
-                    "WCA scramble generation failed: {error}. Using the built-in generator."
-                ));
-                scramble
-            }
-        }
+        Scramble::new_wca(wca::get_wca_scramble(event))
     }
     #[cfg(not(feature = "wca-scrambles"))]
     Scramble::new(random_scramble(event))
@@ -917,16 +908,23 @@ mod tests {
 
     #[test]
     fn fto_scramble_uses_valid_moves_and_length() {
-        let valid_bases = ["R", "L", "B", "D", "F", "Br", "Bl"];
+        let builtin_bases = ["R", "L", "B", "D", "F", "Br", "Bl"];
+        let wca_bases = ["U", "R", "F", "L", "B", "BL", "D", "BR"];
         let valid_modifiers = ["", "'"];
 
         for _ in 0..20 {
             let scramble = generate_scramble(WcaEvent::Fto);
 
             let tokens: Vec<&str> = scramble.as_str().split_whitespace().collect();
+            let (valid_bases, lengths) = if scramble.is_wca() {
+                // Random-state scrambles vary in length.
+                (&wca_bases[..], 10..50)
+            } else {
+                (&builtin_bases[..], 25..30)
+            };
             assert!(
-                (25..30).contains(&tokens.len()),
-                "FTO length {} outside 25-29",
+                lengths.contains(&tokens.len()),
+                "FTO length {} outside {lengths:?}",
                 tokens.len()
             );
 

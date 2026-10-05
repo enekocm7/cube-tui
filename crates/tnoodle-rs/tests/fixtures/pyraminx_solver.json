@@ -1,0 +1,391 @@
+{
+  "random": [
+    {
+      "seed": 0,
+      "state": [240, 26, 13, 56],
+      "unsolvedTips": 2,
+      "solveIn": "R' U R' B' U L' U R u b",
+      "solveInNoTips": "R' U R' B' U L' U R u b",
+      "exactly": "B' U L' U B U' B' L' U' B' R u' b'",
+      "tooShort": null
+    },
+    {
+      "seed": 1,
+      "state": [487, 13, 8, 67],
+      "unsolvedTips": 4,
+      "solveIn": "B L' R L' R L' R' u l' r' b'",
+      "solveInNoTips": "B L' R L' R L' R' u l' r' b'",
+      "exactly": "B R' B R' L B' R L' R' B R u' l r b",
+      "tooShort": null
+    },
+    {
+      "seed": 2,
+      "state": [492, 28, 1, 78],
+      "unsolvedTips": 3,
+      "solveIn": "R' L' R' B' U L R' U' u l r",
+      "solveInNoTips": "R' L' R' B' U L R' U' u l r",
+      "exactly": "U R L B' L' R B U B U R u' l' r'",
+      "tooShort": null
+    },
+    {
+      "seed": 3,
+      "state": [374, 17, 60, 61],
+      "unsolvedTips": 3,
+      "solveIn": "B' L U L B L R u r b'",
+      "solveInNoTips": "B' L U L B L R u r b'",
+      "exactly": "B U' R U' B L U L B L R u' r' b",
+      "tooShort": null
+    },
+    {
+      "seed": 4,
+      "state": [422, 29, 66, 19],
+      "unsolvedTips": 2,
+      "solveIn": "R' L U L R' U R U' l b'",
+      "solveInNoTips": "R' L U L R' U R U' l b'",
+      "exactly": "R B L' R' L' B' U L U L' R l' b",
+      "tooShort": null
+    },
+    {
+      "seed": 5,
+      "state": [426, 30, 40, 8],
+      "unsolvedTips": 2,
+      "solveIn": "U' L' R L B R L' B r b",
+      "solveInNoTips": "U' L' R L B R L' B r b",
+      "exactly": "U' B L' R' U' B' R B' L' B' R r' b'",
+      "tooShort": null
+    },
+    {
+      "seed": 6,
+      "state": [691, 11, 80, 45],
+      "unsolvedTips": 2,
+      "solveIn": "R' L' B U R' L U' L U u' l",
+      "solveInNoTips": "R' L' B U R' L U' L U u' l",
+      "exactly": "R' U B L U' B' R' L U' B' R u l'",
+      "tooShort": null
+    },
+    {
+      "seed": 7,
+      "state": [285, 0, 64, 64],
+      "unsolvedTips": 3,
+      "solveIn": "R' B U B' R B L' B u l' b'",
+      "solveInNoTips": "R' B U B' R B L' B u l' b'",
+      "exactly": "L U' R' B' U B L B L' U' R u' l b",
+      "tooShort": null
+    },
+    {
+      "seed": 8,
+      "state": [370, 0, 51, 41],
+      "unsolvedTips": 4,
+      "solveIn": null,
+      "solveInNoTips": "B U R' L' U B' R L' R u' l' r' b",
+      "exactly": "R B' L' U' R U' B L' R' L R u l r b'",
+      "tooShort": null
+    },
+    {
+      "seed": 9,
+      "state": [469, 8, 7, 58],
+      "unsolvedTips": 3,
+      "solveIn": "R' B' R U' B' R U B u r' b'",
+      "solveInNoTips": "R' B' R U' B' R U B u r' b'",
+      "exactly": "U R L B L U L B U B' R u' r b",
+      "tooShort": null
+    },
+    {
+      "seed": 10,
+      "state": [60, 8, 9, 76],
+      "unsolvedTips": 4,
+      "solveIn": null,
+      "solveInNoTips": "U B' R L' B' R' U' B' u l r' b'",
+      "exactly": "B' L' U' B' L' U' B U' R' B R u' l' r b",
+      "tooShort": null
+    },
+    {
+      "seed": 11,
+      "state": [435, 20, 75, 52],
+      "unsolvedTips": 4,
+      "solveIn": null,
+      "solveInNoTips": "R' L U' B' L U' B L' u' l r b'",
+      "exactly": "R U R B U' L' R U B' U R u l' r' b",
+      "tooShort": null
+    },
+    {
+      "seed": 12,
+      "state": [133, 15, 52, 49],
+      "unsolvedTips": 4,
+      "solveIn": null,
+      "solveInNoTips": "R' U R L B U' B R U' u' l r' b'",
+      "exactly": "L U R' U' R U L B' R B' R u l' r b",
+      "tooShort": null
+    },
+    {
+      "seed": 13,
+      "state": [455, 0, 37, 2],
+      "unsolvedTips": 1,
+      "solveIn": "B L' B U' L U' L' U b",
+      "solveInNoTips": "B L' B U' L U' L' U b",
+      "exactly": "R' U' L' R L' U' R B' R B' R b'",
+      "tooShort": null
+    },
+    {
+      "seed": 14,
+      "state": [204, 29, 53, 26],
+      "unsolvedTips": 3,
+      "solveIn": null,
+      "solveInNoTips": "U' B U R' L B U' B' R' l r b",
+      "exactly": "L' R' U' B' R U R B' U B R l' r' b'",
+      "tooShort": null
+    },
+    {
+      "seed": 15,
+      "state": [658, 13, 46, 5],
+      "unsolvedTips": 2,
+      "solveIn": "U R' U R L B' r' b",
+      "solveInNoTips": "U R' U R L B' r' b",
+      "exactly": "U' R' L' U B U L' U' L U R r b'",
+      "tooShort": null
+    },
+    {
+      "seed": 16,
+      "state": [435, 25, 73, 58],
+      "unsolvedTips": 3,
+      "solveIn": "L' R L' B' R' U u r' b'",
+      "solveInNoTips": "L' R L' B' R' U u r' b'",
+      "exactly": "L' U R L' U B' L' R L' B' R u' r b",
+      "tooShort": null
+    },
+    {
+      "seed": 17,
+      "state": [96, 25, 28, 20],
+      "unsolvedTips": 2,
+      "solveIn": "R U' B L R L' B R l b",
+      "solveInNoTips": "R U' B L R L' B R l b",
+      "exactly": "L U' R U' R' B L' B R' B' R l' b'",
+      "tooShort": null
+    },
+    {
+      "seed": 18,
+      "state": [500, 31, 8, 51],
+      "unsolvedTips": 3,
+      "solveIn": "B U' L' U' R' U' R' L u' l r",
+      "solveInNoTips": "B U' L' U' R' U' R' L u' l r",
+      "exactly": "U R B L B' U L' U' B' U' R u l' r'",
+      "tooShort": null
+    },
+    {
+      "seed": 19,
+      "state": [365, 8, 41, 30],
+      "unsolvedTips": 2,
+      "solveIn": "R U L' B' R U B' u' r'",
+      "solveInNoTips": "R U L' B' R U B' u' r'",
+      "exactly": "R' L R B' U' R L R' U' L' R u r",
+      "tooShort": null
+    },
+    {
+      "seed": 20,
+      "state": [413, 19, 63, 69],
+      "unsolvedTips": 3,
+      "solveIn": "L B R' U L B' R u l' r",
+      "solveInNoTips": "L B R' U L B' R u l' r",
+      "exactly": "R U L' U' B L R B' L U' R u' l r'",
+      "tooShort": null
+    },
+    {
+      "seed": 21,
+      "state": [278, 27, 16, 64],
+      "unsolvedTips": 3,
+      "solveIn": "R' U L' B' U R' U u l' b'",
+      "solveInNoTips": "R' U L' B' U R' U u l' b'",
+      "exactly": "U' R B U' L U' R' L R L' R u' l b",
+      "tooShort": null
+    },
+    {
+      "seed": 22,
+      "state": [60, 27, 14, 48],
+      "unsolvedTips": 3,
+      "solveIn": null,
+      "solveInNoTips": "R' B U' R U' L' R U' R u' l r'",
+      "exactly": "B R' U B' R' U R' L U B' R u l' r",
+      "tooShort": null
+    },
+    {
+      "seed": 23,
+      "state": [547, 10, 30, 9],
+      "unsolvedTips": 1,
+      "solveIn": "L B' R U' L' R B l'",
+      "solveInNoTips": "R' U' B R B R' B l'",
+      "exactly": "U' L' R L B L R' U' L' B' R l",
+      "tooShort": null
+    },
+    {
+      "seed": 24,
+      "state": [595, 21, 36, 48],
+      "unsolvedTips": 3,
+      "solveIn": "L' U L R' U L' R u' l r'",
+      "solveInNoTips": "L' U L R' U L' R u' l r'",
+      "exactly": "R' L' R' B R U' B' U L' U R u l' r",
+      "tooShort": null
+    }
+  ],
+  "conversions": [
+    {
+      "moves": [],
+      "state": [0, 0, 0, 0]
+    },
+    {
+      "moves": ["U"],
+      "state": [59, 10, 27, 0]
+    },
+    {
+      "moves": ["L", "r"],
+      "state": [144, 24, 9, 3]
+    },
+    {
+      "moves": ["b'", "U", "u"],
+      "state": [59, 10, 27, 29]
+    },
+    {
+      "moves": ["R'", "L'", "u'", "b"],
+      "state": [296, 6, 24, 55]
+    },
+    {
+      "moves": ["r'", "b", "b", "u'", "l'"],
+      "state": [0, 0, 0, 80]
+    },
+    {
+      "moves": ["u'", "r'", "u'", "R", "R'", "B"],
+      "state": [20, 1, 1, 33]
+    },
+    {
+      "moves": ["B'", "B'", "b'", "l", "b'", "r", "l'"],
+      "state": [20, 1, 1, 4]
+    },
+    {
+      "moves": ["b'", "b'", "r", "U'", "b", "U", "l'", "r'"],
+      "state": [0, 0, 0, 20]
+    },
+    {
+      "moves": ["B", "L", "U", "B", "r", "R", "U'", "B", "b"],
+      "state": [25, 20, 12, 4]
+    },
+    {
+      "moves": ["b", "U'", "L'", "R'", "r'", "b'", "U'", "u'", "r'", "R'"],
+      "state": [68, 30, 48, 57]
+    },
+    {
+      "moves": ["U", "B'", "L'", "B'", "l'", "U'", "R", "B", "r'", "R'", "U'"],
+      "state": [503, 19, 74, 24]
+    },
+    {
+      "moves": ["B'", "U", "l", "l", "R'", "u", "R'", "u'", "r", "r'", "L'", "R'"],
+      "state": [111, 3, 47, 18]
+    },
+    {
+      "moves": ["B'", "B", "r", "u'", "U'", "R", "u'", "r'", "u'", "R", "R'", "r'", "B"],
+      "state": [595, 7, 58, 6]
+    },
+    {
+      "moves": ["l", "R'", "L'", "b'", "r'", "b'", "u", "b", "r'", "B'", "u", "u", "r'", "B'"],
+      "state": [311, 2, 25, 11]
+    },
+    {
+      "moves": [],
+      "state": [0, 0, 0, 0]
+    },
+    {
+      "moves": ["U'"],
+      "state": [103, 2, 54, 0]
+    },
+    {
+      "moves": ["r", "b"],
+      "state": [0, 0, 0, 4]
+    },
+    {
+      "moves": ["l", "u'", "R'"],
+      "state": [392, 18, 6, 63]
+    },
+    {
+      "moves": ["L", "r'", "r'", "r"],
+      "state": [144, 24, 9, 6]
+    },
+    {
+      "moves": ["r'", "u'", "L'", "R'", "r'"],
+      "state": [362, 30, 24, 57]
+    },
+    {
+      "moves": ["L", "u'", "B", "B", "u", "l'"],
+      "state": [159, 29, 11, 18]
+    },
+    {
+      "moves": ["L", "L", "l'", "r'", "U'", "U'", "l"],
+      "state": [299, 14, 45, 6]
+    },
+    {
+      "moves": ["u'", "r'", "r'", "L", "R", "b'", "l'", "L"],
+      "state": [252, 9, 21, 77]
+    },
+    {
+      "moves": ["B'", "U'", "b'", "R'", "l'", "l", "b'", "B", "L'"],
+      "state": [395, 28, 78, 1]
+    },
+    {
+      "moves": ["u", "u'", "r", "b", "U", "b'", "l'", "b'", "B", "u'"],
+      "state": [52, 11, 28, 77]
+    },
+    {
+      "moves": ["R'", "B'", "B", "U", "u", "U'", "r", "U'", "b", "L'", "L'"],
+      "state": [662, 30, 69, 31]
+    },
+    {
+      "moves": ["L", "U", "R'", "L'", "B", "l", "U'", "U'", "u", "B'", "U'", "R'"],
+      "state": [544, 10, 30, 36]
+    },
+    {
+      "moves": ["b", "u'", "r'", "B'", "U'", "b", "U", "l", "U'", "r'", "B'", "L'", "L"],
+      "state": [42, 2, 55, 68]
+    },
+    {
+      "moves": ["U", "R", "R'", "R", "l'", "b'", "l'", "l'", "B'", "l", "U'", "l'", "b", "L"],
+      "state": [359, 17, 14, 0]
+    },
+    {
+      "moves": [],
+      "state": [0, 0, 0, 0]
+    },
+    {
+      "moves": ["l'"],
+      "state": [0, 0, 0, 18]
+    },
+    {
+      "moves": ["L'", "l'"],
+      "state": [240, 12, 18, 18]
+    },
+    {
+      "moves": ["l", "B", "b"],
+      "state": [20, 1, 1, 10]
+    },
+    {
+      "moves": ["B'", "B", "l'", "U"],
+      "state": [59, 10, 27, 18]
+    },
+    {
+      "moves": ["l'", "r'", "u", "R'", "R"],
+      "state": [0, 0, 0, 51]
+    },
+    {
+      "moves": ["B", "l", "l'", "L", "B'", "b'"],
+      "state": [225, 24, 9, 2]
+    },
+    {
+      "moves": ["b'", "L'", "B", "b", "L'", "R", "r'"],
+      "state": [148, 11, 13, 6]
+    },
+    {
+      "moves": ["L'", "b'", "b", "u", "u'", "R'", "b'", "R"],
+      "state": [240, 12, 18, 2]
+    },
+    {
+      "moves": ["B", "U", "b", "r", "R", "u'", "r'", "L'", "l'"],
+      "state": [661, 3, 49, 73]
+    }
+  ]
+}

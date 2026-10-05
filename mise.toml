@@ -1,6 +1,5 @@
 [tools]
 bun = '1.4.2'
-java = "temurin-21.0.10+7.0.LTS"
 python = "latest"
 
 [tasks.run]
@@ -40,7 +39,7 @@ alias = "t"
 
 [tasks.test-all]
 description = "Run tests with all features"
-run = "cargo test --all-features"
+run = "cargo test --workspace --all-features"
 alias = "ta"
 
 [tasks.test-scrambles]
@@ -48,12 +47,10 @@ description = "Run Rust scramble tests"
 run = "cargo test --features wca-scrambles"
 alias = "ts"
 
-[tasks.test-java]
-description = "Test the scrambles Java code"
-dir = "scrambles"
-run = "./gradlew :lib:test --no-daemon"
-run_windows = "gradlew.bat :lib:test --no-daemon"
-alias = "tj"
+[tasks.test-tnoodle]
+description = "Test the TNoodle Rust port against the recorded Java fixtures"
+run = "cargo test -p tnoodle-rs"
+alias = "tt"
 
 [tasks.release]
 description = "Bump version, tag, publish and push to trigger the release build"
@@ -74,9 +71,9 @@ fi
 '''
 
 [tasks.test-all-scrambles]
-description = "Run Rust and scrambles Java tests"
+description = "Run the TNoodle port and app scramble tests"
 run = [
-    { task = "test-java" },
+    { task = "test-tnoodle" },
     { task = "test-scrambles" }
 ]
 alias = "tas"
