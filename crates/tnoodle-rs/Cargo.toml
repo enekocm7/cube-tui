@@ -1,0 +1,47 @@
+[package]
+name = "tnoodle-rs"
+version = "0.1.0"
+edition = "2024"
+repository = "https://github.com/enekocm7/cube-tui"
+license = "GPL-3.0-or-later"
+description = "A faithful Rust port of TNoodle, the official World Cube Association scramble program library."
+keywords = ["wca", "scramble", "rubiks-cube", "speedcubing", "tnoodle"]
+categories = ["algorithms", "games"]
+# The differential fixtures recorded from the Java library are large and only used by
+# this repository's tests.
+exclude = ["tests/"]
+
+[lib]
+name = "tnoodle"
+
+[dependencies]
+getrandom = "0.4.3"
+libm = "0.2.16"
+sha1 = "0.11.0"
+thiserror = "2.0.21"
+
+[dev-dependencies]
+proptest = "1.11.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["preserve_order"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+cast_lossless = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+too_many_arguments = "allow"
+many_single_char_names = "allow"
+unreadable_literal = "allow"

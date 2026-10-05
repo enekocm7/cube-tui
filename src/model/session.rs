@@ -534,9 +534,11 @@ mod tests {
         let mut session = session_without_workers(WcaEvent::Fto);
         session.spawn_scramble_generator();
 
+        // With `wca-scrambles`, the first FTO scramble also builds the solver's
+        // tables, which can take a while when the whole suite runs in parallel.
         let scramble = session
             .next_scramble_rx
-            .recv_timeout(Duration::from_secs(5))
+            .recv_timeout(Duration::from_secs(30))
             .expect("background generator should produce a scramble");
 
         assert_ne!(scramble.as_str(), "");

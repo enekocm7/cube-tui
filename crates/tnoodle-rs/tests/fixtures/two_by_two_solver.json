@@ -1,0 +1,356 @@
+{
+  "random": [
+    {
+      "seed": 0,
+      "permutation": 3120,
+      "orientation": 511,
+      "optimal": "U2 R F U2 F2 U F2 R'",
+      "solveIn5": null,
+      "exactly11": "R U' F' R2 U2 R U2 R' F U' F"
+    },
+    {
+      "seed": 1,
+      "permutation": 2265,
+      "orientation": 271,
+      "optimal": "F U R' F R U2 F2 R2 U",
+      "solveIn5": null,
+      "exactly11": "R' F' R2 U2 R2 U' R' F U' R2 U2"
+    },
+    {
+      "seed": 2,
+      "permutation": 4828,
+      "orientation": 618,
+      "optimal": "U2 F U' R F R2 F2 U2 F",
+      "solveIn5": null,
+      "exactly11": "R F2 U2 R U' R' U' R2 U' R2 F"
+    },
+    {
+      "seed": 3,
+      "permutation": 3974,
+      "orientation": 200,
+      "optimal": "R' F' U2 F' U2 F' U2 R' F2",
+      "solveIn5": null,
+      "exactly11": "R' U' F U' F' R F' U2 R2 F' R"
+    },
+    {
+      "seed": 4,
+      "permutation": 4742,
+      "orientation": 475,
+      "optimal": "R' U' R2 F R' U' F2 R F2",
+      "solveIn5": null,
+      "exactly11": "R F U' F' U2 R2 U' R2 F2 R U2"
+    },
+    {
+      "seed": 5,
+      "permutation": 3887,
+      "orientation": 235,
+      "optimal": "R' U' R U' F R' U F'",
+      "solveIn5": null,
+      "exactly11": "R F' R' U' R F' U' R U2 R' U"
+    },
+    {
+      "seed": 6,
+      "permutation": 1411,
+      "orientation": 582,
+      "optimal": "F' R2 F R U2 R U2 F' U2",
+      "solveIn5": null,
+      "exactly11": "U2 F U' R U' F U2 R U' R' F"
+    },
+    {
+      "seed": 7,
+      "permutation": 556,
+      "orientation": 164,
+      "optimal": "R U' R' U' F2 R U' F2 U",
+      "solveIn5": null,
+      "exactly11": "U R U2 R F' U' R' U R' U2 R"
+    },
+    {
+      "seed": 8,
+      "permutation": 1324,
+      "orientation": 439,
+      "optimal": "U F R U R' U' R U",
+      "solveIn5": null,
+      "exactly11": "U' R' F' U2 F R U R' U' F' U"
+    },
+    {
+      "seed": 9,
+      "permutation": 469,
+      "orientation": 199,
+      "optimal": "U2 F R' U2 R' U' R2 F R'",
+      "solveIn5": null,
+      "exactly11": "R' F R2 U' R2 U' F U' R U2 F"
+    },
+    {
+      "seed": 10,
+      "permutation": 3033,
+      "orientation": 546,
+      "optimal": "R F' R U' R U R' F R",
+      "solveIn5": null,
+      "exactly11": "R' U' F U' F U' F' U2 F' U R2"
+    },
+    {
+      "seed": 11,
+      "permutation": 2178,
+      "orientation": 128,
+      "optimal": "R' F2 R2 U2 F' U F' U R",
+      "solveIn5": null,
+      "exactly11": "R' U' F U' F R2 U2 R2 U2 F2 R"
+    },
+    {
+      "seed": 12,
+      "permutation": 2946,
+      "orientation": 581,
+      "optimal": "F' R U R U F2 U F",
+      "solveIn5": null,
+      "exactly11": "R F U' R2 U' R' U R' F' R2 U'"
+    },
+    {
+      "seed": 13,
+      "permutation": 2092,
+      "orientation": 163,
+      "optimal": "F R U2 F' R2 U F U2 F R",
+      "solveIn5": null,
+      "exactly11": "U F U R U2 R' U' F U' R2 F'"
+    },
+    {
+      "seed": 14,
+      "permutation": 4655,
+      "orientation": 510,
+      "optimal": "R2 F' U2 R2 F U R' U F2",
+      "solveIn5": null,
+      "exactly11": "F U2 R U2 R U2 F' U' R' U2 R'"
+    },
+    {
+      "seed": 15,
+      "permutation": 3801,
+      "orientation": 92,
+      "optimal": "F2 U' R2 U' F' R2 U2 F'",
+      "solveIn5": null,
+      "exactly11": "U R' F U2 R' U R2 U' F' R2 U'"
+    },
+    {
+      "seed": 16,
+      "permutation": 1671,
+      "orientation": 655,
+      "optimal": "R' U R U' F U' F2 U2 R",
+      "solveIn5": null,
+      "exactly11": "R' U2 F R' U' R' F U' R U R2"
+    },
+    {
+      "seed": 17,
+      "permutation": 816,
+      "orientation": 237,
+      "optimal": "R2 U2 F' R F2 R U' F'",
+      "solveIn5": null,
+      "exactly11": "R' F R2 U' R2 U2 F U' R U2 R'"
+    },
+    {
+      "seed": 18,
+      "permutation": 3380,
+      "orientation": 584,
+      "optimal": "R F2 R F2 R U' R' U2 R",
+      "solveIn5": null,
+      "exactly11": "U R' F' R U2 R' U' R2 F' R2 F"
+    },
+    {
+      "seed": 19,
+      "permutation": 2525,
+      "orientation": 344,
+      "optimal": "R F' U2 R F U' F U'",
+      "solveIn5": null,
+      "exactly11": "R F' U2 F' R2 U2 F R U' F R2"
+    },
+    {
+      "seed": 20,
+      "permutation": 3293,
+      "orientation": 619,
+      "optimal": "F U R2 U' R2 F R' U' F R'",
+      "solveIn5": null,
+      "exactly11": "U' R2 U F' R U2 R' U2 F U' F"
+    },
+    {
+      "seed": 21,
+      "permutation": 2438,
+      "orientation": 201,
+      "optimal": "U F' R U2 R2 F U F R'",
+      "solveIn5": null,
+      "exactly11": "R' U2 R U' R2 F' U2 R U2 R' F"
+    },
+    {
+      "seed": 22,
+      "permutation": 5002,
+      "orientation": 726,
+      "optimal": "U' F2 R U2 R' U F2 U F' R'",
+      "solveIn5": null,
+      "exactly11": "R' U R2 F' R U' R2 F2 U' R U2"
+    },
+    {
+      "seed": 23,
+      "permutation": 4147,
+      "orientation": 308,
+      "optimal": "R2 F' R' U F' R2 U2 R' F2",
+      "solveIn5": null,
+      "exactly11": "F U' R U' R' U2 F R U R2 U'"
+    },
+    {
+      "seed": 24,
+      "permutation": 4915,
+      "orientation": 583,
+      "optimal": "R' F U R F2 U' R2 U R' U",
+      "solveIn5": null,
+      "exactly11": "R' U2 F R U2 R' F R2 U' R' U"
+    }
+  ],
+  "conversions": [
+    {
+      "moves": [],
+      "permutation": 0,
+      "orientation": 0
+    },
+    {
+      "moves": ["U'"],
+      "permutation": 960,
+      "orientation": 0
+    },
+    {
+      "moves": ["Lw2", "R2"],
+      "permutation": 4527,
+      "orientation": 0
+    },
+    {
+      "moves": ["D2", "Fw2", "Lw2"],
+      "permutation": 2424,
+      "orientation": 0
+    },
+    {
+      "moves": ["R", "D", "Lw", "B"],
+      "permutation": 4213,
+      "orientation": 110
+    },
+    {
+      "moves": ["F2", "Lw'", "D2", "R", "Dw2"],
+      "permutation": 3011,
+      "orientation": 516
+    },
+    {
+      "moves": ["U2", "Fw2", "Bw'", "Fw2", "D2", "L2"],
+      "permutation": 403,
+      "orientation": 0
+    },
+    {
+      "moves": ["Rw'", "Lw'", "B", "B'", "U'", "F2", "Uw'"],
+      "permutation": 4765,
+      "orientation": 0
+    },
+    {
+      "moves": ["U'", "F", "Rw'", "Fw", "R", "R2", "Bw2", "F2"],
+      "permutation": 4088,
+      "orientation": 0
+    },
+    {
+      "moves": ["Lw2", "B", "Lw", "Uw", "Dw2", "Uw", "B'", "Dw2", "R"],
+      "permutation": 3922,
+      "orientation": 463
+    },
+    {
+      "moves": ["D", "U", "Uw2", "B'", "R", "Uw2", "F", "B2", "B'", "Rw2"],
+      "permutation": 3967,
+      "orientation": 88
+    },
+    {
+      "moves": ["F'", "Dw", "D2", "R2", "D'", "Bw2", "Uw'", "F'", "Lw", "R", "U"],
+      "permutation": 1615,
+      "orientation": 384
+    },
+    {
+      "moves": [],
+      "permutation": 0,
+      "orientation": 0
+    },
+    {
+      "moves": ["U"],
+      "permutation": 1464,
+      "orientation": 0
+    },
+    {
+      "moves": ["Uw", "Fw"],
+      "permutation": 0,
+      "orientation": 0
+    },
+    {
+      "moves": ["Fw'", "D2", "D'"],
+      "permutation": 1464,
+      "orientation": 0
+    },
+    {
+      "moves": ["Fw'", "Lw'", "F2", "L"],
+      "permutation": 3173,
+      "orientation": 516
+    },
+    {
+      "moves": ["B'", "R", "Rw2", "Fw'", "Bw"],
+      "permutation": 3275,
+      "orientation": 516
+    },
+    {
+      "moves": ["Fw'", "Uw'", "R", "Dw", "D", "L2"],
+      "permutation": 4461,
+      "orientation": 154
+    },
+    {
+      "moves": ["Dw'", "B", "B'", "D2", "B2", "U", "Dw"],
+      "permutation": 3487,
+      "orientation": 0
+    },
+    {
+      "moves": ["Rw2", "R'", "R", "D", "Bw'", "D2", "D'", "Lw2"],
+      "permutation": 413,
+      "orientation": 408
+    },
+    {
+      "moves": ["U2", "Dw'", "Dw", "B", "Dw", "B'", "Uw'", "Uw2", "Bw2"],
+      "permutation": 2763,
+      "orientation": 516
+    },
+    {
+      "moves": ["U", "Uw", "D", "Dw", "Bw2", "Bw2", "Uw", "U2", "L", "U'"],
+      "permutation": 1013,
+      "orientation": 66
+    },
+    {
+      "moves": ["Bw2", "U2", "Dw'", "D2", "F2", "B2", "Uw", "Uw'", "D'", "Rw2", "D"],
+      "permutation": 0,
+      "orientation": 0
+    },
+    {
+      "moves": [],
+      "permutation": 0,
+      "orientation": 0
+    },
+    {
+      "moves": ["Fw"],
+      "permutation": 0,
+      "orientation": 0
+    },
+    {
+      "moves": ["L'", "Bw2"],
+      "permutation": 1663,
+      "orientation": 516
+    },
+    {
+      "moves": ["B", "D", "Rw2"],
+      "permutation": 1596,
+      "orientation": 106
+    },
+    {
+      "moves": ["Uw'", "Fw", "Dw", "Uw2"],
+      "permutation": 0,
+      "orientation": 0
+    },
+    {
+      "moves": ["D", "D2", "Lw'", "U'", "Bw2"],
+      "permutation": 1003,
+      "orientation": 66
+    }
+  ]
+}

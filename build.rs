@@ -1,60 +1,7 @@
-#[cfg(unix)]
-#[cfg(feature = "wca-scrambles")]
-use std::ffi::OsStr;
-
 /// Builds the optional bundled assets required by enabled Cargo features.
 fn main() {
     #[cfg(feature = "dashboard")]
     build_dashboard();
-    #[cfg(feature = "wca-scrambles")]
-    build_scrambles();
-}
-
-#[cfg(feature = "wca-scrambles")]
-/// Compiles the Java WCA scrambler and copies its shaded JAR into `OUT_DIR`.
-fn build_scrambles() {
-    use std::fs;
-    use std::path::{Path, PathBuf};
-    use std::process::Command;
-
-    println!("cargo:rerun-if-changed=scrambles/lib/src/main/java/org/example/Library.java");
-    println!("cargo:rerun-if-changed=scrambles/lib/src/test/java/org/example/LibraryTest.java");
-    println!("cargo:rerun-if-changed=scrambles/lib/build.gradle.kts");
-
-    let scrambles_dir = Path::new("scrambles");
-
-    let mut command = if cfg!(target_os = "windows") {
-        let mut cmd = Command::new("cmd");
-        cmd.args(["/C", "gradlew.bat", "shadowJar", "--no-daemon"]);
-        cmd
-    } else {
-        #[cfg(unix)]
-        add_execution_permission("scrambles/gradlew");
-        let mut cmd = Command::new("./gradlew");
-        cmd.args(["shadowJar", "--no-daemon"]);
-        cmd
-    };
-
-    let status = command
-        .current_dir(scrambles_dir)
-        .status()
-        .unwrap_or_else(|e| panic!("Failed to run `gradle shadowJar`: {e}"));
-
-    assert!(
-        status.success(),
-        "`gradle shadowJar` exited with status {status}"
-    );
-
-    let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR not set"));
-    let src_jar = scrambles_dir.join("lib/build/libs/lib-all.jar");
-    let dst_jar = out_dir.join("lib-all.jar");
-    fs::copy(&src_jar, &dst_jar).unwrap_or_else(|e| {
-        panic!(
-            "Failed to copy {} to {}: {e}",
-            src_jar.display(),
-            dst_jar.display()
-        )
-    });
 }
 
 #[cfg(feature = "dashboard")]
@@ -104,29 +51,4 @@ fn build_dashboard() {
         status.success(),
         "`bun run build` exited with status {status}"
     );
-}
-
-#[cfg(unix)]
-#[cfg(feature = "wca-scrambles")]
-/// Adds executable bits to a build helper while preserving its other permissions.
-fn add_execution_permission<P: AsRef<OsStr>>(path: P) {
-    use std::fs;
-    use std::os::unix::fs::PermissionsExt;
-
-    let path = path.as_ref();
-    let mut permissions = fs::metadata(path)
-        .unwrap_or_else(|e| {
-            panic!(
-                "Failed to read metadata for {}: {e}",
-                path.to_string_lossy()
-            )
-        })
-        .permissions();
-    permissions.set_mode(permissions.mode() | 0o111);
-    fs::set_permissions(path, permissions).unwrap_or_else(|e| {
-        panic!(
-            "Failed to set executable permissions for {}: {e}",
-            path.to_string_lossy()
-        )
-    });
 }

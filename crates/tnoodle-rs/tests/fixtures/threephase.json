@@ -1,0 +1,43 @@
+{
+  "random": [
+    {
+      "seed": 0,
+      "randomState": "F2  R'  F   U'  B   L   U2  R'  F'  R2  U2  B2  R2  D2  B   R2  F'  L2  D'  L'  Uw2 Fw2 L'  D2  F'  R'  B2  Uw2 L'  U2  Fw2 L2  F2  Uw' B   Rw2 Uw2 F'  Rw  Uw' F'  R'  L2  Uw  L'  ",
+      "facelet": "FDDRBDLLBRDRLRLBRUDFDFFFFDRFRRURBDFUURURDBBDDFFDLRLBUUFFUDFLBULULURUBUULBRLLDFBFDBBUUBBRDLLLFBRL",
+      "solution": "D'  L2  D   L   R   D   F2  L'  F'  U2  L2  R'  B2  D2  F2  D2  R   F'  Fw2 Rw2 L   U'  R2  Uw2 F2  Rw2 L'  Fw2 R2  B2  Fw' L   U'  B2  F'  Rw' D   Fw  F'  D2  Fw' B'  R'  "
+    },
+    {
+      "seed": 1,
+      "randomState": "D'  F'  U   B2  F2  L2  F2  U2  L   U2  L'  D2  R   U   F2  L   U   B'  U2  B2  Rw2 D'  L   Fw2 R'  U2  L2  R   Fw2 D'  R2  Uw2 Fw' D2  Fw2 F'  B2  Rw  Fw' U'  F2  U'  Rw2 Uw' Rw' ",
+      "facelet": "LBDUDDBDDLFLDDUFDURRFUBRFUDBBUDUFBRLRRFULDULBFRRLDFDLRLFRBRBLBLFBFLRFLRFBDUUFUBDBLRUDFLLRFBURBUU",
+      "solution": "L   D'  F'  L2  B   D2  L2  B2  L2  F   U   L'  F'  U'  R'  F'  R2  F'  R   Fw2 R   L'  Fw2 Rw2 F   L'  B'  U2  F   Uw2 F'  Uw' U'  F   B'  U'  F   Rw' Uw  Fw' B   F2  Rw2 F   "
+    },
+    {
+      "seed": 2,
+      "randomState": "R2  B2  U2  L2  B   L2  D2  B'  R2  D   R'  F'  U   L'  U   D2  F   R   U'  Fw2 R   B2  Uw2 D'  U'  Fw2 B2  R'  U'  Rw2 F2  Fw' L'  B'  R'  B'  Uw' Rw  R2  F2  Uw  Rw' Uw  L   ",
+      "facelet": "RFDRFURLBDUUFFFLDLFDLDBRBLFUURDFRRDBBRUURBLUBDULURFFBFFFDRBBLLURUDDDRLRLDUFBDLULBLLBULBBFDDRURBF",
+      "solution": "R   B'  R   U   L'  D2  B2  L2  U2  F2  L   F2  U   L'  U'  B'  D'  U'  F2  Fw2 L'  B2  D2  Rw2 Uw2 R   Fw2 D   U   R   L   Fw  R'  D'  B'  L'  D2  Fw  Uw' Fw' B'  D   Rw' U   "
+    },
+    {
+      "seed": 3,
+      "randomState": "B'  U   L'  D   B   D   R2  B'  D   R'  F2  R'  U2  L'  U2  R   D'  Uw2 Fw2 L'  D   Rw2 R'  U'  R'  U2  Fw2 L   F2  R'  Fw' D'  R   B2  R   Rw  U2  Rw  Uw  L'  Fw' U2  F2  ",
+      "facelet": "LRDUBDRBRBULRLLUFDURLUDRLFLRDFDLFBFLBRDUFBUURRFBDBRRDULDFLLRDLUDBDBUFBRLUDFDLULFBBDUUBRRUFFBFFFB",
+      "solution": "R2  U'  B2  R2  D'  B2  L2  U   B2  F   R   D2  F2  D'  R   B2  L2  B'  L'  Rw2 B   U2  Rw2 B'  Rw2 Fw2 D   U2  B2  U   Rw' D   Fw2 Uw2 R'  Uw' F2  R2  Fw  B2  Uw' "
+    },
+    {
+      "seed": 4,
+      "randomState": "U'  F   U2  B2  R2  D2  R'  D'  B'  R2  B'  D2  F'  L2  D2  L2  D2  F'  B'  U'  Fw2 R   U2  F2  Rw2 Fw2 D2  Fw2 B   F2  L'  B   F   Uw' R2  D   B'  U'  L2  Rw  D2  B2  Uw' Fw' Rw' R2  ",
+      "facelet": "FUDUFBLDDRULFLFDFFFBBDFUBDUBBFBRDBRRLRURFDBUUBDDBUBLDUBLFRLDUULDLRRLRLFDBFBUFDLRLRFULFDULLRRBURR",
+      "solution": "B2  L2  D   U   R2  U   B2  U   L2  R'  D2  F'  L   U'  F2  L   B   R   B2  D2  Fw2 U   R2  L   Uw2 D   L   Uw2 L'  D'  Fw2 R   F2  Fw' D   F2  L2  Uw2 B'  Rw' Uw' Rw2 Uw' D'  B   Uw  "
+    },
+    {
+      "seed": 5,
+      "randomState": "D2  F   R'  D2  L   R2  D2  L   F2  L   U2  B   L2  R'  D   R   D   R2  U   L   Uw2 F'  Rw2 L   F'  L   Fw2 F'  L'  Uw2 B   Rw2 U'  Fw2 Uw  L   U'  F2  Fw' U   L2  Fw' U   Fw2 Uw  ",
+      "facelet": "BBDBRBLBDUUURFFLDBRUBDFFFBUURBDLBDRBFRRRLBFULFUFFRFDULDULUBRUDDFUULDLRDLBLFDFBLDRFDLLRFURLDLUBRR",
+      "solution": "B'  L   F'  U2  L2  U2  L2  F2  U2  B2  L   U   R   B'  D2  R   F   D'  Fw2 L2  Uw2 F'  U'  Rw2 B'  L2  D2  F2  D'  Rw2 F2  Rw' D   Rw2 B   U2  Uw' Rw  U2  F   Rw2 Uw  B'  "
+    }
+  ],
+  "noInverseWithRotation": "D'  B2  Uw2 Fw' R   Rw2 Uw' Rw' U'  L   Uw  L2  U   L   U2  Rw2 Uw2 R2  B'  L   B'  Uw2 F'  L   R'  Uw2 L'  D   B2  R2  B2  U'  F2  U'  L2  U'  L2  F2  L'  U2  D   F'  L2  R'  U'  L   x'",
+  "inverseWithRotation": "B'  L   D2  U2  B   D2  F'  D2  F   R2  F   L2  D   R2  F   D   R   U   B2  R'  Fw2 D   Rw2 B   U   F'  Rw2 F   L2  Fw2 D   R2  Fw2 Rw' D'  B2  R2  Uw2 Fw2 Uw  Fw  R   Fw' B'  L'  Uw2 y' ",
+  "solveScramble": "R   U   Rw' F2  Uw2 Fw  L'  Uw' F   "
+}

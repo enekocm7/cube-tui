@@ -12,7 +12,6 @@ your terminal. All your session data is saved locally.
 ## Requirements
 
 - [Rust & Cargo](https://rustup.rs/)
-- [Java (Version 21 or newer)](https://www.oracle.com/es/java/technologies/downloads/) (required for the `wca-scrambles` feature)
 - [Bun](https://bun.sh/) (required for the `dashboard` feature)
 
 ## Installation & Features
@@ -37,7 +36,7 @@ To install with WCA scrambles support:
 cargo install cube-tui --features wca-scrambles
 ```
 
-It uses [JNI](https://github.com/jni-rs/jni-rs) to call the official WCA scramble library, which is written in Java.
+It uses `tnoodle-rs`, a Rust port of the official WCA scramble library included in this repository (`crates/tnoodle-rs`), so no Java installation is needed.
 
 ### Dashboard
 
