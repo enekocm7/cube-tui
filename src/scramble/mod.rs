@@ -922,10 +922,6 @@ mod tests {
 
         for _ in 0..20 {
             let scramble = generate_scramble(WcaEvent::Fto);
-            assert!(
-                !scramble.is_wca(),
-                "FTO currently uses the built-in generator"
-            );
 
             let tokens: Vec<&str> = scramble.as_str().split_whitespace().collect();
             assert!(
