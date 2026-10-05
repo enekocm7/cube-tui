@@ -3,7 +3,7 @@
 
 [versions]
 junit-jupiter = "6.0.1"
-tnoodle-lib = "0.19.2"
+tnoodle-lib = "0.20.0"
 slf4j = "2.0.13"
 
 [libraries]
