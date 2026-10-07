@@ -288,13 +288,15 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         let preview_height = widget.height_for(host_area.height.saturating_sub(reserved_height));
         let split = Layout::vertical([Constraint::Fill(1), Constraint::Length(preview_height)])
             .split(host_area);
-        if stats_area.is_some() {
+        let preview_area = if stats_area.is_some() {
+            // Span the whole stats column so both panels share their borders.
             stats_area = Some(split[0]);
+            split[1]
         } else {
             timer_area = split[0];
-        }
-        let width = split[1].width.min(widget.width().max(30));
-        let preview_area = Rect::new(split[1].right() - width, split[1].y, width, split[1].height);
+            let width = split[1].width.min(widget.width().max(30));
+            Rect::new(split[1].right() - width, split[1].y, width, split[1].height)
+        };
         (widget, preview_area)
     });
 
@@ -575,22 +577,22 @@ mod tests {
         // The U face's right column turns green after R. The last panel border
         // ends above the footer, at the right edge of the main layout.
         let net_y = area.bottom() - 12;
-        assert_eq!(buf[(area.right() - 22, net_y)].symbol(), "W");
-        assert_eq!(buf[(area.right() - 18, net_y)].symbol(), "G");
+        assert_eq!(buf[(area.right() - 23, net_y)].symbol(), "W");
+        assert_eq!(buf[(area.right() - 19, net_y)].symbol(), "G");
         assert_eq!(buf[(area.right() - 2, area.bottom() - 3)].symbol(), "┘");
 
         model.settings.set_scramble_preview(false);
         let hidden = render_model(&mut model, area);
         assert!(!buffer_text(&hidden).contains("Preview ["));
         assert!(buffer_text(&hidden).contains("ao100"));
-        assert_ne!(hidden[(area.right() - 18, net_y)].symbol(), "G");
+        assert_ne!(hidden[(area.right() - 19, net_y)].symbol(), "G");
     }
 
     #[test]
     fn preview_tracks_new_scrambles_sessions_and_events() {
         let mut model = preview_model();
         let area = Rect::new(0, 0, 100, 32);
-        let sticker = (area.right() - 18, area.bottom() - 12);
+        let sticker = (area.right() - 19, area.bottom() - 12);
         assert_eq!(render_model(&mut model, area)[sticker].symbol(), "G");
         model.current_session_mut().scramble = Some(crate::scramble::Scramble::new("U"));
         assert_eq!(render_model(&mut model, area)[sticker].symbol(), "W");
@@ -649,7 +651,11 @@ mod tests {
         let large_area = Rect::new(3, 5, 100, 32);
         let buf = render_model(&mut model, large_area);
         assert_eq!(
-            buf[(large_area.right() - 18, large_area.bottom() - 12)].symbol(),
+            buf[(
+                large_area.right() - if stats { 19 } else { 18 },
+                large_area.bottom() - 12
+            )]
+                .symbol(),
             "G"
         );
         assert_eq!(
