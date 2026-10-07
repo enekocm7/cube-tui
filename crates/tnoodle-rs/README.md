@@ -67,8 +67,8 @@ is itself nondeterministic:
   one of Java's possible orders.
 * **Solver randomness**: the Pyraminx and Skewb solvers use an unseeded `new Random()` in
   Java. Here they use OS entropy by default, and `with_search_seed` makes them reproducible.
-  The 3x3x3's 200 ms minimum search time can be removed for tests with
-  `with_min_search_time(Duration::ZERO)`.
+  The 3x3x3 uses the first solution found by default instead of TNoodle's 200 ms minimum
+  search time; `with_min_search_time(Duration::from_millis(200))` restores it.
 * **Omitted**: threephase table serialization (`Tools.initFrom`/`saveTo`), debug printing,
   and the GWT exporter annotations.
 * **Errors**: invalid hex colors return `None` instead of throwing, and Java exceptions map

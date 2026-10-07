@@ -6,6 +6,7 @@ use super::full_cube::FullCube;
 use super::moves::{MOVE2STD, MOVE3STD, MOVES, WB3, WD3, WF1, WU1, to_moves};
 use super::tables::{TABLES, Tables};
 use crate::java::{JavaPriorityQueue, RandomSource};
+use crate::parallel::{self, Stop};
 
 const PHASE1_SOLUTIONS: usize = 10000;
 const PHASE2_ATTEMPTS: usize = 500;
@@ -15,28 +16,27 @@ const PHASE3_ATTEMPTS: usize = 100;
 /// Chen Shuang's three phase 4x4x4 solver: phase 1 separates the U/D centers, phase 2
 /// solves the remaining centers into a reduced state, phase 3 pairs the edges; the reduced
 /// 3x3x3 is then solved with min2phase.
+///
+/// The candidates of phases 2 and 3 are searched in parallel (with the `parallel` feature),
+/// keeping the results of Java's sequential search.
 #[derive(Clone)]
 pub struct Search {
     t: &'static Tables,
     p1sols: JavaPriorityQueue<FullCube>,
     move1: [usize; 15],
-    move2: [usize; 20],
-    move3: [usize; 20],
     length1: i32,
     length2: i32,
     add1: bool,
     c: FullCube,
     c1: FullCube,
-    c2: FullCube,
     ct2: Center2,
-    ct3: Center3,
-    e12: Edge3,
-    tempe: [Edge3; 20],
+    /// The scratch state of phases 2 and 3 on this thread; see [`Worker`].
+    worker: Worker,
     search333: crate::min2phase::Search,
     solution: String,
     p1_sols_cnt: usize,
+    /// The phase 3 candidates.
     arr2: Vec<FullCube>,
-    arr2idx: usize,
     /// Return the inverse of the solution (a scramble); `true` by default.
     pub inverse_solution: bool,
     /// Append the whole-cube rotation that finishes the solution; `false` by default.
@@ -73,23 +73,17 @@ impl Search {
             t: &TABLES,
             p1sols: JavaPriorityQueue::with_capacity(PHASE2_ATTEMPTS, by_value_descending),
             move1: [0; 15],
-            move2: [0; 20],
-            move3: [0; 20],
             length1: 0,
             length2: 0,
             add1: false,
             c: FullCube::new(),
             c1: FullCube::new(),
-            c2: FullCube::new(),
             ct2: Center2::default(),
-            ct3: Center3::default(),
-            e12: Edge3::new(),
-            tempe: [Edge3::new(); 20],
+            worker: Worker::new(),
             search333: crate::min2phase::Search::new(),
             solution: String::new(),
             p1_sols_cnt: 0,
             arr2: Vec::with_capacity(PHASE2_SOLUTIONS),
-            arr2idx: 0,
             inverse_solution: true,
             with_rotation: false,
             totlen: 0,
@@ -183,7 +177,7 @@ impl Search {
         let rlprun = i32::from(c1t.csprun[(rl >> 6) as usize]);
 
         self.p1_sols_cnt = 0;
-        self.arr2idx = 0;
+        self.arr2.clear();
         self.p1sols.clear();
 
         self.length1 = udprun.min(fbprun).min(rlprun);
@@ -204,26 +198,14 @@ impl Search {
         let mut max_length2 = 9;
         loop {
             let mut length12 = p1_sols_arr[0].value;
-            'out: while length12 < 100 {
-                for sol in &p1_sols_arr {
-                    if sol.value > length12 {
-                        break;
-                    }
-                    if length12 - sol.length1 > max_length2 {
-                        continue;
-                    }
-                    self.c1.copy_from(sol);
-                    let center = *self.c1.center();
-                    let parity = self.c1.edge().parity();
-                    self.ct2.set(&center, parity);
-                    let s2ct = self.ct2.get_ct();
-                    let s2rl = self.ct2.get_rl();
-                    self.length1 = sol.length1;
-                    self.length2 = length12 - sol.length1;
-
-                    if self.search2(s2ct as usize, s2rl as usize, self.length2, 28, 0) {
-                        break 'out;
-                    }
+            while length12 < 100 {
+                let sols: Vec<&FullCube> = p1_sols_arr
+                    .iter()
+                    .take_while(|sol| sol.value <= length12)
+                    .filter(|sol| length12 - sol.length1 <= max_length2)
+                    .collect();
+                if self.phase2_pass(&sols, length12) {
+                    break;
                 }
                 length12 += 1;
             }
@@ -233,52 +215,31 @@ impl Search {
             }
         }
 
-        let arr2idx = self.arr2idx;
-        self.arr2[..arr2idx].sort_by_key(|c| c.value);
-        let mut index = 0;
+        self.arr2.sort_by_key(|c| c.value);
         let mut length123;
         let mut max_length3 = 13;
-        loop {
+        let (index, move3) = 'found: loop {
             length123 = self.arr2[0].value;
-            'out2: while length123 < 100 {
-                for i in 0..arr2idx.min(PHASE3_ATTEMPTS) {
-                    let cand = &mut self.arr2[i];
-                    if cand.value > length123 {
-                        break;
-                    }
-                    let remaining = length123 - cand.length1 - cand.length2;
-                    if remaining > max_length3 {
-                        continue;
-                    }
-                    let eparity = self.e12.set_from_cube(cand.edge());
-                    let center = *cand.center();
-                    let corner_parity = cand.corner().parity();
-                    self.ct3.set(&center, eparity ^ corner_parity);
-                    let ct = self.ct3.get_ct();
-                    let edge = self.e12.get(10);
-                    let prun = t.edge3.prun(self.e12.get_sym(&t.edge3) as usize);
-                    let lm = 20;
-
-                    if prun <= remaining && self.search3(edge, ct as usize, prun, remaining, lm, 0)
-                    {
-                        index = i;
-                        break 'out2;
-                    }
+            while length123 < 100 {
+                let arr2 = &self.arr2;
+                let candidates: Vec<usize> = (0..arr2.len().min(PHASE3_ATTEMPTS))
+                    .take_while(|&i| arr2[i].value <= length123)
+                    .filter(|&i| length123 - arr2[i].length1 - arr2[i].length2 <= max_length3)
+                    .collect();
+                if let Some(found) = self.phase3_pass(&candidates, length123) {
+                    break 'found found;
                 }
                 length123 += 1;
             }
             max_length3 += 1;
-            if length123 != 100 {
-                break;
-            }
-        }
+        };
 
         let mut solcube = self.arr2[index].clone();
         self.length1 = solcube.length1;
         self.length2 = solcube.length2;
         let length = length123 - self.length1 - self.length2;
 
-        for &m in &self.move3[..length as usize] {
+        for &m in &move3[..length as usize] {
             solcube.push_move(MOVE3STD[m]);
         }
 
@@ -388,10 +349,192 @@ impl Search {
         self.p1_sols_cnt == PHASE1_SOLUTIONS
     }
 
-    fn search2(&mut self, ct: usize, rl: usize, maxl: i32, lm: usize, depth: usize) -> bool {
+    /// Runs phase 2 from the phase 1 solutions `sols`, in order, adding the phase 3
+    /// candidates found to `arr2` until there are [`PHASE2_SOLUTIONS`]; returns whether
+    /// there are.
+    fn phase2_pass(&mut self, sols: &[&FullCube], length12: i32) -> bool {
         let t = self.t;
+        let mut start = 0;
+        // Until its edges settle, the results of this thread's worker depend on its
+        // history, so it must see the solutions in order.
+        while start < sols.len() && !self.worker.e12.is_settled() {
+            let sol = sols[start];
+            let need = PHASE2_SOLUTIONS - self.arr2.len();
+            let found = self
+                .worker
+                .phase2(t, sol, length12 - sol.length1, need, &Stop::never());
+            self.arr2.extend(found);
+            if self.arr2.len() == PHASE2_SOLUTIONS {
+                return true;
+            }
+            start += 1;
+        }
+
+        // Every phase 1 solution yields its candidates in a fixed order, so the first `need`
+        // candidates of all of them in order are those a sequential search collects.
+        let sols = &sols[start..];
+        let need = PHASE2_SOLUTIONS - self.arr2.len();
+        let mut total = 0;
+        let results = parallel::in_order(
+            sols.len(),
+            Worker::settled,
+            |w, i, stop| w.phase2(t, sols[i], length12 - sols[i].length1, need, stop),
+            |found| {
+                total += found.len();
+                total >= need
+            },
+            |found| found.len() >= need,
+        );
+        self.arr2.extend(results.into_iter().flatten().take(need));
+        self.arr2.len() == PHASE2_SOLUTIONS
+    }
+
+    /// Runs phase 3 on the candidates `arr2[i]` for the `i` in `candidates`, in order;
+    /// returns the first that can be solved within `length123` moves in total, with its
+    /// phase 3 moves.
+    fn phase3_pass(
+        &mut self,
+        candidates: &[usize],
+        length123: i32,
+    ) -> Option<(usize, [usize; 20])> {
+        let t = self.t;
+        let arr2 = &self.arr2;
+        let remaining = |i: usize| length123 - arr2[i].length1 - arr2[i].length2;
+        let mut start = 0;
+        while start < candidates.len() && !self.worker.e12.is_settled() {
+            let i = candidates[start];
+            let moves = self
+                .worker
+                .phase3(t, &arr2[i], remaining(i), &Stop::never());
+            if let Some(moves) = moves {
+                return Some((i, moves));
+            }
+            start += 1;
+        }
+
+        let candidates = &candidates[start..];
+        let results = parallel::in_order(
+            candidates.len(),
+            Worker::settled,
+            |w, k, stop| {
+                let i = candidates[k];
+                w.phase3(t, &arr2[i], remaining(i), stop)
+            },
+            Option::is_some,
+            Option::is_some,
+        );
+        results
+            .into_iter()
+            .zip(candidates)
+            .find_map(|(moves, &i)| moves.map(|m| (i, m)))
+    }
+}
+
+/// The scratch state of phases 2 and 3 (fields of `Search` in Java). Every thread searching
+/// phase 2 or 3 candidates has its own.
+#[derive(Clone)]
+struct Worker {
+    c1: FullCube,
+    c2: FullCube,
+    ct2: Center2,
+    ct3: Center3,
+    /// Carries state from one use to the next until it settles; see [`Edge3::is_settled`].
+    e12: Edge3,
+    tempe: [Edge3; 20],
+    move2: [usize; 20],
+    move3: [usize; 20],
+    length1: i32,
+    length2: i32,
+    found: Vec<FullCube>,
+    cap: usize,
+}
+
+impl Worker {
+    fn new() -> Self {
+        Self {
+            c1: FullCube::new(),
+            c2: FullCube::new(),
+            ct2: Center2::default(),
+            ct3: Center3::default(),
+            e12: Edge3::new(),
+            tempe: [Edge3::new(); 20],
+            move2: [0; 20],
+            move3: [0; 20],
+            length1: 0,
+            length2: 0,
+            found: Vec::new(),
+            cap: 0,
+        }
+    }
+
+    /// A worker that gives the same results as any worker that has settled.
+    fn settled() -> Self {
+        let mut w = Self::new();
+        w.e12.set_index(0);
+        w
+    }
+
+    /// The first `cap` phase 3 candidates reached by `length2` phase 2 moves from the phase
+    /// 1 solution `sol`, in search order.
+    fn phase2(
+        &mut self,
+        t: &Tables,
+        sol: &FullCube,
+        length2: i32,
+        cap: usize,
+        stop: &Stop<'_>,
+    ) -> Vec<FullCube> {
+        self.c1.copy_from(sol);
+        let center = *self.c1.center();
+        let parity = self.c1.edge().parity();
+        self.ct2.set(&center, parity);
+        let s2ct = self.ct2.get_ct();
+        let s2rl = self.ct2.get_rl();
+        self.length1 = sol.length1;
+        self.length2 = length2;
+        self.cap = cap;
+        self.found.clear();
+        self.search2(t, stop, s2ct as usize, s2rl as usize, length2, 28, 0);
+        std::mem::take(&mut self.found)
+    }
+
+    /// The moves that solve phase 3 of `cand` in `remaining` moves, if any.
+    fn phase3(
+        &mut self,
+        t: &Tables,
+        cand: &FullCube,
+        remaining: i32,
+        stop: &Stop<'_>,
+    ) -> Option<[usize; 20]> {
+        let mut cand = cand.clone();
+        let eparity = self.e12.set_from_cube(cand.edge());
+        let center = *cand.center();
+        let corner_parity = cand.corner().parity();
+        self.ct3.set(&center, eparity ^ corner_parity);
+        let ct = self.ct3.get_ct();
+        let edge = self.e12.get(10);
+        let prun = t.edge3.prun(self.e12.get_sym(&t.edge3) as usize);
+        let lm = 20;
+        (prun <= remaining && self.search3(t, stop, edge, ct as usize, prun, remaining, lm, 0))
+            .then_some(self.move3)
+    }
+
+    /// Returns `true` once `cap` candidates have been found, or when stopped.
+    fn search2(
+        &mut self,
+        t: &Tables,
+        stop: &Stop<'_>,
+        ct: usize,
+        rl: usize,
+        maxl: i32,
+        lm: usize,
+        depth: usize,
+    ) -> bool {
+        if stop.should_stop() {
+            return true;
+        }
         if ct == 0 && t.center2.ctprun[rl] == 0 && maxl == 0 {
-            return self.init3();
+            return self.init3(t);
         }
         let ckmv2 = &MOVES.ckmv2;
         let skip = &MOVES.skip_axis2;
@@ -412,7 +555,7 @@ impl Search {
                 continue;
             }
             self.move2[depth] = MOVE2STD[m];
-            if self.search2(ctx, rlx, maxl - 1, m, depth + 1) {
+            if self.search2(t, stop, ctx, rlx, maxl - 1, m, depth + 1) {
                 return true;
             }
             m += 1;
@@ -420,8 +563,7 @@ impl Search {
         false
     }
 
-    fn init3(&mut self) -> bool {
-        let t = self.t;
+    fn init3(&mut self, t: &Tables) -> bool {
         self.c2.copy_from(&self.c1);
         for &m in &self.move2[..self.length2 as usize] {
             self.c2.push_move(m);
@@ -438,22 +580,20 @@ impl Search {
         let _edge = self.e12.get(10);
         let prun = t.edge3.prun(self.e12.get_sym(&t.edge3) as usize);
 
-        if self.arr2.len() <= self.arr2idx {
-            self.arr2.push(self.c2.clone());
-        } else {
-            self.arr2[self.arr2idx].copy_from(&self.c2);
-        }
-        let entry = &mut self.arr2[self.arr2idx];
+        let mut entry = self.c2.clone();
         entry.value =
             self.length1 + self.length2 + prun.max(i32::from(t.center3.prun[ct as usize]));
         entry.length2 = self.length2;
-        self.arr2idx += 1;
+        self.found.push(entry);
 
-        self.arr2idx == PHASE2_SOLUTIONS
+        self.found.len() == self.cap
     }
 
+    /// Returns `false` when stopped.
     fn search3(
         &mut self,
+        t: &Tables,
+        stop: &Stop<'_>,
         edge: i32,
         ct: usize,
         prun: i32,
@@ -464,7 +604,9 @@ impl Search {
         if maxl == 0 {
             return edge == 0 && ct == 0;
         }
-        let t = self.t;
+        if stop.should_stop() {
+            return false;
+        }
         let ckmv3 = &MOVES.ckmv3;
         let skip = &MOVES.skip_axis3;
         self.tempe[depth].set_index(edge);
@@ -503,7 +645,7 @@ impl Search {
                 continue;
             }
 
-            if self.search3(edgex, ctx, prunx, maxl - 1, m, depth + 1) {
+            if self.search3(t, stop, edgex, ctx, prunx, maxl - 1, m, depth + 1) {
                 self.move3[depth] = m;
                 return true;
             }

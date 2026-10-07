@@ -2,6 +2,7 @@
 
 use super::cubes::{CENTER_FACELET, CenterCube, center_move};
 use super::moves::{MOVE2STD, MOVES, WB3, WD2, WD3, WF1, WL3, WR1, WU1, WU2, swap4};
+use crate::parallel;
 
 /// Applies the `j`-th step of the walk that enumerates the 48 cube symmetries.
 fn sym_step(j: usize, mut rot: impl FnMut(usize)) {
@@ -238,15 +239,16 @@ impl Center1Tables {
     }
 
     fn create_move_table(&mut self, raw2sym: &[i32]) {
-        let mut d = Center1::default();
-        for i in 0..N_CENTER1_SYM {
-            d.set(self.sym2raw[i]);
-            for m in 0..36 {
+        let sym2raw = &self.sym2raw;
+        parallel::fill(&mut self.ctsmv, |i, row| {
+            let mut d = Center1::default();
+            d.set(sym2raw[i]);
+            for (m, v) in row.iter_mut().enumerate() {
                 let mut c = d;
                 c.do_move(m);
-                self.ctsmv[i][m] = raw2sym[c.get() as usize];
+                *v = raw2sym[c.get() as usize];
             }
-        }
+        });
     }
 
     fn create_prun(&mut self) {

@@ -13,6 +13,6 @@ pub use algorithm_builder::{AlgorithmBuilder, IndexAndMove, MergingMode, split_a
 pub use cacher::{CacheListener, CacherError, ScrambleCacher};
 pub use image_info::PuzzleImageInfo;
 pub use puzzle::{ColorScheme, Puzzle, PuzzleState, PuzzleStateAndGenerator};
-pub(crate) use puzzle::{generate_random_turns, order_by_state_hash};
+pub(crate) use puzzle::{first_canonical_move_to, generate_random_turns, order_by_state_hash};
 pub use registry::{PuzzleRegistry, Scrambler};
 pub(crate) use solve::solve_in_bfs;
