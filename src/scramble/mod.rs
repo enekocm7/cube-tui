@@ -2,10 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::fmt;
 
-pub(crate) mod square1;
 pub mod visualization;
-
-#[cfg(feature = "wca-scrambles")]
 mod wca;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -109,141 +106,16 @@ impl WcaEvent {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg(not(feature = "wca-scrambles"))]
-pub enum Move {
-    R,
-    L,
-    U,
-    D,
-    F,
-    B,
-    Rw,
-    Lw,
-    Uw,
-    Dw,
-    Fw,
-    Bw,
-    Br,
-    Bl,
-    ThreeRw,
-    ThreeLw,
-    ThreeUw,
-    ThreeDw,
-    ThreeFw,
-    ThreeBw,
-    RDoublePlus,
-    RDoubleMinus,
-    DDoublePlus,
-    DDoubleMinus,
-    SmallR,
-    SmallL,
-    SmallU,
-    SmallB,
-}
-
-#[cfg(not(feature = "wca-scrambles"))]
-impl Move {
-    /// Returns the move axis used to avoid redundant consecutive cube moves.
-    pub const fn axis(self) -> u8 {
-        match self {
-            Self::R
-            | Self::L
-            | Self::Rw
-            | Self::Lw
-            | Self::ThreeRw
-            | Self::ThreeLw
-            | Self::Br
-            | Self::Bl => 0,
-            Self::U | Self::D | Self::Uw | Self::Dw | Self::ThreeUw | Self::ThreeDw => 1,
-            Self::F | Self::B | Self::Fw | Self::Bw | Self::ThreeFw | Self::ThreeBw => 2,
-            Self::RDoublePlus | Self::RDoubleMinus => 3,
-            Self::DDoublePlus | Self::DDoubleMinus => 4,
-            Self::SmallR | Self::SmallL | Self::SmallU | Self::SmallB => 5,
-        }
-    }
-}
-
-#[cfg(not(feature = "wca-scrambles"))]
-impl fmt::Display for Move {
-    /// Writes the move in standard puzzle notation.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Self::R => "R",
-            Self::L => "L",
-            Self::U => "U",
-            Self::D => "D",
-            Self::F => "F",
-            Self::B => "B",
-            Self::Rw => "Rw",
-            Self::Lw => "Lw",
-            Self::Uw => "Uw",
-            Self::Dw => "Dw",
-            Self::Fw => "Fw",
-            Self::Bw => "Bw",
-            Self::Bl => "Bl",
-            Self::Br => "Br",
-            Self::ThreeRw => "3Rw",
-            Self::ThreeLw => "3Lw",
-            Self::ThreeUw => "3Uw",
-            Self::ThreeDw => "3Dw",
-            Self::ThreeFw => "3Fw",
-            Self::ThreeBw => "3Bw",
-            Self::RDoublePlus => "R++",
-            Self::RDoubleMinus => "R--",
-            Self::DDoublePlus => "D++",
-            Self::DDoubleMinus => "D--",
-            Self::SmallR => "r",
-            Self::SmallL => "l",
-            Self::SmallU => "u",
-            Self::SmallB => "b",
-        };
-        f.write_str(s)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg(not(feature = "wca-scrambles"))]
-pub enum Modifier {
-    None,
-    Prime,
-    Double,
-}
-
-#[cfg(not(feature = "wca-scrambles"))]
-impl fmt::Display for Modifier {
-    /// Writes the move suffix in standard puzzle notation.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Self::None => "",
-            Self::Prime => "'",
-            Self::Double => "2",
-        };
-        f.write_str(s)
-    }
-}
-
 pub struct Scramble {
     text: Cow<'static, str>,
-    wca: bool,
     pub warning: Option<String>,
 }
 
 impl Scramble {
-    /// Creates a locally generated scramble.
+    /// Creates a scramble from its notation.
     pub fn new(text: impl Into<Cow<'static, str>>) -> Self {
         Self {
             text: text.into(),
-            wca: false,
-            warning: None,
-        }
-    }
-
-    /// Creates a scramble supplied by an official WCA generator.
-    pub fn new_wca(text: impl Into<Cow<'static, str>>) -> Self {
-        Self {
-            text: text.into(),
-            wca: true,
             warning: None,
         }
     }
@@ -252,15 +124,10 @@ impl Scramble {
     pub fn as_str(&self) -> &str {
         &self.text
     }
-
-    /// Returns whether the official WCA backend produced this scramble.
-    pub const fn is_wca(&self) -> bool {
-        self.wca
-    }
 }
 
 impl fmt::Display for Scramble {
-    /// Writes the scramble notation without its provenance metadata.
+    /// Writes the scramble notation.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.text)
     }
@@ -273,33 +140,9 @@ impl From<Scramble> for Cow<'static, str> {
     }
 }
 
-/// Generates a scramble for `event`, preferring the optional WCA backend.
+/// Generates an official WCA random-state scramble for `event`.
 pub fn generate_scramble(event: WcaEvent) -> Scramble {
-    #[cfg(feature = "wca-scrambles")]
-    {
-        Scramble::new_wca(wca::get_wca_scramble(event))
-    }
-    #[cfg(not(feature = "wca-scrambles"))]
-    Scramble::new(random_scramble(event))
-}
-
-/// Generates a scramble using the built-in event-specific algorithm.
-#[cfg(not(feature = "wca-scrambles"))]
-fn random_scramble(event: WcaEvent) -> String {
-    match event {
-        WcaEvent::Cube2x2 => cube_scramble(10, &cube_2x2_moves(), &cube_modifiers()),
-        WcaEvent::Cube3x3 => cube_scramble(20, &cube_3x3_moves(), &cube_modifiers()),
-        WcaEvent::Cube4x4 => cube_scramble(40, &cube_4x4_moves(), &cube_modifiers()),
-        WcaEvent::Cube5x5 => cube_scramble(60, &cube_5x5_moves(), &cube_modifiers()),
-        WcaEvent::Cube6x6 => cube_scramble(80, &cube_6x6_moves(), &cube_modifiers()),
-        WcaEvent::Cube7x7 => cube_scramble(100, &cube_7x7_moves(), &cube_modifiers()),
-        WcaEvent::Megaminx => megaminx_scramble(),
-        WcaEvent::Pyraminx => pyraminx_scramble(11),
-        WcaEvent::Skewb => skewb_scramble(9),
-        WcaEvent::Square1 => square1_scramble(15),
-        WcaEvent::Clock => clock_scramble(14),
-        WcaEvent::Fto => fto_scramble(rand::random_range(25..30)),
-    }
+    Scramble::new(wca::get_wca_scramble(event))
 }
 
 /// Infers the most likely puzzle event from scramble notation.
@@ -401,275 +244,8 @@ fn is_clock_token(token: &str) -> bool {
     false
 }
 
-/// Returns the move set used for 2×2 scrambles.
-#[cfg(not(feature = "wca-scrambles"))]
-fn cube_2x2_moves() -> Vec<Move> {
-    vec![Move::R, Move::U, Move::F]
-}
-
-/// Returns the move set used for 3×3 scrambles.
-#[cfg(not(feature = "wca-scrambles"))]
-fn cube_3x3_moves() -> Vec<Move> {
-    vec![Move::R, Move::L, Move::U, Move::D, Move::F, Move::B]
-}
-
-/// Returns the move set used for 4×4 scrambles.
-#[cfg(not(feature = "wca-scrambles"))]
-fn cube_4x4_moves() -> Vec<Move> {
-    vec![
-        Move::R,
-        Move::L,
-        Move::U,
-        Move::D,
-        Move::F,
-        Move::B,
-        Move::Rw,
-        Move::Lw,
-        Move::Uw,
-        Move::Dw,
-        Move::Fw,
-        Move::Bw,
-    ]
-}
-
-/// Returns the move set used for 5×5 scrambles.
-#[cfg(not(feature = "wca-scrambles"))]
-fn cube_5x5_moves() -> Vec<Move> {
-    vec![
-        Move::R,
-        Move::L,
-        Move::U,
-        Move::D,
-        Move::F,
-        Move::B,
-        Move::Rw,
-        Move::Lw,
-        Move::Uw,
-        Move::Dw,
-        Move::Fw,
-        Move::Bw,
-    ]
-}
-
-/// Returns the move set used for 6×6 scrambles.
-#[cfg(not(feature = "wca-scrambles"))]
-fn cube_6x6_moves() -> Vec<Move> {
-    vec![
-        Move::R,
-        Move::L,
-        Move::U,
-        Move::D,
-        Move::F,
-        Move::B,
-        Move::Rw,
-        Move::Lw,
-        Move::Uw,
-        Move::Dw,
-        Move::Fw,
-        Move::Bw,
-        Move::ThreeRw,
-        Move::ThreeLw,
-        Move::ThreeUw,
-        Move::ThreeDw,
-        Move::ThreeFw,
-        Move::ThreeBw,
-    ]
-}
-
-/// Returns the move set used for 7×7 scrambles.
-#[cfg(not(feature = "wca-scrambles"))]
-fn cube_7x7_moves() -> Vec<Move> {
-    cube_6x6_moves()
-}
-/// Returns the move set used for face-turning octahedron scrambles.
-#[cfg(not(feature = "wca-scrambles"))]
-fn fto_moves() -> Vec<Move> {
-    vec![
-        Move::R,
-        Move::L,
-        Move::B,
-        Move::D,
-        Move::F,
-        Move::Br,
-        Move::Bl,
-    ]
-}
-
-/// Returns suffixes valid for ordinary cube moves.
-#[cfg(not(feature = "wca-scrambles"))]
-fn cube_modifiers() -> Vec<Modifier> {
-    vec![Modifier::None, Modifier::Prime, Modifier::Double]
-}
-
-/// Returns suffixes valid for Pyraminx moves.
-#[cfg(not(feature = "wca-scrambles"))]
-fn pyraminx_modifiers() -> Vec<Modifier> {
-    vec![Modifier::None, Modifier::Prime]
-}
-
-/// Returns suffixes valid for face-turning octahedron moves.
-#[cfg(not(feature = "wca-scrambles"))]
-fn fto_modifiers() -> Vec<Modifier> {
-    vec![Modifier::None, Modifier::Prime]
-}
-
-/// Generates cube moves without consecutive moves on the same axis.
-#[cfg(not(feature = "wca-scrambles"))]
-fn cube_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> String {
-    let mut rng = rand::rng();
-    let mut last_move: Option<Move> = None;
-    let mut last_axis: Option<u8> = None;
-    let mut parts = Vec::with_capacity(length);
-
-    while parts.len() < length {
-        let mv = *moves
-            .choose(&mut rng)
-            .expect("moves list should not be empty");
-        if Some(mv) == last_move || Some(mv.axis()) == last_axis {
-            continue;
-        }
-
-        let modifier = *modifiers.choose(&mut rng).unwrap_or(&Modifier::None);
-        parts.push(format!("{mv}{modifier}"));
-        last_move = Some(mv);
-        last_axis = Some(mv.axis());
-    }
-
-    parts.join(" ")
-}
-
-/// Generates a Megaminx scramble in standard row-oriented notation.
-#[cfg(not(feature = "wca-scrambles"))]
-fn megaminx_scramble() -> String {
-    let mut rng = rand::rng();
-    let r_moves = [Move::RDoublePlus, Move::RDoubleMinus];
-    let d_moves = [Move::DDoublePlus, Move::DDoubleMinus];
-    let u_modifiers = [Modifier::None, Modifier::Prime];
-
-    let mut rows = Vec::with_capacity(7);
-    for _ in 0..7 {
-        let mut parts = Vec::with_capacity(11);
-        for _ in 0..5 {
-            let r = r_moves.choose(&mut rng).unwrap_or(&Move::RDoublePlus);
-            let d = d_moves.choose(&mut rng).unwrap_or(&Move::DDoublePlus);
-            parts.push(r.to_string());
-            parts.push(d.to_string());
-        }
-        let u_mod = u_modifiers.choose(&mut rng).unwrap_or(&Modifier::None);
-        parts.push(format!("U{u_mod} "));
-        rows.push(parts.join(" "));
-    }
-    rows.join("\n")
-}
-
-/// Samples independent moves and modifiers to the requested length.
-#[cfg(not(feature = "wca-scrambles"))]
-fn simple_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> String {
-    let mut rng = rand::rng();
-    let mut parts = Vec::with_capacity(length);
-
-    for _ in 0..length {
-        let mv = moves
-            .choose(&mut rng)
-            .expect("moves list should not be empty");
-        let modifier = modifiers.choose(&mut rng).unwrap_or(&Modifier::None);
-        parts.push(format!("{mv}{modifier}"));
-    }
-
-    parts.join(" ")
-}
-
-/// Generates a Pyraminx body scramble followed by optional tip moves.
-#[cfg(not(feature = "wca-scrambles"))]
-fn pyraminx_scramble(length: usize) -> String {
-    let mut rng = rand::rng();
-    let moves = [Move::R, Move::L, Move::U, Move::B];
-    let modifiers = pyraminx_modifiers();
-
-    let mut base = simple_scramble(length, &moves, &modifiers);
-
-    let tips = [Move::SmallR, Move::SmallL, Move::SmallU, Move::SmallB];
-    let mut tip_parts = Vec::new();
-    for tip in tips {
-        if rng.random_bool(0.5) {
-            let modifier = modifiers.choose(&mut rng).unwrap_or(&Modifier::None);
-            tip_parts.push(format!("{tip}{modifier}"));
-        }
-    }
-
-    if !tip_parts.is_empty() {
-        base.push(' ');
-        base.push_str(&tip_parts.join(" "));
-    }
-
-    base
-}
-
-/// Generates a face-turning octahedron scramble.
-#[cfg(not(feature = "wca-scrambles"))]
-fn fto_scramble(length: usize) -> String {
-    let moves = fto_moves();
-    let modifiers = fto_modifiers();
-    cube_scramble(length, &moves, &modifiers)
-}
-
-/// Generates a Skewb scramble.
-#[cfg(not(feature = "wca-scrambles"))]
-fn skewb_scramble(length: usize) -> String {
-    let moves = [Move::R, Move::L, Move::U, Move::B];
-    simple_scramble(length, &moves, &pyraminx_modifiers())
-}
-
-/// Generates non-zero Square-1 turn pairs separated by slices.
-#[cfg(not(feature = "wca-scrambles"))]
-fn square1_scramble(length: usize) -> String {
-    let mut rng = rand::rng();
-    let mut parts = Vec::with_capacity(length * 2);
-    let mut state = square1::Square1State::new();
-    for _ in 0..length {
-        let (a, b) = loop {
-            let a = rng.random_range(-5..=6);
-            let b = rng.random_range(-5..=6);
-            if a != 0 || b != 0 {
-                let mut candidate = state.clone();
-                candidate.rotate(a, b);
-                if candidate.can_slice() {
-                    state = candidate;
-                    break (a, b);
-                }
-            }
-        };
-        parts.push(format!("({a},{b})"));
-        parts.push("/".to_string());
-        let sliced = state.slice();
-        debug_assert!(sliced, "generated Square-1 cuts must lie between pieces");
-    }
-    parts.join(" ")
-}
-
-/// Generates clock dial turns followed by the puzzle rotation.
-#[cfg(not(feature = "wca-scrambles"))]
-fn clock_scramble(length: usize) -> String {
-    let mut rng = rand::rng();
-    let positions = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"];
-    let mut parts = Vec::with_capacity(length + 2);
-    for _ in 0..length {
-        let pos = positions
-            .choose(&mut rng)
-            .expect("positions list should not be empty");
-        let amount: i8 = rng.random_range(-5..=6);
-        parts.push(format!("{pos}{amount:+}"));
-    }
-    parts.push("y2".to_string());
-    parts.join(" ")
-}
-
 #[cfg(test)]
 mod tests {
-    #[cfg(not(feature = "wca-scrambles"))]
-    use super::Modifier;
-    #[cfg(not(feature = "wca-scrambles"))]
-    use super::Move;
     use super::{Scramble, WcaEvent, generate_scramble};
 
     #[test]
@@ -700,31 +276,24 @@ mod tests {
 
     #[test]
     fn cube_scramble_lengths() {
-        // (event, built-in exact length, WCA min/max move count)
-        let cases: [(WcaEvent, usize, usize, usize); 6] = [
-            (WcaEvent::Cube2x2, 10, 4, 14),
-            (WcaEvent::Cube3x3, 20, 4, 25),
-            (WcaEvent::Cube4x4, 40, 30, 55),
-            (WcaEvent::Cube5x5, 60, 40, 75),
-            (WcaEvent::Cube6x6, 80, 50, 100),
-            (WcaEvent::Cube7x7, 100, 60, 120),
+        // (event, min/max move count)
+        let cases: [(WcaEvent, usize, usize); 6] = [
+            (WcaEvent::Cube2x2, 4, 14),
+            (WcaEvent::Cube3x3, 4, 25),
+            (WcaEvent::Cube4x4, 30, 55),
+            (WcaEvent::Cube5x5, 40, 75),
+            (WcaEvent::Cube6x6, 50, 100),
+            (WcaEvent::Cube7x7, 60, 120),
         ];
 
         for _ in 0..10 {
-            for (event, internal_len, wca_min, wca_max) in cases {
+            for (event, min, max) in cases {
                 let scramble = generate_scramble(event);
                 let count = scramble.as_str().split_whitespace().count();
-                if scramble.is_wca() {
-                    assert!(
-                        (wca_min..=wca_max).contains(&count),
-                        "{event:?} WCA length {count} outside {wca_min}-{wca_max}"
-                    );
-                } else {
-                    assert_eq!(
-                        count, internal_len,
-                        "{event:?} should have {internal_len} moves"
-                    );
-                }
+                assert!(
+                    (min..=max).contains(&count),
+                    "{event:?} length {count} outside {min}-{max}"
+                );
             }
         }
     }
@@ -805,14 +374,10 @@ mod tests {
         for _ in 0..10 {
             let scramble = generate_scramble(WcaEvent::Skewb);
             let count = scramble.as_str().split_whitespace().count();
-            if scramble.is_wca() {
-                assert!(
-                    (4..=20).contains(&count),
-                    "WCA skewb length {count} outside 4-20"
-                );
-            } else {
-                assert_eq!(count, 9, "Skewb should have 9 moves, got {count}");
-            }
+            assert!(
+                (4..=20).contains(&count),
+                "Skewb length {count} outside 4-20"
+            );
         }
     }
 
@@ -826,21 +391,12 @@ mod tests {
             assert!(text.contains('('), "Square-1 should have parentheses");
             assert!(text.contains('/'), "Square-1 should have slashes");
 
-            let slash_count = text.matches('/').count();
-            if scramble.is_wca() {
-                // WCA Square-1 scrambles vary in length
-                let token_count = text.split_whitespace().count();
-                assert!(
-                    (4..=30).contains(&token_count),
-                    "WCA Square-1 token count {token_count} outside 4-30"
-                );
-            } else {
-                // Built-in generator emits exactly 15 twist/slash pairs
-                assert_eq!(
-                    slash_count, 15,
-                    "Square-1 should have 15 slashes, got {slash_count}"
-                );
-            }
+            // Random-state Square-1 scrambles vary in length
+            let token_count = text.split_whitespace().count();
+            assert!(
+                (4..=30).contains(&token_count),
+                "Square-1 token count {token_count} outside 4-30"
+            );
         }
     }
 
@@ -856,39 +412,15 @@ mod tests {
                 "Clock should have +/- amounts"
             );
 
-            if scramble.is_wca() {
-                // WCA clock: two sections separated by a y2 rotation,
-                // ending in bare pin moves
-                assert!(text.contains("y2"), "WCA clock should contain y2");
-                let sections: Vec<&str> = text.split("y2").collect();
-                assert_eq!(sections.len(), 2, "WCA clock should have 2 y2 sections");
-                assert!(
-                    !sections[0].trim().is_empty() && !sections[1].trim().is_empty(),
-                    "WCA clock sections should not be empty"
-                );
-            } else {
-                // Built-in clock ends with y2
-                assert!(text.ends_with("y2"), "Clock should end with y2");
-            }
+            // Two sections separated by a y2 rotation, ending in bare pin moves
+            assert!(text.contains("y2"), "Clock should contain y2");
+            let sections: Vec<&str> = text.split("y2").collect();
+            assert_eq!(sections.len(), 2, "Clock should have 2 y2 sections");
+            assert!(
+                !sections[0].trim().is_empty() && !sections[1].trim().is_empty(),
+                "Clock sections should not be empty"
+            );
         }
-    }
-
-    #[test]
-    #[cfg(not(feature = "wca-scrambles"))]
-    fn move_display() {
-        assert_eq!(Move::R.to_string(), "R");
-        assert_eq!(Move::Rw.to_string(), "Rw");
-        assert_eq!(Move::ThreeRw.to_string(), "3Rw");
-        assert_eq!(Move::RDoublePlus.to_string(), "R++");
-        assert_eq!(Move::SmallR.to_string(), "r");
-    }
-
-    #[test]
-    #[cfg(not(feature = "wca-scrambles"))]
-    fn modifier_display() {
-        assert_eq!(Modifier::None.to_string(), "");
-        assert_eq!(Modifier::Prime.to_string(), "'");
-        assert_eq!(Modifier::Double.to_string(), "2");
     }
 
     #[test]
@@ -936,20 +468,15 @@ mod tests {
 
     #[test]
     fn fto_scramble_uses_valid_moves_and_length() {
-        let builtin_bases = ["R", "L", "B", "D", "F", "Br", "Bl"];
-        let wca_bases = ["U", "R", "F", "L", "B", "BL", "D", "BR"];
+        let valid_bases = ["U", "R", "F", "L", "B", "BL", "D", "BR"];
         let valid_modifiers = ["", "'"];
 
         for _ in 0..20 {
             let scramble = generate_scramble(WcaEvent::Fto);
 
             let tokens: Vec<&str> = scramble.as_str().split_whitespace().collect();
-            let (valid_bases, lengths) = if scramble.is_wca() {
-                // Random-state scrambles vary in length.
-                (&wca_bases[..], 10..50)
-            } else {
-                (&builtin_bases[..], 25..30)
-            };
+            // Random-state scrambles vary in length.
+            let lengths = 10..50;
             assert!(
                 lengths.contains(&tokens.len()),
                 "FTO length {} outside {lengths:?}",
@@ -966,23 +493,6 @@ mod tests {
                 );
             }
         }
-    }
-
-    #[test]
-    #[cfg(not(feature = "wca-scrambles"))]
-    fn move_axis() {
-        // Same axis moves
-        assert_eq!(Move::R.axis(), Move::L.axis());
-        assert_eq!(Move::U.axis(), Move::D.axis());
-        assert_eq!(Move::F.axis(), Move::B.axis());
-
-        // Wide moves same axis as base
-        assert_eq!(Move::R.axis(), Move::Rw.axis());
-        assert_eq!(Move::Rw.axis(), Move::ThreeRw.axis());
-
-        // Different axes
-        assert_ne!(Move::R.axis(), Move::U.axis());
-        assert_ne!(Move::U.axis(), Move::F.axis());
     }
 
     #[test]
@@ -1091,53 +601,6 @@ mod tests {
     }
 
     #[test]
-    fn cube_scrambles_no_consecutive_same_axis() {
-        fn parse_axis(token: &str) -> u8 {
-            let base = token.trim_end_matches(['\'', '2']);
-            match base {
-                "R" | "L" | "Rw" | "Lw" | "3Rw" | "3Lw" => 0,
-                "U" | "D" | "Uw" | "Dw" | "3Uw" | "3Dw" => 1,
-                "F" | "B" | "Fw" | "Bw" | "3Fw" | "3Bw" => 2,
-                _ => 255, // Unknown
-            }
-        }
-
-        let cube_events = [
-            WcaEvent::Cube2x2,
-            WcaEvent::Cube3x3,
-            WcaEvent::Cube4x4,
-            WcaEvent::Cube5x5,
-            WcaEvent::Cube6x6,
-            WcaEvent::Cube7x7,
-        ];
-
-        for event in cube_events {
-            for _ in 0..5 {
-                let scramble = generate_scramble(event);
-                if scramble.is_wca() {
-                    // WCA scrambles legitimately contain consecutive same-axis moves
-                    continue;
-                }
-                let tokens: Vec<&str> = scramble.as_str().split_whitespace().collect();
-
-                for i in 1..tokens.len() {
-                    let prev_axis = parse_axis(tokens[i - 1]);
-                    let curr_axis = parse_axis(tokens[i]);
-
-                    assert_ne!(
-                        prev_axis,
-                        curr_axis,
-                        "{:?}: consecutive same-axis moves {} and {}",
-                        event,
-                        tokens[i - 1],
-                        tokens[i]
-                    );
-                }
-            }
-        }
-    }
-
-    #[test]
     fn all_event_names_unique() {
         let events = [
             WcaEvent::Cube2x2,
@@ -1205,11 +668,9 @@ mod tests {
 
                     for num_str in nums {
                         let num: i8 = num_str.parse().expect("Should parse as number");
-                        // WCA Square-1 coordinates span -6..6, built-in uses -5..6
-                        let range = if scramble.is_wca() { -6..=6 } else { -5..=6 };
                         assert!(
-                            range.contains(&num),
-                            "Square-1 value {num} outside {range:?}"
+                            (-6..=6).contains(&num),
+                            "Square-1 value {num} outside -6..=6"
                         );
                     }
                 }
@@ -1233,7 +694,7 @@ mod tests {
                     continue;
                 }
 
-                // Primed pin move (WCA-only), e.g. "UR'"
+                // Primed pin move, e.g. "UR'"
                 if let Some(pin) = token.strip_suffix('\'') {
                     assert!(prefixes.contains(&pin), "Invalid clock pin move: {token}");
                     continue;
@@ -1247,68 +708,44 @@ mod tests {
                     continue;
                 }
 
-                let (magnitude, negative) = parse_clock_amount(rest)
+                // Amounts have magnitude 0-6 with a direction sign
+                let magnitude = parse_clock_amount(rest)
                     .unwrap_or_else(|| panic!("Invalid clock amount in token: {token}"));
-                if scramble.is_wca() {
-                    // WCA amounts have magnitude 0-6 with a direction sign
-                    assert!(
-                        (0..=6).contains(&magnitude),
-                        "Clock magnitude {magnitude} out of range in token: {token}"
-                    );
-                } else {
-                    // Built-in amounts span -5 to 6
-                    let amount = if negative { -magnitude } else { magnitude };
-                    assert!(
-                        (-5..=6).contains(&amount),
-                        "Clock amount {amount} out of range in token: {token}"
-                    );
-                }
+                assert!(
+                    (0..=6).contains(&magnitude),
+                    "Clock magnitude {magnitude} out of range in token: {token}"
+                );
             }
         }
     }
 
-    /// Parses "+3"/"-3" (built-in) or "3+"/"3-" (WCA) into (magnitude, negative).
-    fn parse_clock_amount(rest: &str) -> Option<(i8, bool)> {
-        if let Some(digits) = rest.strip_prefix('+') {
-            return Some((digits.parse::<i8>().ok()?, false));
-        }
-        if let Some(digits) = rest.strip_prefix('-') {
-            return Some((digits.parse::<i8>().ok()?, true));
-        }
-        if let Some(digits) = rest.strip_suffix('+') {
-            return Some((digits.parse::<i8>().ok()?, false));
-        }
-        let digits = rest.strip_suffix('-')?;
-        Some((digits.parse::<i8>().ok()?, true))
+    /// Parses a "3+"/"3-" clock amount into its magnitude.
+    fn parse_clock_amount(rest: &str) -> Option<i8> {
+        rest.strip_suffix(['+', '-'])?.parse().ok()
     }
 
     #[test]
-    fn scramble_deterministic_length() {
-        // The built-in generator produces a fixed length per event;
-        // WCA scrambles vary within competition bounds.
-        let cases: [(WcaEvent, usize, usize, usize); 8] = [
-            (WcaEvent::Cube2x2, 10, 4, 14),
-            (WcaEvent::Cube3x3, 20, 4, 25),
-            (WcaEvent::Cube4x4, 40, 30, 55),
-            (WcaEvent::Cube5x5, 60, 40, 75),
-            (WcaEvent::Cube6x6, 80, 50, 100),
-            (WcaEvent::Cube7x7, 100, 60, 120),
-            (WcaEvent::Megaminx, 77, 77, 77),
-            (WcaEvent::Skewb, 9, 4, 20),
+    fn scramble_length_bounds() {
+        // Random-state scrambles vary within competition bounds.
+        let cases: [(WcaEvent, usize, usize); 8] = [
+            (WcaEvent::Cube2x2, 4, 14),
+            (WcaEvent::Cube3x3, 4, 25),
+            (WcaEvent::Cube4x4, 30, 55),
+            (WcaEvent::Cube5x5, 40, 75),
+            (WcaEvent::Cube6x6, 50, 100),
+            (WcaEvent::Cube7x7, 60, 120),
+            (WcaEvent::Megaminx, 77, 77),
+            (WcaEvent::Skewb, 4, 20),
         ];
 
-        for (event, internal_len, wca_min, wca_max) in cases {
+        for (event, min, max) in cases {
             for _ in 0..5 {
                 let scramble = generate_scramble(event);
                 let count = scramble.as_str().split_whitespace().count();
-                if scramble.is_wca() {
-                    assert!(
-                        (wca_min..=wca_max).contains(&count),
-                        "{event:?} WCA length {count} outside {wca_min}-{wca_max}"
-                    );
-                } else {
-                    assert_eq!(count, internal_len, "{event:?} length mismatch");
-                }
+                assert!(
+                    (min..=max).contains(&count),
+                    "{event:?} length {count} outside {min}-{max}"
+                );
             }
         }
     }
