@@ -680,7 +680,6 @@ dependencies = [
  "futures-util",
  "mime_guess",
  "open",
- "rand 0.10.3",
  "ratatui",
  "rodio",
  "rstest",

@@ -141,19 +141,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "wca-scrambles"))]
-    fn built_in_cube_scrambles_can_be_visualized() {
-        for event in CUBES {
-            for _ in 0..10 {
-                let scramble = crate::scramble::random_scramble(event);
-                visualize(event, &scramble)
-                    .unwrap_or_else(|error| panic!("{event:?}: {scramble}: {error}"));
-            }
-        }
-    }
-
-    #[cfg(feature = "wca-scrambles")]
-    #[test]
     fn official_cube_scrambles_can_be_visualized() {
         for event in CUBES {
             let scramble = crate::scramble::wca::get_wca_scramble(event);

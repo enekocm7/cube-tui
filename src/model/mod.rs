@@ -362,18 +362,6 @@ impl Model {
             .as_str()
     }
 
-    /// Returns whether the current scramble came from the official WCA generator.
-    ///
-    /// # Panics
-    /// Panics if the active session has not yet been prepared with a scramble.
-    pub fn scramble_is_wca(&self) -> bool {
-        self.current_session()
-            .scramble
-            .as_ref()
-            .expect("active session should have a scramble")
-            .is_wca()
-    }
-
     /// Returns the active session's puzzle event.
     pub fn event(&self) -> WcaEvent {
         self.current_session().event

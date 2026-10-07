@@ -534,7 +534,7 @@ mod tests {
         let mut session = session_without_workers(WcaEvent::Fto);
         session.spawn_scramble_generator();
 
-        // With `wca-scrambles`, the first FTO scramble also builds the solver's
+        // The first FTO scramble also builds the solver's
         // tables, which can take a while when the whole suite runs in parallel.
         let scramble = session
             .next_scramble_rx
@@ -584,7 +584,6 @@ mod tests {
     }
 
     /// Verifies that WCA generation works from a background runtime thread.
-    #[cfg(feature = "wca-scrambles")]
     #[test]
     fn background_generator_produces_a_wca_scramble() {
         let mut session = session_without_workers(WcaEvent::Cube4x4);
@@ -596,6 +595,5 @@ mod tests {
             .expect("background generator should produce a WCA scramble");
 
         assert_ne!(scramble.as_str(), "");
-        assert!(scramble.is_wca());
     }
 }

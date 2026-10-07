@@ -14,12 +14,11 @@ pub struct ScrambleWidget<'a> {
 }
 
 impl<'a> ScrambleWidget<'a> {
-    /// Creates a scramble widget with event and provenance labels.
-    pub fn new(text: &'a str, event_name: &str, is_wca: bool) -> Self {
-        let prefix = if is_wca { "WCA Scramble" } else { "Scramble" };
+    /// Creates a scramble widget labelled with its event.
+    pub fn new(text: &'a str, event_name: &str) -> Self {
         Self {
             text,
-            title: format!("{prefix} ({event_name})"),
+            title: format!("WCA Scramble ({event_name})"),
         }
     }
 

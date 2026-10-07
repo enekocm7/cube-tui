@@ -44,7 +44,7 @@ alias = "ta"
 
 [tasks.test-scrambles]
 description = "Run Rust scramble tests"
-run = "cargo test --features wca-scrambles"
+run = "cargo test scramble"
 alias = "ts"
 
 [tasks.test-tnoodle]
