@@ -37,7 +37,7 @@ path = "src/main.rs"
 [dependencies]
 tnoodle-rs = { path = "crates/tnoodle-rs", features = [
     "parallel",
-], version = "0.1.0" }
+], version = "0.1.1" }
 anyhow = "1.0.104"
 axum = { version = "0.8.9", optional = true }
 btleplug = { version = "0.13.3", optional = true }
