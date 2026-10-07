@@ -1,5 +1,3 @@
-use rand::RngExt;
-use rand::prelude::IndexedRandom;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::fmt;
@@ -112,6 +110,7 @@ impl WcaEvent {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg(not(feature = "wca-scrambles"))]
 pub enum Move {
     R,
     L,
@@ -143,6 +142,7 @@ pub enum Move {
     SmallB,
 }
 
+#[cfg(not(feature = "wca-scrambles"))]
 impl Move {
     /// Returns the move axis used to avoid redundant consecutive cube moves.
     pub const fn axis(self) -> u8 {
@@ -164,6 +164,7 @@ impl Move {
     }
 }
 
+#[cfg(not(feature = "wca-scrambles"))]
 impl fmt::Display for Move {
     /// Writes the move in standard puzzle notation.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -202,12 +203,14 @@ impl fmt::Display for Move {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg(not(feature = "wca-scrambles"))]
 pub enum Modifier {
     None,
     Prime,
     Double,
 }
 
+#[cfg(not(feature = "wca-scrambles"))]
 impl fmt::Display for Modifier {
     /// Writes the move suffix in standard puzzle notation.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -281,6 +284,7 @@ pub fn generate_scramble(event: WcaEvent) -> Scramble {
 }
 
 /// Generates a scramble using the built-in event-specific algorithm.
+#[cfg(not(feature = "wca-scrambles"))]
 fn random_scramble(event: WcaEvent) -> String {
     match event {
         WcaEvent::Cube2x2 => cube_scramble(10, &cube_2x2_moves(), &cube_modifiers()),
@@ -398,16 +402,19 @@ fn is_clock_token(token: &str) -> bool {
 }
 
 /// Returns the move set used for 2×2 scrambles.
+#[cfg(not(feature = "wca-scrambles"))]
 fn cube_2x2_moves() -> Vec<Move> {
     vec![Move::R, Move::U, Move::F]
 }
 
 /// Returns the move set used for 3×3 scrambles.
+#[cfg(not(feature = "wca-scrambles"))]
 fn cube_3x3_moves() -> Vec<Move> {
     vec![Move::R, Move::L, Move::U, Move::D, Move::F, Move::B]
 }
 
 /// Returns the move set used for 4×4 scrambles.
+#[cfg(not(feature = "wca-scrambles"))]
 fn cube_4x4_moves() -> Vec<Move> {
     vec![
         Move::R,
@@ -426,6 +433,7 @@ fn cube_4x4_moves() -> Vec<Move> {
 }
 
 /// Returns the move set used for 5×5 scrambles.
+#[cfg(not(feature = "wca-scrambles"))]
 fn cube_5x5_moves() -> Vec<Move> {
     vec![
         Move::R,
@@ -444,6 +452,7 @@ fn cube_5x5_moves() -> Vec<Move> {
 }
 
 /// Returns the move set used for 6×6 scrambles.
+#[cfg(not(feature = "wca-scrambles"))]
 fn cube_6x6_moves() -> Vec<Move> {
     vec![
         Move::R,
@@ -468,10 +477,12 @@ fn cube_6x6_moves() -> Vec<Move> {
 }
 
 /// Returns the move set used for 7×7 scrambles.
+#[cfg(not(feature = "wca-scrambles"))]
 fn cube_7x7_moves() -> Vec<Move> {
     cube_6x6_moves()
 }
 /// Returns the move set used for face-turning octahedron scrambles.
+#[cfg(not(feature = "wca-scrambles"))]
 fn fto_moves() -> Vec<Move> {
     vec![
         Move::R,
@@ -485,21 +496,25 @@ fn fto_moves() -> Vec<Move> {
 }
 
 /// Returns suffixes valid for ordinary cube moves.
+#[cfg(not(feature = "wca-scrambles"))]
 fn cube_modifiers() -> Vec<Modifier> {
     vec![Modifier::None, Modifier::Prime, Modifier::Double]
 }
 
 /// Returns suffixes valid for Pyraminx moves.
+#[cfg(not(feature = "wca-scrambles"))]
 fn pyraminx_modifiers() -> Vec<Modifier> {
     vec![Modifier::None, Modifier::Prime]
 }
 
 /// Returns suffixes valid for face-turning octahedron moves.
+#[cfg(not(feature = "wca-scrambles"))]
 fn fto_modifiers() -> Vec<Modifier> {
     vec![Modifier::None, Modifier::Prime]
 }
 
 /// Generates cube moves without consecutive moves on the same axis.
+#[cfg(not(feature = "wca-scrambles"))]
 fn cube_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> String {
     let mut rng = rand::rng();
     let mut last_move: Option<Move> = None;
@@ -524,6 +539,7 @@ fn cube_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> Strin
 }
 
 /// Generates a Megaminx scramble in standard row-oriented notation.
+#[cfg(not(feature = "wca-scrambles"))]
 fn megaminx_scramble() -> String {
     let mut rng = rand::rng();
     let r_moves = [Move::RDoublePlus, Move::RDoubleMinus];
@@ -547,6 +563,7 @@ fn megaminx_scramble() -> String {
 }
 
 /// Samples independent moves and modifiers to the requested length.
+#[cfg(not(feature = "wca-scrambles"))]
 fn simple_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> String {
     let mut rng = rand::rng();
     let mut parts = Vec::with_capacity(length);
@@ -563,6 +580,7 @@ fn simple_scramble(length: usize, moves: &[Move], modifiers: &[Modifier]) -> Str
 }
 
 /// Generates a Pyraminx body scramble followed by optional tip moves.
+#[cfg(not(feature = "wca-scrambles"))]
 fn pyraminx_scramble(length: usize) -> String {
     let mut rng = rand::rng();
     let moves = [Move::R, Move::L, Move::U, Move::B];
@@ -588,6 +606,7 @@ fn pyraminx_scramble(length: usize) -> String {
 }
 
 /// Generates a face-turning octahedron scramble.
+#[cfg(not(feature = "wca-scrambles"))]
 fn fto_scramble(length: usize) -> String {
     let moves = fto_moves();
     let modifiers = fto_modifiers();
@@ -595,12 +614,14 @@ fn fto_scramble(length: usize) -> String {
 }
 
 /// Generates a Skewb scramble.
+#[cfg(not(feature = "wca-scrambles"))]
 fn skewb_scramble(length: usize) -> String {
     let moves = [Move::R, Move::L, Move::U, Move::B];
     simple_scramble(length, &moves, &pyraminx_modifiers())
 }
 
 /// Generates non-zero Square-1 turn pairs separated by slices.
+#[cfg(not(feature = "wca-scrambles"))]
 fn square1_scramble(length: usize) -> String {
     let mut rng = rand::rng();
     let mut parts = Vec::with_capacity(length * 2);
@@ -627,6 +648,7 @@ fn square1_scramble(length: usize) -> String {
 }
 
 /// Generates clock dial turns followed by the puzzle rotation.
+#[cfg(not(feature = "wca-scrambles"))]
 fn clock_scramble(length: usize) -> String {
     let mut rng = rand::rng();
     let positions = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"];
@@ -644,7 +666,11 @@ fn clock_scramble(length: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Modifier, Move, Scramble, WcaEvent, generate_scramble};
+    #[cfg(not(feature = "wca-scrambles"))]
+    use super::Modifier;
+    #[cfg(not(feature = "wca-scrambles"))]
+    use super::Move;
+    use super::{Scramble, WcaEvent, generate_scramble};
 
     #[test]
     fn scrambles_are_non_empty() {
@@ -848,6 +874,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "wca-scrambles"))]
     fn move_display() {
         assert_eq!(Move::R.to_string(), "R");
         assert_eq!(Move::Rw.to_string(), "Rw");
@@ -857,6 +884,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "wca-scrambles"))]
     fn modifier_display() {
         assert_eq!(Modifier::None.to_string(), "");
         assert_eq!(Modifier::Prime.to_string(), "'");
@@ -941,6 +969,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "wca-scrambles"))]
     fn move_axis() {
         // Same axis moves
         assert_eq!(Move::R.axis(), Move::L.axis());

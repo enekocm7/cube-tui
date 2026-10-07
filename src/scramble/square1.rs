@@ -2,6 +2,7 @@
 //! units, so a slice is legal only when both cuts fall between whole pieces.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg(not(feature = "wca-scrambles"))]
 pub struct Unit {
     pub piece: u8,
     pub upper_color: bool,
@@ -9,11 +10,13 @@ pub struct Unit {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg(not(feature = "wca-scrambles"))]
 pub struct Square1State {
     pub layers: [[Unit; 12]; 2],
     pub middle_flipped: bool,
 }
 
+#[cfg(not(feature = "wca-scrambles"))]
 impl Square1State {
     pub fn new() -> Self {
         let upper = [0, 0, 1, 2, 2, 3, 4, 4, 5, 6, 6, 7];
@@ -63,6 +66,7 @@ impl Square1State {
 }
 
 #[cfg(test)]
+#[cfg(not(feature = "wca-scrambles"))]
 mod tests {
     use super::*;
 

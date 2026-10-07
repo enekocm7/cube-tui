@@ -141,6 +141,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(feature = "wca-scrambles"))]
     fn built_in_cube_scrambles_can_be_visualized() {
         for event in CUBES {
             for _ in 0..10 {
