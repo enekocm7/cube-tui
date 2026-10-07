@@ -55,6 +55,11 @@ impl Settings {
         self.timer.zen
     }
 
+    /// Returns whether the timer is drawn in large block digits.
+    pub const fn big_timer(&self) -> bool {
+        self.display.big_timer
+    }
+
     /// Returns whether the solve-history panel is visible.
     pub const fn history(&self) -> bool {
         self.display.history
@@ -310,6 +315,7 @@ impl<'de> Deserialize<'de> for ColorSettings {
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(default)]
 pub struct DisplaySettings {
+    big_timer: bool,
     history: bool,
     scramble: bool,
     scramble_preview: bool,
@@ -318,9 +324,11 @@ pub struct DisplaySettings {
 }
 
 impl Default for DisplaySettings {
-    /// Makes the history, scramble, statistics, and toast notifications visible.
+    /// Makes the big timer digits, history, scramble, statistics, and toast
+    /// notifications visible.
     fn default() -> Self {
         Self {
+            big_timer: true,
             history: true,
             scramble: true,
             scramble_preview: false,
@@ -394,6 +402,17 @@ mod tests {
         assert!(settings.display.scramble);
         assert!(settings.display.stats);
         assert!(!settings.scramble_preview());
+        assert!(settings.big_timer());
+    }
+
+    #[test]
+    fn big_timer_can_be_disabled_in_config() {
+        let settings: Settings = toml::from_str(
+            "[display]
+big_timer = false",
+        )
+        .unwrap();
+        assert!(!settings.big_timer());
     }
 
     #[test]

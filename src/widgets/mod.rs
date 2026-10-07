@@ -1,3 +1,4 @@
+pub mod big_timer;
 #[cfg(feature = "bluetooth")]
 pub mod bluetooth;
 pub mod confirmation;

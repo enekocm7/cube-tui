@@ -10,6 +10,7 @@ use crate::model::settings::{Settings, ThemeColors};
 use crate::model::toast::ToastBuffer;
 use crate::model::{Model, TimerState};
 use crate::utils::{format_elapsed, get_scramble_lines};
+use crate::widgets::big_timer::BigTimerWidget;
 use crate::widgets::confirmation::ConfirmationWidget;
 use crate::widgets::detailed_stats::DetailedStatsWidget;
 use crate::widgets::details::DetailsWidget;
@@ -359,12 +360,24 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         .title(timer_title)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border()));
-    let (timer_text, timer_style) = timer_display(model);
-    Paragraph::new(Line::from(Span::styled(timer_text, timer_style)))
-        .block(timer_block)
-        .alignment(Alignment::Center)
-        .wrap(Wrap { trim: true })
-        .render(timer_area, buf);
+    let (timer_label, timer_text, timer_style) = timer_display(model);
+    if settings.big_timer() {
+        let timer_inner = timer_block.inner(timer_area);
+        timer_block.render(timer_area, buf);
+        BigTimerWidget::new(&timer_text, timer_style)
+            .label(timer_label)
+            .render(timer_inner, buf);
+    } else {
+        let text = match timer_label {
+            Some(label) => Cow::Owned(format!("{label}: {timer_text}")),
+            None => timer_text,
+        };
+        Paragraph::new(Line::from(Span::styled(text, timer_style)))
+            .block(timer_block)
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true })
+            .render(timer_area, buf);
+    }
 
     if let Some(stats_area) = stats_area {
         let history = model.history();
@@ -490,8 +503,8 @@ const fn inner_area(area: Rect) -> Rect {
     )
 }
 
-/// Chooses the timer text and style for the model's current state.
-fn timer_display(model: &Model) -> (Cow<'static, str>, Style) {
+/// Chooses the timer caption, text and style for the model's current state.
+fn timer_display(model: &Model) -> (Option<&'static str>, Cow<'static, str>, Style) {
     let theme = model.settings().theme();
     let inspection_limit = model.settings().inspection_limit();
     let style = match model.timer_state() {
@@ -515,16 +528,13 @@ fn timer_display(model: &Model) -> (Cow<'static, str>, Style) {
             .add_modifier(Modifier::BOLD),
     };
 
-    let text = match model.timer_state() {
-        TimerState::Pulsed => format_elapsed(0),
-        TimerState::Inspection { .. } => {
-            let elapsed_ms = model.elapsed_ms();
-            Cow::Owned(format!("Inspect: {}", format_elapsed(elapsed_ms)))
-        }
-        _ => format_elapsed(model.elapsed_ms()),
+    let (label, text) = match model.timer_state() {
+        TimerState::Pulsed => (None, format_elapsed(0)),
+        TimerState::Inspection { .. } => (Some("Inspection"), format_elapsed(model.elapsed_ms())),
+        _ => (None, format_elapsed(model.elapsed_ms())),
     };
 
-    (text, style)
+    (label, text, style)
 }
 
 #[cfg(test)]
@@ -729,9 +739,10 @@ mod tests {
     fn inspection_text_turns_red_at_dnf_limit() {
         let model = inspecting_for(Duration::from_secs(18));
 
-        let (text, style) = timer_display(&model);
+        let (label, text, style) = timer_display(&model);
 
-        assert!(text.starts_with("Inspect: 00:18."));
+        assert_eq!(label, Some("Inspection"));
+        assert!(text.starts_with("00:18."));
         assert_eq!(style.fg, Some(Color::Red));
     }
 
@@ -739,7 +750,7 @@ mod tests {
     fn inspection_text_stays_yellow_before_dnf_limit() {
         let model = inspecting_for(Duration::from_secs(14));
 
-        let (_, style) = timer_display(&model);
+        let (_, _, style) = timer_display(&model);
 
         assert_eq!(style.fg, Some(Color::Yellow));
     }
@@ -749,12 +760,12 @@ mod tests {
         let mut model = inspecting_for(Duration::from_secs(18));
         assert!(!model.start_timer());
 
-        let (text, style) = timer_display(&model);
+        let (_, text, style) = timer_display(&model);
         assert_eq!(text, "00:00.000");
         assert_eq!(style.fg, Some(Color::Red));
 
         model.reset_timer();
-        let (_, reset_style) = timer_display(&model);
+        let (_, _, reset_style) = timer_display(&model);
         assert_eq!(reset_style.fg, Some(model.settings().theme().text()));
     }
 }
