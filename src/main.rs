@@ -340,7 +340,7 @@ mod event_loop_tests {
     }
 
     #[test]
-    fn rename_is_blocked_outside_idle_main_and_rejects_blank_names() {
+    fn rename_is_blocked_outside_idle_main_and_blank_names_remove_the_name() {
         let mut model = Model::new();
         model.history_load_failed = true;
         let rename = Event::Key(KeyEvent::new(KeyCode::F(2), KeyModifiers::NONE));
@@ -352,17 +352,19 @@ mod event_loop_tests {
         let _ = handle_terminal_event(&mut model, &rename);
         assert!(model.text_input.is_none());
         model.reset_timer();
+        model.history_mut().set_session_name("Named".into());
         let _ = handle_terminal_event(&mut model, &rename);
         let _ = handle_terminal_event(&mut model, &Event::Paste("   ".into()));
         let enter = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
         let _ = handle_terminal_event(&mut model, &enter);
+        assert_eq!(model.history().session_name(), "Named");
+        let _ = handle_terminal_event(&mut model, &rename);
+        let backspaces = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
+        for _ in 0..8 {
+            let _ = handle_terminal_event(&mut model, &backspaces);
+        }
+        let _ = handle_terminal_event(&mut model, &enter);
         assert_eq!(model.history().session_name(), "");
-        assert!(
-            model
-                .toasts
-                .iter_mut()
-                .any(|toast| toast.message.contains("cannot be empty"))
-        );
     }
 
     #[test]

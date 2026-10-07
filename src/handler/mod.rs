@@ -329,8 +329,8 @@ fn handle_new_session(model: &mut Model) {
 
 /// Prompts for a session name on the idle main screen (F2 by default).
 ///
-/// Prefills the current name, trims surrounding whitespace, and rejects blank
-/// submissions. Cancellation leaves the name intact. Accepted changes are saved
+/// Prefills the current name and trims surrounding whitespace. A blank
+/// submission removes the name. Cancellation leaves the name intact. Accepted changes are saved
 /// with the session history so they survive restarting the application.
 fn handle_rename_session(model: &mut Model) {
     use crate::widgets::text_input::TextInputResult;
@@ -341,16 +341,16 @@ fn handle_rename_session(model: &mut Model) {
             return;
         };
         let name = text.trim();
-        if name.is_empty() {
-            model.toast_warning("Session name cannot be empty.");
-            return;
-        }
         if name == model.history().session_name() {
             return;
         }
         model.history_mut().set_session_name(name.to_owned());
         if model.save_history() {
-            model.toast_info("Session renamed.");
+            model.toast_info(if name.is_empty() {
+                "Session name removed."
+            } else {
+                "Session renamed."
+            });
         }
     });
 }
