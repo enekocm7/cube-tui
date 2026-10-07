@@ -37,6 +37,7 @@ pub mod error;
 pub mod fto3phase;
 pub mod java;
 pub mod min2phase;
+mod parallel;
 pub mod puzzle;
 pub mod scrambles;
 pub mod sq12phase;

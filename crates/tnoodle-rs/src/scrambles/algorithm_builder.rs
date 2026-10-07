@@ -114,11 +114,7 @@ impl<S: PuzzleState> AlgorithmBuilder<S> {
         }
         let new_normalized = new_un_normalized.normalized();
 
-        let mv = self
-            .state()
-            .canonical_moves_by_state()
-            .into_iter()
-            .find_map(|(ps, name)| ps.equals_normalized(&new_normalized).then_some(name));
+        let mv = self.state().canonical_move_to(&new_normalized);
 
         for last_index in (0..self.moves.len()).rev() {
             let state_before = &self.states[last_index];
@@ -131,18 +127,15 @@ impl<S: PuzzleState> AlgorithmBuilder<S> {
             }
             let m = mv.as_deref().expect("commuting moves are known");
             let after_both = self.states[last_index + 1].apply(m)?;
-            if state_before.equals_normalized(&after_both) {
+            let after_both = after_both.normalized();
+            if *state_before.normalized() == *after_both {
                 // The move cancels the last move.
                 return Ok(IndexAndMove {
                     index: last_index,
                     mv: None,
                 });
             }
-            if let Some(alternate) = state_before
-                .canonical_moves_by_state()
-                .into_iter()
-                .find_map(|(ps, name)| ps.equals_normalized(&after_both).then_some(name))
-            {
+            if let Some(alternate) = state_before.canonical_move_to(&after_both) {
                 // The move merges with the last move.
                 return Ok(IndexAndMove {
                     index: last_index,

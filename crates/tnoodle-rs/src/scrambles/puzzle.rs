@@ -82,6 +82,13 @@ pub trait PuzzleState: Clone + Eq + Hash + Debug + Send + Sync {
         order_by_state_hash(unique.map(|(k, v)| (k.0, v)).collect())
     }
 
+    /// The name of the first of the [`canonical_moves_by_state`](Self::canonical_moves_by_state)
+    /// that leads to a state equal to `target` up to rotation. `target` must be normalized.
+    /// Puzzles can override this with a faster search giving the same answer.
+    fn canonical_move_to(&self, target: &Self) -> Option<String> {
+        first_canonical_move_to(self, target)
+    }
+
     /// The moves used to generate random-turn scrambles, in the iteration order of Java's
     /// `getScrambleSuccessors()` (a `HashMap` keyed by move name by default).
     fn scramble_successors(&self) -> Vec<(String, Self)> {
@@ -90,6 +97,15 @@ pub trait PuzzleState: Clone + Eq + Hash + Debug + Send + Sync {
                 .into_iter()
                 .map(|(state, name)| (name, state)),
         )
+    }
+
+    /// The names of [`scramble_successors`](Self::scramble_successors), in the same order.
+    /// Puzzles that know them without computing the successor states can override this.
+    fn scramble_successor_names(&self) -> Vec<String> {
+        self.scramble_successors()
+            .into_iter()
+            .map(|(m, _)| m)
+            .collect()
     }
 
     /// Applies one move.
@@ -128,6 +144,14 @@ pub trait PuzzleState: Clone + Eq + Hash + Debug + Send + Sync {
         let state2 = self.apply(move2).and_then(|s| s.apply(move1));
         matches!((state1, state2), (Ok(a), Ok(b)) if a == b)
     }
+}
+
+/// The default [`PuzzleState::canonical_move_to`].
+pub(crate) fn first_canonical_move_to<S: PuzzleState>(state: &S, target: &S) -> Option<String> {
+    state
+        .canonical_moves_by_state()
+        .into_iter()
+        .find_map(|(ps, name)| (*ps.normalized() == *target).then_some(name))
 }
 
 /// Reorders `(state, move)` pairs into the iteration order of a Java `HashMap` keyed by
@@ -326,12 +350,7 @@ pub(crate) fn generate_random_turns<S: PuzzleState>(
 ) -> PuzzleStateAndGenerator<S> {
     let mut ab = AlgorithmBuilder::with_state(MergingMode::NoMerging, solved);
     while ab.total_cost() < move_count {
-        let mut successors: Vec<String> = ab
-            .state()
-            .scramble_successors()
-            .into_iter()
-            .map(|(m, _)| m)
-            .collect();
+        let mut successors = ab.state().scramble_successor_names();
         let mv = loop {
             let mv = choose(r, successors.iter().cloned())
                 .expect("a puzzle state always has a non-redundant move");

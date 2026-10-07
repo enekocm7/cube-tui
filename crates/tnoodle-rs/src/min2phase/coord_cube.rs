@@ -4,6 +4,7 @@ use std::sync::LazyLock;
 
 use super::cubie_cube::{CubieCube, SYM_E2C_MAGIC, SymTables, esym_to_csym};
 use super::util::{UD2STD, get_comb, get_n_parity};
+use crate::parallel;
 
 pub(crate) const N_MOVES: usize = 18;
 pub(crate) const N_MOVES2: usize = 10;
@@ -342,10 +343,43 @@ impl Tables {
         }
     }
 
+    /// Builds the five (independent) pruning tables, in parallel.
     fn init_prunings(&mut self) {
-        let mut prun = std::mem::take(&mut self.mcperm_prun);
+        let mut mcperm_prun = std::mem::take(&mut self.mcperm_prun);
+        let mut eperm_ccombp_prun = std::mem::take(&mut self.eperm_ccombp_prun);
+        let mut ud_slice_twist_prun = std::mem::take(&mut self.ud_slice_twist_prun);
+        let mut ud_slice_flip_prun = std::mem::take(&mut self.ud_slice_flip_prun);
+        let mut twist_flip_prun = std::mem::take(&mut self.twist_flip_prun);
+        let t = &*self;
+        parallel::join(
+            || {
+                parallel::join(
+                    || t.init_twist_flip_prun(&mut twist_flip_prun),
+                    || t.init_mcperm_prun(&mut mcperm_prun),
+                )
+            },
+            || {
+                parallel::join(
+                    || t.init_eperm_ccombp_prun(&mut eperm_ccombp_prun),
+                    || {
+                        parallel::join(
+                            || t.init_ud_slice_twist_prun(&mut ud_slice_twist_prun),
+                            || t.init_ud_slice_flip_prun(&mut ud_slice_flip_prun),
+                        )
+                    },
+                )
+            },
+        );
+        self.mcperm_prun = mcperm_prun;
+        self.eperm_ccombp_prun = eperm_ccombp_prun;
+        self.ud_slice_twist_prun = ud_slice_twist_prun;
+        self.ud_slice_flip_prun = ud_slice_flip_prun;
+        self.twist_flip_prun = twist_flip_prun;
+    }
+
+    fn init_mcperm_prun(&self, prun: &mut [i32]) {
         init_raw_sym_prun(
-            &mut prun,
+            prun,
             Some(&RawTables {
                 n_raw: N_MPERM,
                 raw_move: &|r, m| usize::from(self.mperm_move[r][m]),
@@ -357,11 +391,11 @@ impl Tables {
             self,
             0x8ea34,
         );
-        self.mcperm_prun = prun;
+    }
 
-        let mut prun = std::mem::take(&mut self.eperm_ccombp_prun);
+    fn init_eperm_ccombp_prun(&self, prun: &mut [i32]) {
         init_raw_sym_prun(
-            &mut prun,
+            prun,
             Some(&RawTables {
                 n_raw: N_COMB,
                 raw_move: &|r, m| usize::from(self.ccombp_move[r][m]),
@@ -373,11 +407,11 @@ impl Tables {
             self,
             0x7d824,
         );
-        self.eperm_ccombp_prun = prun;
+    }
 
-        let mut prun = std::mem::take(&mut self.ud_slice_twist_prun);
+    fn init_ud_slice_twist_prun(&self, prun: &mut [i32]) {
         init_raw_sym_prun(
-            &mut prun,
+            prun,
             Some(&RawTables {
                 n_raw: N_SLICE,
                 raw_move: &|r, m| usize::from(self.ud_slice_move[r][m]),
@@ -389,11 +423,11 @@ impl Tables {
             self,
             0x69603,
         );
-        self.ud_slice_twist_prun = prun;
+    }
 
-        let mut prun = std::mem::take(&mut self.ud_slice_flip_prun);
+    fn init_ud_slice_flip_prun(&self, prun: &mut [i32]) {
         init_raw_sym_prun(
-            &mut prun,
+            prun,
             Some(&RawTables {
                 n_raw: N_SLICE,
                 raw_move: &|r, m| usize::from(self.ud_slice_move[r][m]),
@@ -405,11 +439,11 @@ impl Tables {
             self,
             0x69603,
         );
-        self.ud_slice_flip_prun = prun;
+    }
 
-        let mut prun = std::mem::take(&mut self.twist_flip_prun);
+    fn init_twist_flip_prun(&self, prun: &mut [i32]) {
         init_raw_sym_prun(
-            &mut prun,
+            prun,
             None,
             N_TWIST_SYM,
             &|s, m| usize::from(self.twist_move[s][m]),
@@ -417,7 +451,6 @@ impl Tables {
             self,
             0x19603,
         );
-        self.twist_flip_prun = prun;
     }
 }
 

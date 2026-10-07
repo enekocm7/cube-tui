@@ -10,7 +10,7 @@ use crate::min2phase::{INVERSE_SOLUTION, SearchWca, tools as min2phase_tools};
 use crate::scrambles::per_thread::PerThread;
 use crate::scrambles::{
     AlgorithmBuilder, ColorScheme, MergingMode, Puzzle, PuzzleState, PuzzleStateAndGenerator,
-    generate_random_turns, order_by_state_hash, split_algorithm,
+    first_canonical_move_to, generate_random_turns, order_by_state_hash, split_algorithm,
 };
 use crate::svg::{Color, Dimension, Element, Svg};
 use crate::threephase;
@@ -196,7 +196,7 @@ impl CubePuzzle {
             short_name,
             long_name,
             wca_min_scramble_distance,
-            min_search_time: Duration::from_millis(200),
+            min_search_time: Duration::ZERO,
             four_searchers: PerThread::default(),
         }
     }
@@ -284,8 +284,8 @@ impl CubePuzzle {
     }
 
     /// Sets how long the 3x3x3 variants keep looking for shorter solutions after finding
-    /// one (TNoodle uses 200ms). With [`Duration::ZERO`] the first solution is used, which
-    /// makes scrambles a deterministic function of the random source.
+    /// one. The default, [`Duration::ZERO`], uses the first solution, which is fast and makes
+    /// scrambles a deterministic function of the random source; TNoodle uses 200ms.
     #[must_use]
     pub fn with_min_search_time(mut self, min_search_time: Duration) -> Self {
         self.min_search_time = min_search_time;
@@ -761,6 +761,22 @@ impl CubeState {
         }
     }
 
+    /// The colour counts of each face, sorted. Whole-cube rotations only move faces around
+    /// and turn them, so states a rotation apart have the same fingerprint.
+    fn rotation_invariant_fingerprint(&self) -> [[u8; 6]; 6] {
+        let mut counts = [[0_u8; 6]; 6];
+        let face_len = self.size * self.size;
+        if face_len > 0 {
+            for (face, stickers) in counts.iter_mut().zip(self.image.chunks_exact(face_len)) {
+                for &s in stickers {
+                    face[usize::from(s)] += 1;
+                }
+            }
+        }
+        counts.sort_unstable();
+        counts
+    }
+
     /// Normalized when the BLD corner is solved.
     fn image_is_normalized(&self) -> bool {
         let s = self.size - 1;
@@ -943,6 +959,36 @@ impl PuzzleState for CubeState {
 
     fn scramble_successors(&self) -> Vec<(String, Self)> {
         self.successors(&MOVE_SETS[self.size].scramble)
+    }
+
+    /// Like the default, but avoids hashing and normalizing every successor: a state only
+    /// matches if its rotation-invariant fingerprint does, and the Java hash order only
+    /// matters when several different states match.
+    fn canonical_move_to(&self, target: &Self) -> Option<String> {
+        let fingerprint = target.rotation_invariant_fingerprint();
+        let mut found: Option<(Self, &String)> = None;
+        for (name, mv) in &MOVE_SETS[self.size].scramble {
+            let state = self.apply_move(mv);
+            if state.rotation_invariant_fingerprint() != fingerprint
+                || *state.normalized() != *target
+            {
+                continue;
+            }
+            match &found {
+                // Like `HashMap#put`, a later move to the same state replaces the name.
+                Some((s, _)) if *s != state => return first_canonical_move_to(self, target),
+                _ => found = Some((state, name)),
+            }
+        }
+        found.map(|(_, name)| name.clone())
+    }
+
+    fn scramble_successor_names(&self) -> Vec<String> {
+        MOVE_SETS[self.size]
+            .scramble
+            .iter()
+            .map(|(name, _)| name.clone())
+            .collect()
     }
 
     fn canonical_moves_by_state(&self) -> Vec<(Self, String)> {

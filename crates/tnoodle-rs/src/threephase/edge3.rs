@@ -1,8 +1,9 @@
 //! The phase 3 edge coordinate and its pruning table (`cs.threephase.Edge3`).
 
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicI32, AtomicUsize, Ordering};
 
 use super::cubes::EdgeCube;
+use crate::parallel;
 
 pub(crate) const N_SYM: usize = 1538;
 pub(crate) const N_RAW: usize = 20160;
@@ -65,10 +66,6 @@ pub(crate) struct Edge3Tables {
     pub(crate) mvroto: Vec<[i32; 12]>,
 }
 
-fn set_pruning(table: &mut [i32], index: usize, value: i32) {
-    table[index >> 4] ^= (0x3 ^ value) << ((index & 0xf) << 1);
-}
-
 fn get_pruning(table: &[i32], index: usize) -> i32 {
     (table[index >> 4] >> ((index & 0xf) << 1)) & 0x3
 }
@@ -127,6 +124,16 @@ impl Edge3 {
             *o = i as i32;
         }
         self.is_std = true;
+    }
+
+    /// Whether the lazily applied part of the permutation is the identity, as it is after
+    /// any [`set_index`](Self::set_index) or [`get_sym`](Self::get_sym) with a rotation.
+    ///
+    /// [`set_from_cube`](Self::set_from_cube) leaves it alone, so a fresh value (all
+    /// zeroes) behaves differently in `get_sym` until its first rotation; after that, all
+    /// values give the same results.
+    pub(crate) fn is_settled(&self) -> bool {
+        self.is_std && self.edgeo.iter().enumerate().all(|(i, &o)| o == i as i32)
     }
 
     /// Copies the permutation of `e` (`set(Edge3)`); the scratch buffer is left alone.
@@ -350,7 +357,7 @@ fn swap4(arr: &mut [i32; 12], a: usize, b: usize, c: usize, d: usize) {
 impl Edge3Tables {
     pub(crate) fn build() -> Self {
         let mut t = Self {
-            eprun: vec![0; N_EPRUN / 16],
+            eprun: Vec::new(),
             sym2raw: vec![0; N_SYM],
             symstate: vec![0; N_SYM],
             raw2sym: vec![0; N_RAW2SYM],
@@ -461,88 +468,115 @@ impl Edge3Tables {
         depth
     }
 
+    /// A breadth first search filling the pruning table up to `MAX_DEPTH - 1`.
+    ///
+    /// Java's backwards ("inverse") search only kicks in past depth 9, which the table never
+    /// reaches, so it is left out. Within a level, entries only change from unvisited to
+    /// the next depth, so the blocks can be expanded in any order (here, in parallel) with
+    /// the same result.
     fn create_prun(&mut self) {
-        let mut e = Edge3::new();
-        let mut f = Edge3::new();
-        let mut g = Edge3::new();
-        self.eprun.fill(-1);
+        let eprun: Vec<AtomicI32> = (0..N_EPRUN / 16).map(|_| AtomicI32::new(-1)).collect();
         let mut depth = 0;
         let mut done = 1;
         DONE.store(done, Ordering::Relaxed);
-        set_pruning(&mut self.eprun, 0, 0);
+        set_pruning_atomic(&eprun, 0, 0);
 
-        while done != N_EPRUN {
-            let inv = depth > 9;
-            let depm3 = depth % 3;
-            let dep1m3 = (depth + 1) % 3;
-            let find = if inv { 0x3 } else { depm3 };
-            let chk = if inv { depm3 } else { 0x3 };
-
-            if depth >= MAX_DEPTH - 1 {
-                break;
-            }
-
-            for block in 0..N_EPRUN / 16 {
-                let mut val = self.eprun[block];
-                if !inv && val == -1 {
-                    continue;
-                }
-                for i in block * 16..block * 16 + 16 {
-                    let entry = val;
-                    val >>= 2;
-                    if entry & 0x3 != find {
-                        continue;
-                    }
-                    let symcord1 = i / N_RAW;
-                    let cord1 = self.sym2raw[symcord1];
-                    let cord2 = (i % N_RAW) as i32;
-                    e.set_index(cord1 * N_RAW as i32 + cord2);
-
-                    for m in 0..17 {
-                        let cord1x = self.mvrot_index(&e.edge, m << 3, 4);
-                        let mut symcord1x = self.raw2sym[cord1x as usize];
-                        let symx = (symcord1x & 0x7) as usize;
-                        symcord1x >>= 3;
-                        let cord2x = self.mvrot_index(&e.edge, m << 3 | symx, 10) % N_RAW as i32;
-                        let idx = symcord1x as usize * N_RAW + cord2x as usize;
-                        if get_pruning(&self.eprun, idx) != chk {
-                            continue;
-                        }
-                        set_pruning(&mut self.eprun, if inv { i } else { idx }, dep1m3);
-                        done += 1;
-                        if inv {
-                            break;
-                        }
-                        let mut sym_state = self.symstate[symcord1x as usize];
-                        if sym_state == 1 {
-                            continue;
-                        }
-                        f.set_from(&e);
-                        f.do_move(m);
-                        f.rotate(symx);
-                        let mut j = 1;
-                        loop {
-                            sym_state >>= 1;
-                            if sym_state == 0 {
-                                break;
-                            }
-                            if sym_state & 1 == 1 {
-                                g.set_from(&f);
-                                g.rotate(j);
-                                let idxx = symcord1x as usize * N_RAW
-                                    + (g.get(10) % N_RAW as i32) as usize;
-                                if get_pruning(&self.eprun, idxx) == chk {
-                                    set_pruning(&mut self.eprun, idxx, dep1m3);
-                                    done += 1;
-                                }
-                            }
-                            j += 1;
-                        }
-                    }
-                }
-            }
+        while done != N_EPRUN && depth < MAX_DEPTH - 1 {
+            let this = &*self;
+            done += parallel::sum(
+                N_EPRUN / 16,
+                || [Edge3::new(); 3],
+                |[e, f, g], block| this.expand_block(&eprun, block, depth, e, f, g),
+            );
             depth += 1;
             DONE.store(done, Ordering::Relaxed);
         }
+        self.eprun = eprun.into_iter().map(AtomicI32::into_inner).collect();
     }
+
+    /// Sets the unvisited neighbours of the entries of `block` at `depth` to `depth + 1`;
+    /// returns how many entries were set.
+    fn expand_block(
+        &self,
+        eprun: &[AtomicI32],
+        block: usize,
+        depth: i32,
+        e: &mut Edge3,
+        f: &mut Edge3,
+        g: &mut Edge3,
+    ) -> usize {
+        const UNVISITED: i32 = 0x3;
+        let depm3 = depth % 3;
+        let dep1m3 = (depth + 1) % 3;
+        let mut val = eprun[block].load(Ordering::Relaxed);
+        if val == -1 {
+            return 0;
+        }
+        let mut added = 0;
+        for i in block * 16..block * 16 + 16 {
+            let entry = val;
+            val >>= 2;
+            if entry & 0x3 != depm3 {
+                continue;
+            }
+            let symcord1 = i / N_RAW;
+            let cord1 = self.sym2raw[symcord1];
+            let cord2 = (i % N_RAW) as i32;
+            e.set_index(cord1 * N_RAW as i32 + cord2);
+
+            for m in 0..17 {
+                let cord1x = self.mvrot_index(&e.edge, m << 3, 4);
+                let mut symcord1x = self.raw2sym[cord1x as usize];
+                let symx = (symcord1x & 0x7) as usize;
+                symcord1x >>= 3;
+                let cord2x = self.mvrot_index(&e.edge, m << 3 | symx, 10) % N_RAW as i32;
+                let idx = symcord1x as usize * N_RAW + cord2x as usize;
+                if get_pruning_atomic(eprun, idx) != UNVISITED
+                    || !set_pruning_atomic(eprun, idx, dep1m3)
+                {
+                    // Already visited, or another thread got there first (and also sets
+                    // the symmetric entries).
+                    continue;
+                }
+                added += 1;
+                let mut sym_state = self.symstate[symcord1x as usize];
+                if sym_state == 1 {
+                    continue;
+                }
+                f.set_from(e);
+                f.do_move(m);
+                f.rotate(symx);
+                let mut j = 1;
+                loop {
+                    sym_state >>= 1;
+                    if sym_state == 0 {
+                        break;
+                    }
+                    if sym_state & 1 == 1 {
+                        g.set_from(f);
+                        g.rotate(j);
+                        let idxx = symcord1x as usize * N_RAW + (g.get(10) % N_RAW as i32) as usize;
+                        if get_pruning_atomic(eprun, idxx) == UNVISITED
+                            && set_pruning_atomic(eprun, idxx, dep1m3)
+                        {
+                            added += 1;
+                        }
+                    }
+                    j += 1;
+                }
+            }
+        }
+        added
+    }
+}
+
+fn get_pruning_atomic(table: &[AtomicI32], index: usize) -> i32 {
+    (table[index >> 4].load(Ordering::Relaxed) >> ((index & 0xf) << 1)) & 0x3
+}
+
+/// Sets an unvisited (`0x3`) entry to `value`; returns whether this call changed it.
+fn set_pruning_atomic(table: &[AtomicI32], index: usize, value: i32) -> bool {
+    let shift = (index & 0xf) << 1;
+    let old = table[index >> 4].fetch_and(!((0x3 ^ value) << shift), Ordering::Relaxed);
+    (old >> shift) & 0x3 == 0x3
 }
