@@ -36,6 +36,7 @@ layout are visible:
 
 ```toml
 [display]
+big_timer = true
 history = true
 scramble = true
 scramble_preview = false
@@ -47,6 +48,11 @@ toasts = true
 panel, and `scramble` controls the scramble display. Hiding the history or
 statistics panel reduces the minimum terminal width. Hiding the scramble
 display reduces the minimum terminal height.
+
+`big_timer` draws the timer in large block digits centered in the timer panel,
+dropping leading zero minutes (`7.123` instead of `00:07.123`). In narrow panes
+it switches to smaller digits, then to plain text. It defaults to `true`; set it
+to `false` to show the time as a single line of text.
 
 `scramble_preview` shows a colored ASCII net of the current scramble in the
 bottom-right corner. Press `v` to toggle it; the choice is saved. Previews are
