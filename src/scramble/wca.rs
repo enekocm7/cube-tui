@@ -1,5 +1,27 @@
 use super::WcaEvent;
+use std::sync::LazyLock;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
+use tnoodle::puzzle::CubePuzzle;
 use tnoodle::{PuzzleRegistry, Scrambler};
+
+/// How long `TNoodle` keeps searching for shorter 3x3x3 solutions after finding one.
+const TNOODLE_MIN_SEARCH_TIME: Duration = Duration::from_millis(200);
+
+/// Whether 3x3x3 scrambles use `TNoodle`'s minimum search time.
+static ACCURATE_3X3: AtomicBool = AtomicBool::new(false);
+
+/// A 3x3x3 scrambler configured exactly like `TNoodle`'s.
+static ACCURATE_THREE: LazyLock<Scrambler> = LazyLock::new(|| {
+    Scrambler::Cube(CubePuzzle::three_by_three().with_min_search_time(TNOODLE_MIN_SEARCH_TIME))
+});
+
+/// Sets whether 3x3x3 scrambles keep searching for shorter solutions like `TNoodle`.
+///
+/// Both modes draw the same random state; the fast one may need more moves to reach it.
+pub fn set_accurate_3x3(accurate: bool) {
+    ACCURATE_3X3.store(accurate, Ordering::Relaxed);
+}
 
 /// Generates an official random-state scramble with `tnoodle-rs`.
 ///
@@ -12,6 +34,9 @@ pub fn get_wca_scramble(event: WcaEvent) -> String {
 
 /// Maps an event to its `tnoodle-rs` scrambler.
 fn event_to_puzzle(event: WcaEvent) -> &'static Scrambler {
+    if event == WcaEvent::Cube3x3 && ACCURATE_3X3.load(Ordering::Relaxed) {
+        return &ACCURATE_THREE;
+    }
     let puzzle = match event {
         WcaEvent::Cube2x2 => PuzzleRegistry::Two,
         WcaEvent::Cube3x3 => PuzzleRegistry::Three,
@@ -31,7 +56,7 @@ fn event_to_puzzle(event: WcaEvent) -> &'static Scrambler {
 
 #[cfg(test)]
 mod tests {
-    use super::{WcaEvent, event_to_puzzle, get_wca_scramble};
+    use super::{ACCURATE_THREE, WcaEvent, event_to_puzzle, get_wca_scramble};
 
     const EVENTS: [WcaEvent; 12] = [
         WcaEvent::Cube2x2,
@@ -75,6 +100,16 @@ mod tests {
                 .unwrap_or_else(|error| panic!("{event:?}: {scramble}: {error}"));
             assert!(!solved, "{event:?}: {scramble} solves the puzzle");
         }
+    }
+
+    #[test]
+    fn accurate_3x3_scrambles_are_valid() {
+        let scramble = ACCURATE_THREE.generate_scramble();
+        assert_eq!(ACCURATE_THREE.short_name(), "333");
+        assert!(
+            !ACCURATE_THREE.is_solved_by(&scramble).unwrap(),
+            "{scramble}"
+        );
     }
 
     #[test]

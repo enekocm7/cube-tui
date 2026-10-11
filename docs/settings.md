@@ -100,6 +100,23 @@ zen = false
 `inspection` enables the WCA inspection period. `zen` hides the interface
 while the timer is running.
 
+## Scramble Settings
+
+Scramble generation is configured with the `[scramble]` table:
+
+```toml
+[scramble]
+accurate_3x3 = false
+```
+
+The official WCA scrambler, TNoodle, keeps searching for a shorter 3x3x3
+scramble for 200ms after finding the first one. `accurate_3x3 = true` does the
+same, so 3x3x3 scrambles match TNoodle's exactly. The default, `false`, uses
+the first scramble found, which is faster.
+
+Both modes scramble the cube to the same random state, so they are equally
+fair; the faster mode may just take a few more moves to get there.
+
 ## Custom Keybinds
 
 Add a `[keybinds]` table containing only the bindings you want to change:
