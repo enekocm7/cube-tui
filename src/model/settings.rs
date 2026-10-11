@@ -11,6 +11,7 @@ pub struct Settings {
     pub timer: TimerSettings,
     theme: Theme,
     display: DisplaySettings,
+    scramble: ScrambleSettings,
     keybinds: Keybinds,
 }
 
@@ -110,10 +111,21 @@ impl Settings {
         self.theme.clone_from(theme);
     }
 
+    /// Returns whether 3x3x3 scrambles use `TNoodle`'s 200ms minimum search time.
+    pub const fn accurate_3x3(&self) -> bool {
+        self.scramble.accurate_3x3
+    }
+
     /// Returns the configured keyboard bindings.
     pub const fn keybinds(&self) -> &Keybinds {
         &self.keybinds
     }
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ScrambleSettings {
+    accurate_3x3: bool,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -403,6 +415,17 @@ mod tests {
         assert!(settings.display.stats);
         assert!(!settings.scramble_preview());
         assert!(settings.big_timer());
+    }
+
+    #[test]
+    fn accurate_3x3_defaults_off_and_can_be_enabled() {
+        assert!(!Settings::default().accurate_3x3());
+        let settings: Settings = toml::from_str(
+            "[scramble]
+accurate_3x3 = true",
+        )
+        .unwrap();
+        assert!(settings.accurate_3x3());
     }
 
     #[test]

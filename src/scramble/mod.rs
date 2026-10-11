@@ -5,6 +5,8 @@ use std::fmt;
 pub mod visualization;
 mod wca;
 
+pub use wca::set_accurate_3x3;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WcaEvent {
     Cube2x2,

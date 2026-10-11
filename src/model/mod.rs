@@ -92,17 +92,7 @@ impl Model {
 
     /// Loads saved state and reports failures without replacing unreadable history.
     pub fn load_persisted_state(&mut self) {
-        match persistence::load() {
-            Ok(Some(data)) => self.restore_from_history(data),
-            Ok(None) => {}
-            Err(error) => {
-                self.history_load_failed = true;
-                self.toast_error(format!("{error:#}. Existing history will not be overwritten. New solves will stay in memory."));
-            }
-        }
-        if let Err(error) = persistence::ensure_default_theme() {
-            self.toast_warning(format!("{error:#}. Using built-in colors if needed."));
-        }
+        // Settings load first so restored sessions generate scrambles with them.
         match persistence::load_config() {
             Ok(Some(settings)) => self.set_settings(settings),
             Ok(None) => {}
@@ -110,8 +100,30 @@ impl Model {
                 "{error:#}. Using default settings; the file will not be overwritten."
             )),
         }
+        match persistence::load() {
+            Ok(Some(data)) => self.restore_from_history(data),
+            Ok(None) => self.refresh_accurate_scramble(),
+            Err(error) => {
+                self.refresh_accurate_scramble();
+                self.history_load_failed = true;
+                self.toast_error(format!("{error:#}. Existing history will not be overwritten. New solves will stay in memory."));
+            }
+        }
+        if let Err(error) = persistence::ensure_default_theme() {
+            self.toast_warning(format!("{error:#}. Using built-in colors if needed."));
+        }
         if let Err(error) = persistence::load_theme(self.settings().theme_name()) {
             self.toast_warning(format!("{error:#}. Using built-in colors."));
+        }
+    }
+
+    /// Replaces the startup 3x3x3 scramble, generated before settings loaded,
+    /// when accurate 3x3x3 scrambles are enabled.
+    fn refresh_accurate_scramble(&mut self) {
+        if self.settings.accurate_3x3() {
+            let session = self.current_session_mut();
+            session.respawn_scramble_generators();
+            session.next_scramble();
         }
     }
 
@@ -142,6 +154,7 @@ impl Model {
 
     /// Replaces the application settings used by the model.
     pub fn set_settings(&mut self, settings: Settings) {
+        crate::scramble::set_accurate_3x3(settings.accurate_3x3());
         self.settings = settings;
     }
 

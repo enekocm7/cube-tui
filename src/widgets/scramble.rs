@@ -37,6 +37,25 @@ impl<'a> ScrambleWidget<'a> {
             .split('\n')
             .map(|row| Line::from(Span::styled(row.to_string(), style)))
             .collect();
+        // Megaminx scrambles come as pre-split rows: left-align them inside a
+        // centered block so every U move lines up in one column (U' sticks out).
+        if self.text.contains('\n') {
+            let inner = block.inner(area);
+            block.render(area, buf);
+            let block_width = self
+                .text
+                .split('\n')
+                .map(|row| row.chars().count())
+                .max()
+                .unwrap_or(0);
+            let block_width = u16::try_from(block_width).unwrap_or(u16::MAX);
+            let width = block_width.min(inner.width);
+            let x = inner.x + (inner.width - width) / 2;
+            Paragraph::new(text)
+                .alignment(Alignment::Left)
+                .render(Rect::new(x, inner.y, width, inner.height), buf);
+            return;
+        }
         Paragraph::new(text)
             .block(block)
             .alignment(Alignment::Center)
