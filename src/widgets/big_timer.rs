@@ -13,6 +13,12 @@ const LARGE: Font = Font {
     glyph: large_glyph,
 };
 
+/// Hollow digits drawn with box characters, selected by `big_timer_outline`.
+const OUTLINE: Font = Font {
+    height: 4,
+    glyph: outline_glyph,
+};
+
 const SMALL: Font = Font {
     height: 3,
     glyph: small_glyph,
@@ -35,6 +41,24 @@ fn large_glyph(c: char) -> Option<&'static [&'static str]> {
         '9' => &["██▀██", "██▄██", "   ██", "▀▀▀▀▀"],
         ':' => &["  ", "▀▀", "▀▀", "  "],
         '.' => &["  ", "  ", "  ", "▀▀"],
+        _ => return None,
+    })
+}
+
+fn outline_glyph(c: char) -> Option<&'static [&'static str]> {
+    Some(match c {
+        '0' => &["╭───╮", "│   │", "│   │", "╰───╯"],
+        '1' => &["  ╷  ", "  │  ", "  │  ", "╶─┴─╴"],
+        '2' => &["╭───╮", "    │", "╭───╯", "╰────"],
+        '3' => &["╭───╮", "    │", " ───┤", "╰───╯"],
+        '4' => &["╷   ╷", "│   │", "╰───┤", "    │"],
+        '5' => &["╭───╮", "│    ", "├───╮", "╰───╯"],
+        '6' => &["╭────", "│    ", "├───╮", "╰───╯"],
+        '7' => &["────╮", "    │", "    │", "    ╵"],
+        '8' => &["╭───╮", "├───┤", "│   │", "╰───╯"],
+        '9' => &["╭───╮", "│   │", "╰───┤", "    │"],
+        ':' => &["  ", "╭╮", "╰╯", "  "],
+        '.' => &["  ", "  ", "╭╮", "╰╯"],
         _ => return None,
     })
 }
@@ -80,12 +104,14 @@ fn compact_time(text: &str) -> &str {
     }
 }
 
-/// Renders a time in large block digits, centered in its area, with an
-/// optional caption above it. Falls back to smaller digits, then to plain
-/// text, when the area is too small.
+/// Renders a time in large digits, centered in its area, with an optional
+/// caption above it. The digits are solid blocks unless [`Self::outline`] is
+/// set. Falls back to smaller solid digits, then to plain text, when the area
+/// is too small.
 pub struct BigTimerWidget<'a> {
     time: &'a str,
     label: Option<&'a str>,
+    outline: bool,
     style: Style,
 }
 
@@ -94,6 +120,7 @@ impl<'a> BigTimerWidget<'a> {
         Self {
             time,
             label: None,
+            outline: false,
             style,
         }
     }
@@ -103,14 +130,21 @@ impl<'a> BigTimerWidget<'a> {
         self
     }
 
+    /// Draws the large digits as hollow outlines instead of solid blocks.
+    pub const fn outline(mut self, outline: bool) -> Self {
+        self.outline = outline;
+        self
+    }
+
     pub fn render(self, area: Rect, buf: &mut Buffer) {
         if area.is_empty() {
             return;
         }
         let time = compact_time(self.time);
         let label_height = if self.label.is_some() { 2 } else { 0 };
+        let large = if self.outline { &OUTLINE } else { &LARGE };
 
-        for font in [&LARGE, &SMALL] {
+        for font in [large, &SMALL] {
             let Some(glyphs) = font.glyphs(time) else {
                 break;
             };
@@ -198,6 +232,37 @@ mod tests {
             rows[6],
             format!("{:7}▀▀▀▀▀ ▀▀ ▀▀▀▀▀ ▀▀▀▀▀ ▀▀▀▀▀{:7}", "", "")
         );
+    }
+
+    #[test]
+    fn outline_digits_are_hollow_and_keep_the_solid_footprint() {
+        let area = Rect::new(0, 0, 40, 10);
+        let mut buf = Buffer::empty(area);
+        BigTimerWidget::new("00:00.000", Style::default())
+            .outline(true)
+            .render(area, &mut buf);
+        let rows = rows(&buf);
+        // Same 26-column, 4-row box as the solid digits.
+        assert_eq!(rows[2].trim(), "");
+        assert_eq!(rows[7].trim(), "");
+        assert_eq!(
+            rows[3],
+            format!("{:7}╭───╮    ╭───╮ ╭───╮ ╭───╮{:7}", "", "")
+        );
+        assert_eq!(
+            rows[6],
+            format!("{:7}╰───╯ ╰╯ ╰───╯ ╰───╯ ╰───╯{:7}", "", "")
+        );
+    }
+
+    #[test]
+    fn outline_falls_back_to_small_digits_in_short_panes() {
+        let area = Rect::new(0, 0, 21, 3);
+        let mut buf = Buffer::empty(area);
+        BigTimerWidget::new("00:12.345", Style::default())
+            .outline(true)
+            .render(area, &mut buf);
+        assert_eq!(rows(&buf)[0], "▀█  ▀▀█   ▀▀█ █ █ █▀▀");
     }
 
     #[test]
