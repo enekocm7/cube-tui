@@ -363,23 +363,12 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border()));
     let (timer_label, timer_text, timer_style) = timer_display(model);
-    if settings.big_timer() {
-        let timer_inner = timer_block.inner(timer_area);
-        timer_block.render(timer_area, buf);
-        BigTimerWidget::new(&timer_text, timer_style)
-            .label(timer_label)
-            .render(timer_inner, buf);
-    } else {
-        let text = match timer_label {
-            Some(label) => Cow::Owned(format!("{label}: {timer_text}")),
-            None => timer_text,
-        };
-        Paragraph::new(Line::from(Span::styled(text, timer_style)))
-            .block(timer_block)
-            .alignment(Alignment::Center)
-            .wrap(Wrap { trim: true })
-            .render(timer_area, buf);
-    }
+    let timer_inner = timer_block.inner(timer_area);
+    timer_block.render(timer_area, buf);
+    BigTimerWidget::new(&timer_text, timer_style)
+        .label(timer_label)
+        .outline(settings.big_timer_outline())
+        .render(timer_inner, buf);
 
     if let Some(stats_area) = stats_area {
         let history = model.history();

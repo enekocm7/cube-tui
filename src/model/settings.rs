@@ -56,9 +56,9 @@ impl Settings {
         self.timer.zen
     }
 
-    /// Returns whether the timer is drawn in large block digits.
-    pub const fn big_timer(&self) -> bool {
-        self.display.big_timer
+    /// Returns whether the big timer digits are drawn as outlines instead of solid blocks.
+    pub const fn big_timer_outline(&self) -> bool {
+        self.display.big_timer_outline
     }
 
     /// Returns whether the solve-history panel is visible.
@@ -327,7 +327,7 @@ impl<'de> Deserialize<'de> for ColorSettings {
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(default)]
 pub struct DisplaySettings {
-    big_timer: bool,
+    big_timer_outline: bool,
     history: bool,
     scramble: bool,
     scramble_preview: bool,
@@ -337,10 +337,10 @@ pub struct DisplaySettings {
 
 impl Default for DisplaySettings {
     /// Makes the big timer digits, history, scramble, statistics, and toast
-    /// notifications visible.
+    /// notifications visible, with solid timer digits.
     fn default() -> Self {
         Self {
-            big_timer: true,
+            big_timer_outline: false,
             history: true,
             scramble: true,
             scramble_preview: false,
@@ -414,7 +414,7 @@ mod tests {
         assert!(settings.display.scramble);
         assert!(settings.display.stats);
         assert!(!settings.scramble_preview());
-        assert!(settings.big_timer());
+        assert!(!settings.big_timer_outline());
     }
 
     #[test]
@@ -429,13 +429,25 @@ accurate_3x3 = true",
     }
 
     #[test]
-    fn big_timer_can_be_disabled_in_config() {
+    fn big_timer_outline_defaults_off_and_can_be_enabled() {
+        assert!(!Settings::default().big_timer_outline());
+        let settings: Settings = toml::from_str(
+            "[display]
+big_timer_outline = true",
+        )
+        .unwrap();
+        assert!(settings.big_timer_outline());
+    }
+
+    #[test]
+    fn removed_big_timer_key_is_ignored() {
+        // Configs written before the single-line timer was removed must still load.
         let settings: Settings = toml::from_str(
             "[display]
 big_timer = false",
         )
         .unwrap();
-        assert!(!settings.big_timer());
+        assert!(!settings.big_timer_outline());
     }
 
     #[test]
