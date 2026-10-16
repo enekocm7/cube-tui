@@ -13,9 +13,11 @@ const LARGE: Font = Font {
     glyph: large_glyph,
 };
 
-/// Hollow digits drawn with box characters, selected by `big_timer_outline`.
+/// Hollow digits whose strokes are traced with rounded box-drawing lines,
+/// selected by `big_timer_outline`. Each glyph is the contour of a 4x5 pixel
+/// digit, so it is two rows taller than [`LARGE`].
 const OUTLINE: Font = Font {
-    height: 4,
+    height: 6,
     glyph: outline_glyph,
 };
 
@@ -47,18 +49,18 @@ fn large_glyph(c: char) -> Option<&'static [&'static str]> {
 
 fn outline_glyph(c: char) -> Option<&'static [&'static str]> {
     Some(match c {
-        '0' => &["╭───╮", "│   │", "│   │", "╰───╯"],
-        '1' => &["  ╷  ", "  │  ", "  │  ", "╶─┴─╴"],
-        '2' => &["╭───╮", "    │", "╭───╯", "╰────"],
-        '3' => &["╭───╮", "    │", " ───┤", "╰───╯"],
-        '4' => &["╷   ╷", "│   │", "╰───┤", "    │"],
-        '5' => &["╭───╮", "│    ", "├───╮", "╰───╯"],
-        '6' => &["╭────", "│    ", "├───╮", "╰───╯"],
-        '7' => &["────╮", "    │", "    │", "    ╵"],
-        '8' => &["╭───╮", "├───┤", "│   │", "╰───╯"],
-        '9' => &["╭───╮", "│   │", "╰───┤", "    │"],
-        ':' => &["  ", "╭╮", "╰╯", "  "],
-        '.' => &["  ", "  ", "╭╮", "╰╯"],
+        '0' => &["╭───╮", "│╭─╮│", "││ ││", "││ ││", "│╰─╯│", "╰───╯"],
+        '1' => &["╭──╮ ", "╰─╮│ ", "  ││ ", "  ││ ", "╭─╯╰╮", "╰───╯"],
+        '2' => &["╭───╮", "╰──╮│", "╭──╯│", "│╭──╯", "│╰──╮", "╰───╯"],
+        '3' => &["╭───╮", "╰──╮│", " ╭─╯│", " ╰─╮│", "╭──╯│", "╰───╯"],
+        '4' => &["╭╮ ╭╮", "││ ││", "│╰─╯│", "╰──╮│", "   ││", "   ╰╯"],
+        '5' => &["╭───╮", "│╭──╯", "│╰──╮", "╰──╮│", "╭──╯│", "╰───╯"],
+        '6' => &["╭───╮", "│╭──╯", "│╰──╮", "│╭─╮│", "│╰─╯│", "╰───╯"],
+        '7' => &["╭───╮", "╰──╮│", "   ││", "   ││", "   ││", "   ╰╯"],
+        '8' => &["╭───╮", "│╭─╮│", "│╰─╯│", "│╭─╮│", "│╰─╯│", "╰───╯"],
+        '9' => &["╭───╮", "│╭─╮│", "│╰─╯│", "╰──╮│", "╭──╯│", "╰───╯"],
+        ':' => &["  ", "╭╮", "╰╯", "╭╮", "╰╯", "  "],
+        '.' => &["  ", "  ", "  ", "  ", "╭╮", "╰╯"],
         _ => return None,
     })
 }
@@ -106,8 +108,8 @@ fn compact_time(text: &str) -> &str {
 
 /// Renders a time in large digits, centered in its area, with an optional
 /// caption above it. The digits are solid blocks unless [`Self::outline`] is
-/// set. Falls back to smaller solid digits, then to plain text, when the area
-/// is too small.
+/// set. When the area is too small, falls back to the solid digits (if the
+/// outline was requested), then to smaller solid digits, then to plain text.
 pub struct BigTimerWidget<'a> {
     time: &'a str,
     label: Option<&'a str>,
@@ -142,9 +144,13 @@ impl<'a> BigTimerWidget<'a> {
         }
         let time = compact_time(self.time);
         let label_height = if self.label.is_some() { 2 } else { 0 };
-        let large = if self.outline { &OUTLINE } else { &LARGE };
+        let fonts: &[&Font] = if self.outline {
+            &[&OUTLINE, &LARGE, &SMALL]
+        } else {
+            &[&LARGE, &SMALL]
+        };
 
-        for font in [large, &SMALL] {
+        for font in fonts {
             let Some(glyphs) = font.glyphs(time) else {
                 break;
             };
@@ -235,28 +241,80 @@ mod tests {
     }
 
     #[test]
-    fn outline_digits_are_hollow_and_keep_the_solid_footprint() {
+    fn outline_digits_are_hollow_and_centered() {
         let area = Rect::new(0, 0, 40, 10);
         let mut buf = Buffer::empty(area);
         BigTimerWidget::new("00:00.000", Style::default())
             .outline(true)
             .render(area, &mut buf);
         let rows = rows(&buf);
-        // Same 26-column, 4-row box as the solid digits.
-        assert_eq!(rows[2].trim(), "");
-        assert_eq!(rows[7].trim(), "");
+        // 26 columns wide like the solid digits, but 6 rows tall: 2 blank
+        // rows above and below.
+        assert_eq!(rows[1].trim(), "");
+        assert_eq!(rows[8].trim(), "");
         assert_eq!(
-            rows[3],
+            rows[2],
             format!("{:7}╭───╮    ╭───╮ ╭───╮ ╭───╮{:7}", "", "")
         );
         assert_eq!(
-            rows[6],
+            rows[4],
+            format!("{:7}││ ││    ││ ││ ││ ││ ││ ││{:7}", "", "")
+        );
+        assert_eq!(
+            rows[7],
             format!("{:7}╰───╯ ╰╯ ╰───╯ ╰───╯ ╰───╯{:7}", "", "")
         );
     }
 
     #[test]
-    fn outline_falls_back_to_small_digits_in_short_panes() {
+    fn outline_glyphs_are_closed_contours() {
+        // (up, down, left, right) arms of each line-drawing character.
+        fn arms(c: char) -> [bool; 4] {
+            match c {
+                '│' => [true, true, false, false],
+                '─' => [false, false, true, true],
+                '╭' => [false, true, false, true],
+                '╮' => [false, true, true, false],
+                '╰' => [true, false, false, true],
+                '╯' => [true, false, true, false],
+                ' ' => [false; 4],
+                _ => panic!("unexpected outline character {c:?}"),
+            }
+        }
+        for c in "0123456789:.".chars() {
+            let glyph: Vec<Vec<[bool; 4]>> = outline_glyph(c)
+                .unwrap()
+                .iter()
+                .map(|row| row.chars().map(arms).collect())
+                .collect();
+            assert_eq!(glyph.len(), usize::from(OUTLINE.height), "{c:?}");
+            for (y, row) in glyph.iter().enumerate() {
+                assert_eq!(row.len(), glyph[0].len(), "{c:?} row {y}");
+                for (x, &[up, down, left, right]) in row.iter().enumerate() {
+                    let above = y.checked_sub(1).is_some_and(|y| glyph[y][x][1]);
+                    let below = glyph.get(y + 1).is_some_and(|r| r[x][0]);
+                    let before = x.checked_sub(1).is_some_and(|x| row[x][3]);
+                    let after = row.get(x + 1).is_some_and(|a| a[2]);
+                    assert_eq!(
+                        [up, down, left, right],
+                        [above, below, before, after],
+                        "{c:?} has a loose line end at ({x}, {y})"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn outline_falls_back_to_solid_then_small_digits() {
+        // Too short for the 6-row outline, tall enough for the 4-row solid font.
+        let area = Rect::new(0, 0, 40, 5);
+        let mut buf = Buffer::empty(area);
+        BigTimerWidget::new("00:00.000", Style::default())
+            .outline(true)
+            .render(area, &mut buf);
+        assert_eq!(rows(&buf)[0].trim(), "██▀██    ██▀██ ██▀██ ██▀██");
+
         let area = Rect::new(0, 0, 21, 3);
         let mut buf = Buffer::empty(area);
         BigTimerWidget::new("00:12.345", Style::default())

@@ -54,8 +54,20 @@ dropping leading zero minutes (`7.123` instead of `00:07.123`). In narrow panes
 it switches to smaller digits, then to plain text. The single-line timer that
 `big_timer = false` used to show has been removed, and that key is now ignored.
 
-`big_timer_outline` draws those large digits as hollow outlines instead of
-solid blocks. The digits keep the same size and position. It defaults to
+`big_timer_outline` draws the digits as hollow outlines, traced with rounded
+box-drawing lines, instead of solid blocks:
+
+```
+╭──╮  ╭───╮    ╭───╮ ╭───╮ ╭╮ ╭╮
+╰─╮│  ╰──╮│    ╰──╮│ │╭──╯ ││ ││
+  ││  ╭──╯│     ╭─╯│ │╰──╮ │╰─╯│
+  ││  │╭──╯     ╰─╮│ ╰──╮│ ╰──╮│
+╭─╯╰╮ │╰──╮ ╭╮ ╭──╯│ ╭──╯│    ││
+╰───╯ ╰───╯ ╰╯ ╰───╯ ╰───╯    ╰╯
+```
+
+Outlined digits are two rows taller than the solid ones; when the timer panel
+is too short for them, it shows the solid digits instead. It defaults to
 `false`, which keeps the solid digits.
 
 `scramble_preview` shows a colored ASCII net of the current scramble in the
