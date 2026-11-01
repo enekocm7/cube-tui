@@ -29,34 +29,36 @@ pub fn set_accurate_3x3(accurate: bool) {
 /// `java.util.Random` would not do: its 48-bit seed cannot reach most states
 /// of the larger puzzles.
 pub fn get_wca_scramble(event: WcaEvent) -> String {
-    event_to_puzzle(event).generate_scramble()
+    event.scrambler().generate_scramble()
 }
 
-/// Maps an event to its `tnoodle-rs` scrambler.
-fn event_to_puzzle(event: WcaEvent) -> &'static Scrambler {
-    if event == WcaEvent::Cube3x3 && ACCURATE_3X3.load(Ordering::Relaxed) {
-        return &ACCURATE_THREE;
+impl WcaEvent {
+    /// Maps an event to its `tnoodle-rs` scrambler.
+    fn scrambler(self) -> &'static Scrambler {
+        if self == WcaEvent::Cube3x3 && ACCURATE_3X3.load(Ordering::Relaxed) {
+            return &ACCURATE_THREE;
+        }
+        let puzzle = match self {
+            WcaEvent::Cube2x2 => PuzzleRegistry::Two,
+            WcaEvent::Cube3x3 => PuzzleRegistry::Three,
+            WcaEvent::Cube4x4 => PuzzleRegistry::Four,
+            WcaEvent::Cube5x5 => PuzzleRegistry::Five,
+            WcaEvent::Cube6x6 => PuzzleRegistry::Six,
+            WcaEvent::Cube7x7 => PuzzleRegistry::Seven,
+            WcaEvent::Megaminx => PuzzleRegistry::Mega,
+            WcaEvent::Pyraminx => PuzzleRegistry::Pyra,
+            WcaEvent::Fto => PuzzleRegistry::Fto,
+            WcaEvent::Skewb => PuzzleRegistry::Skewb,
+            WcaEvent::Square1 => PuzzleRegistry::Sq1,
+            WcaEvent::Clock => PuzzleRegistry::Clock,
+        };
+        puzzle.scrambler()
     }
-    let puzzle = match event {
-        WcaEvent::Cube2x2 => PuzzleRegistry::Two,
-        WcaEvent::Cube3x3 => PuzzleRegistry::Three,
-        WcaEvent::Cube4x4 => PuzzleRegistry::Four,
-        WcaEvent::Cube5x5 => PuzzleRegistry::Five,
-        WcaEvent::Cube6x6 => PuzzleRegistry::Six,
-        WcaEvent::Cube7x7 => PuzzleRegistry::Seven,
-        WcaEvent::Megaminx => PuzzleRegistry::Mega,
-        WcaEvent::Pyraminx => PuzzleRegistry::Pyra,
-        WcaEvent::Fto => PuzzleRegistry::Fto,
-        WcaEvent::Skewb => PuzzleRegistry::Skewb,
-        WcaEvent::Square1 => PuzzleRegistry::Sq1,
-        WcaEvent::Clock => PuzzleRegistry::Clock,
-    };
-    puzzle.scrambler()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{ACCURATE_THREE, WcaEvent, event_to_puzzle, get_wca_scramble};
+    use super::{ACCURATE_THREE, WcaEvent, get_wca_scramble};
 
     const EVENTS: [WcaEvent; 12] = [
         WcaEvent::Cube2x2,
@@ -77,7 +79,7 @@ mod tests {
     fn events_map_to_their_wca_puzzles() {
         let keys: Vec<&str> = EVENTS
             .iter()
-            .map(|&event| event_to_puzzle(event).short_name())
+            .map(|&event| event.scrambler().short_name())
             .collect();
         assert_eq!(
             keys,
@@ -93,7 +95,7 @@ mod tests {
         for event in EVENTS {
             let scramble = get_wca_scramble(event);
             assert!(!scramble.trim().is_empty(), "{event:?}: empty scramble");
-            let puzzle = event_to_puzzle(event);
+            let puzzle = event.scrambler();
             // Every WCA scramble parses and leaves the puzzle unsolved.
             let solved = puzzle
                 .is_solved_by(&scramble)
