@@ -36,7 +36,7 @@ layout are visible:
 
 ```toml
 [display]
-big_timer_outline = false
+big_timer = true
 history = true
 scramble = true
 scramble_preview = false
@@ -49,26 +49,13 @@ panel, and `scramble` controls the scramble display. Hiding the history or
 statistics panel reduces the minimum terminal width. Hiding the scramble
 display reduces the minimum terminal height.
 
-The timer is always drawn in large block digits centered in the timer panel,
-dropping leading zero minutes (`7.123` instead of `00:07.123`). In narrow panes
-it switches to smaller digits, then to plain text. The single-line timer that
-`big_timer = false` used to show has been removed, and that key is now ignored.
-
-`big_timer_outline` draws the digits as hollow outlines, traced with rounded
-box-drawing lines, instead of solid blocks:
-
-```
-╭──╮  ╭───╮    ╭───╮ ╭───╮ ╭╮ ╭╮
-╰─╮│  ╰──╮│    ╰──╮│ │╭──╯ ││ ││
-  ││  ╭──╯│     ╭─╯│ │╰──╮ │╰─╯│
-  ││  │╭──╯     ╰─╮│ ╰──╮│ ╰──╮│
-╭─╯╰╮ │╰──╮ ╭╮ ╭──╯│ ╭──╯│    ││
-╰───╯ ╰───╯ ╰╯ ╰───╯ ╰───╯    ╰╯
-```
-
-Outlined digits are two rows taller than the solid ones; when the timer panel
-is too short for them, it shows the solid digits instead. It defaults to
-`false`, which keeps the solid digits.
+`big_timer` selects the timer display. `true` (the default) draws the time in
+large block digits centered in the timer panel, dropping leading zero minutes
+(`7.123` instead of `00:07.123`); in narrow panes it switches to smaller digits,
+then to plain text. `false` keeps a single centered line with the plain time,
+or `Inspection: 00:12.345` during inspection. The outline style that
+`big_timer_outline = true` used to select has been removed, and that key is now
+ignored.
 
 `scramble_preview` shows a colored ASCII net of the current scramble in the
 bottom-right corner. Press `v` to toggle it; the choice is saved. Previews are

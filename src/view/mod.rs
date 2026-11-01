@@ -363,12 +363,23 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         .borders(Borders::ALL)
         .border_style(Style::default().fg(theme.border()));
     let (timer_label, timer_text, timer_style) = timer_display(model);
-    let timer_inner = timer_block.inner(timer_area);
-    timer_block.render(timer_area, buf);
-    BigTimerWidget::new(&timer_text, timer_style)
-        .label(timer_label)
-        .outline(settings.big_timer_outline())
-        .render(timer_inner, buf);
+    if settings.big_timer() {
+        let timer_inner = timer_block.inner(timer_area);
+        timer_block.render(timer_area, buf);
+        BigTimerWidget::new(&timer_text, timer_style)
+            .label(timer_label)
+            .render(timer_inner, buf);
+    } else {
+        let text = match timer_label {
+            Some(label) => Cow::Owned(format!("{label}: {timer_text}")),
+            None => timer_text,
+        };
+        Paragraph::new(Line::from(Span::styled(text, timer_style)))
+            .block(timer_block)
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true })
+            .render(timer_area, buf);
+    }
 
     if let Some(stats_area) = stats_area {
         let history = model.history();
@@ -602,6 +613,24 @@ mod tests {
         assert!(buffer_text(&render_model(&mut model, area)).contains("not available"));
         model.current_session_mut().event = crate::scramble::WcaEvent::Cube3x3;
         assert!(!buffer_text(&render_model(&mut model, area)).contains("not available"));
+    }
+
+    #[test]
+    fn plain_timer_setting_renders_a_single_centered_line() {
+        let mut model = Model::new();
+        let area = Rect::new(0, 0, 100, 32);
+        assert!(!buffer_text(&render_model(&mut model, area)).contains("00:00.000"));
+
+        model.set_settings(
+            toml::from_str(
+                "[display]
+big_timer = false",
+            )
+            .unwrap(),
+        );
+        let text = buffer_text(&render_model(&mut model, area));
+        assert!(text.contains("00:00.000"));
+        assert!(!text.contains("██▀██"));
     }
 
     #[test]
