@@ -87,6 +87,7 @@ pub struct BigTimerWidget<'a> {
     time: &'a str,
     label: Option<&'a str>,
     style: Style,
+    pad_minutes: bool,
 }
 
 impl<'a> BigTimerWidget<'a> {
@@ -95,6 +96,7 @@ impl<'a> BigTimerWidget<'a> {
             time,
             label: None,
             style,
+            pad_minutes: false,
         }
     }
 
@@ -103,11 +105,21 @@ impl<'a> BigTimerWidget<'a> {
         self
     }
 
+    /// Keeps leading zero minutes, so `00:07.123` keeps its `00:` prefix.
+    pub const fn pad_minutes(mut self, pad: bool) -> Self {
+        self.pad_minutes = pad;
+        self
+    }
+
     pub fn render(self, area: Rect, buf: &mut Buffer) {
         if area.is_empty() {
             return;
         }
-        let time = compact_time(self.time);
+        let time = if self.pad_minutes {
+            self.time
+        } else {
+            compact_time(self.time)
+        };
         let label_height = if self.label.is_some() { 2 } else { 0 };
         let fonts: &[&Font] = &[&LARGE, &SMALL];
 
@@ -199,6 +211,28 @@ mod tests {
             rows[6],
             format!("{:7}▀▀▀▀▀ ▀▀ ▀▀▀▀▀ ▀▀▀▀▀ ▀▀▀▀▀{:7}", "", "")
         );
+    }
+
+    #[test]
+    fn pad_minutes_keeps_the_full_zero_padded_time() {
+        let area = Rect::new(0, 0, 60, 10);
+        let mut compact = Buffer::empty(area);
+        BigTimerWidget::new("00:07.123", Style::default()).render(area, &mut compact);
+        let mut padded = Buffer::empty(area);
+        BigTimerWidget::new("00:07.123", Style::default())
+            .pad_minutes(true)
+            .render(area, &mut padded);
+        let compact: String = compact
+            .content
+            .iter()
+            .map(ratatui::buffer::Cell::symbol)
+            .collect();
+        let padded: String = padded
+            .content
+            .iter()
+            .map(ratatui::buffer::Cell::symbol)
+            .collect();
+        assert_ne!(compact, padded);
     }
 
     #[test]

@@ -346,7 +346,12 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
     #[cfg(not(feature = "bluetooth"))]
     let bt_label = String::new();
     let timer_title = format!(
-        "Timer{}{}{bt_label}",
+        "Timer{}{}{}{bt_label}",
+        if model.show_manual_entry() {
+            " | Manual mode"
+        } else {
+            ""
+        },
         if model.inspection_enabled() {
             " | Inspection: On"
         } else {
@@ -368,6 +373,7 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         timer_block.render(timer_area, buf);
         BigTimerWidget::new(&timer_text, timer_style)
             .label(timer_label)
+            .pad_minutes(model.show_manual_entry())
             .render(timer_inner, buf);
     } else {
         let text = match timer_label {
@@ -400,44 +406,72 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
         );
     }
 
-    let mut help_spans = vec![
-        Span::styled(
-            format!("{}: hold/release  ", keybinds.label(Action::Timer)),
+    let help_spans = if let Some(entry) = &model.manual_entry {
+        let mut spans = Vec::new();
+        if let Some(error) = &entry.error {
+            spans.push(Span::styled(
+                format!("{error}   "),
+                Style::default().fg(Color::Red),
+            ));
+        } else {
+            spans.push(Span::styled(
+                format!(
+                    "8.98 = sec   1:32.49 = min:sec   {}: record   ",
+                    keybinds.label(Action::Enter)
+                ),
+                Style::default().fg(theme.text()),
+            ));
+        }
+        spans.push(Span::styled(
+            "Backspace: edit   ",
             Style::default().fg(theme.text()),
-        ),
-        Span::styled(
-            format!("{}: details  ", keybinds.label(Action::Enter)),
+        ));
+        spans.push(Span::styled(
+            format!("{}: exit", keybinds.label(Action::ManualEntry)),
             Style::default().fg(theme.text()),
-        ),
-        Span::styled(
-            format!("{}: reset  ", keybinds.label(Action::ResetTimer)),
-            Style::default().fg(theme.text()),
-        ),
-        Span::styled(
-            format!("{}: quit  ", keybinds.label(Action::Quit)),
-            Style::default().fg(theme.text()),
-        ),
-        Span::styled(
-            format!(
-                "{}: preview  ",
-                keybinds.label(Action::ToggleScramblePreview)
-            ),
-            Style::default().fg(theme.text()),
-        ),
-        Span::styled(
-            format!("{}: help", keybinds.label(Action::Help)),
-            Style::default().fg(theme.text()),
-        ),
-    ];
-    if show_history && show_stats {
-        help_spans.insert(
-            2,
+        ));
+        spans
+    } else {
+        let mut spans = vec![
             Span::styled(
-                format!("{}: history/stats  ", keybinds.label(Action::ToggleFocus)),
+                format!("{}: hold/release  ", keybinds.label(Action::Timer)),
                 Style::default().fg(theme.text()),
             ),
-        );
-    }
+            Span::styled(
+                format!("{}: details  ", keybinds.label(Action::Enter)),
+                Style::default().fg(theme.text()),
+            ),
+            Span::styled(
+                format!("{}: reset  ", keybinds.label(Action::ResetTimer)),
+                Style::default().fg(theme.text()),
+            ),
+            Span::styled(
+                format!("{}: quit  ", keybinds.label(Action::Quit)),
+                Style::default().fg(theme.text()),
+            ),
+            Span::styled(
+                format!(
+                    "{}: preview  ",
+                    keybinds.label(Action::ToggleScramblePreview)
+                ),
+                Style::default().fg(theme.text()),
+            ),
+            Span::styled(
+                format!("{}: help", keybinds.label(Action::Help)),
+                Style::default().fg(theme.text()),
+            ),
+        ];
+        if show_history && show_stats {
+            spans.insert(
+                2,
+                Span::styled(
+                    format!("{}: history/stats  ", keybinds.label(Action::ToggleFocus)),
+                    Style::default().fg(theme.text()),
+                ),
+            );
+        }
+        spans
+    };
     Paragraph::new(Line::from(help_spans))
         .alignment(Alignment::Center)
         .render(outer_layout[help_area_index], buf);
@@ -508,6 +542,19 @@ const fn inner_area(area: Rect) -> Rect {
 /// Chooses the timer caption, text and style for the model's current state.
 fn timer_display(model: &Model) -> (Option<&'static str>, Cow<'static, str>, Style) {
     let theme = model.settings().theme();
+    if let Some(entry) = &model.manual_entry {
+        let style = if entry.error.is_some() {
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(theme.text())
+        };
+        let text = if entry.time_text.is_empty() {
+            Cow::Borrowed("00:00.000")
+        } else {
+            Cow::Owned(entry.time_text.clone())
+        };
+        return (None, text, style);
+    }
     let inspection_limit = model.settings().inspection_limit();
     let style = match model.timer_state() {
         TimerState::Idle if model.displayed_modifier() == SolveModifier::DNF => {

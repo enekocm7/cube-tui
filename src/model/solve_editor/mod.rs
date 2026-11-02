@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests;
-mod validation;
+pub mod validation;
 
 use chrono::{DateTime, SecondsFormat};
 use ratatui::crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
@@ -83,15 +83,8 @@ impl SolveEditor {
     }
 
     fn validate(&self) -> Result<(), (usize, String)> {
-        if self.draft.time_ms >= 86_400_000 {
-            return Err((0, "Time must be less than 24 hours.".to_owned()));
-        }
-        if self.draft.time_ms == 0 && self.draft.modifier != Modifier::DNF {
-            return Err((
-                0,
-                "Time must be positive unless the solve is DNF.".to_owned(),
-            ));
-        }
+        validation::validate_duration(self.draft.time_ms, self.draft.modifier)
+            .map_err(|error| (0, error))?;
         validate_scramble(&self.draft.scramble, self.draft.event).map_err(|e| (2, e))?;
         parse_date(&date_text(self.draft.solved_at_unix_ms)).map_err(|e| (4, e))?;
         validate_comment(&self.draft.comment).map_err(|e| (5, e))?;

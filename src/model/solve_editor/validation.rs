@@ -1,6 +1,7 @@
 use chrono::DateTime;
 
 use crate::scramble::WcaEvent;
+use crate::widgets::history::Modifier;
 
 /// Parses seconds, M:SS, or H:MM:SS with up to three fractional digits.
 /// Integer arithmetic avoids rounding away milliseconds or accepting NaN.
@@ -51,6 +52,21 @@ pub fn parse_time(text: &str) -> Result<u64, String> {
         .and_then(|n| n.checked_add(millis))
         .filter(|&n| n < 86_400_000)
         .ok_or_else(invalid)
+}
+
+/// Checks a duration and its penalty together, independently of its text form.
+///
+/// Zero is only valid for a DNF, and every duration must stay below one day.
+/// The solve editor and manual entry share these rules so a solve is accepted
+/// by exactly the same duration constraints wherever it is typed.
+pub fn validate_duration(time_ms: u64, modifier: Modifier) -> Result<(), String> {
+    if time_ms >= 86_400_000 {
+        return Err("Time must be less than 24 hours.".to_owned());
+    }
+    if time_ms == 0 && modifier != Modifier::DNF {
+        return Err("Time must be positive unless the solve is DNF.".to_owned());
+    }
+    Ok(())
 }
 
 /// Empty means the original solve date is unknown. Explicit dates need a zone.

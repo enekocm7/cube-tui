@@ -50,6 +50,7 @@ pub fn update(model: &mut Model, msg: Msg) -> bool {
                 | Msg::NextScramble
                 | Msg::DeleteTime
                 | Msg::EditSolve
+                | Msg::ManualEntry
                 | Msg::OpenDetailedStats
         )
     {
@@ -89,6 +90,7 @@ impl Msg {
             Self::OpenThemeSelector => handle_open_theme_selector(model),
             Self::DeleteTime => handle_delete_time(model),
             Self::EditSolve => model.open_solve_editor(),
+            Self::ManualEntry => model.toggle_manual_entry(),
             Self::NavLeft => handle_nav_left(model),
             Self::NavRight => handle_nav_right(model),
             Self::ToggleFocus => handle_toggle_focus(model),

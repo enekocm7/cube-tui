@@ -103,6 +103,35 @@ zen = false
 `inspection` enables the WCA inspection period. `zen` hides the interface
 while the timer is running.
 
+## Manual Time Entry
+
+Press `m` (or the configured `manual_entry` binding) on the idle main screen to
+toggle manual mode, for solves timed on a physical timer. The timer shows
+`00:00.000` until you start typing and adds `| Manual mode` next to the Timer
+label, like the inspection and zen indicators. While manual mode is active,
+digits, `:`
+and `.` build the duration, `Backspace` corrects it, and `Enter` records the
+solve. Space and the configured timer key are disabled so the timer cannot
+start. Every other binding still works, so you can navigate history, open
+details, edit solves, or quit normally. Press `m` again to leave manual mode.
+
+Digits are capped but not required: type `8` for 8 seconds, `8.98` for 8.98
+seconds, `1:32` for 1 minute 32 seconds, or `1:32.49` for 1 minute 32.49
+seconds. Up to two digits fit before a separator, up to two after `:`, and up to
+three after `.`. No separator means seconds. With an empty field, Enter keeps
+its normal details binding.
+
+The solve uses the active event, the current scramble, and the current date;
+the scramble is kept until a duration is accepted and is saved with the solve.
+Entering an invalid duration leaves the history and scramble unchanged and
+keeps the typed text so it can be corrected. After a solve is recorded, manual
+mode stays active with an empty field for the next attempt.
+
+Manual entries are recorded without a penalty; open the solve's details after
+leaving manual mode to apply `+2` or `DNF` if needed. Confirmed entries are
+saved like timed solves, and history, the displayed time, and statistics update
+immediately.
+
 ## Scramble Settings
 
 Scramble generation is configured with the `[scramble]` table:
@@ -132,6 +161,7 @@ toggle_toasts = "Ctrl+o"
 help = "F1"
 theme_selector = "Alt+t"
 edit_solve = "F3"
+manual_entry = "Ctrl+m"
 ```
 
 Bindings accept a character or a named key: `Space`, `Enter`, `Esc`, `Tab`,
@@ -144,7 +174,7 @@ Available actions are `quit`, `reset_timer`, `timer`, `select_up`,
 `select_down`, `navigate_left`, `navigate_right`, `toggle_focus`, `next_event`,
 `previous_event`, `next_session`, `previous_session`, `new_session`,
 `delete_session`, `next_scramble`, `toggle_scramble_preview`, `help`, `toggle_inspection`,
-`detailed_stats`, `theme_selector`, `delete_time`, `edit_solve`, `bluetooth`,
+`detailed_stats`, `theme_selector`, `delete_time`, `edit_solve`, `manual_entry`, `bluetooth`,
 `disconnect_bluetooth`, `toggle_zen`, `toggle_toasts`, `enter`, and `back`.
 
 Bindings are global and must be unique. Some actions are contextual: `timer`
