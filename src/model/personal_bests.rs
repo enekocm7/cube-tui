@@ -5,7 +5,7 @@ const RECORD_LABELS: [&str; 6] = ["single", "mo3", "ao5", "ao12", "ao50", "ao100
 impl Model {
     /// Called exclusively for a completed attempt, never loading, importing, or editing.
     pub fn notify_personal_bests(&mut self) {
-        if !self.settings().toasts() {
+        if !self.settings().toasts() || !self.settings().info_toasts() {
             return;
         }
         let Some(latest) = self.history().last() else {
