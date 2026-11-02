@@ -14,6 +14,7 @@ pub mod details;
 pub mod help;
 pub mod keybinds;
 pub mod main_focus;
+pub mod manual_entry;
 pub mod mean_details;
 mod personal_bests;
 pub mod screen;
@@ -29,6 +30,7 @@ use bluetooth::BluetoothState;
 use confirmation::Confirmation;
 use help::HelpState;
 use main_focus::{MainFocus, MainStatsSelection};
+use manual_entry::ManualEntry;
 use screen::Screen;
 use session::SessionState;
 pub use session::TimerState;
@@ -44,6 +46,7 @@ pub struct Model {
     pub(crate) confirmation: Option<Confirmation>,
     pub(crate) text_input: Option<TextInputPrompt>,
     pub(crate) solve_editor: Option<SolveEditor>,
+    pub(crate) manual_entry: Option<ManualEntry>,
     pub(crate) toasts: ToastBuffer,
     pub(crate) history_load_failed: bool,
     #[cfg(feature = "bluetooth")]
@@ -64,6 +67,7 @@ impl Model {
             confirmation: None,
             text_input: None,
             solve_editor: None,
+            manual_entry: None,
             toasts: ToastBuffer::default(),
             history_load_failed: false,
             #[cfg(feature = "bluetooth")]

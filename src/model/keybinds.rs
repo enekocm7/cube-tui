@@ -31,6 +31,7 @@ pub enum Action {
     ThemeSelector,
     DeleteTime,
     EditSolve,
+    ManualEntry,
     Bluetooth,
     DisconnectBluetooth,
     ToggleZen,
@@ -293,6 +294,10 @@ impl Default for Keybinds {
             ),
             (Action::RenameSession, KeyBinding::new(KeyCode::F(2), none)),
             (Action::EditSolve, KeyBinding::new(KeyCode::Char('h'), none)),
+            (
+                Action::ManualEntry,
+                KeyBinding::new(KeyCode::Char('m'), none),
+            ),
             (
                 Action::ToggleInspection,
                 KeyBinding::new(KeyCode::Char('i'), none),

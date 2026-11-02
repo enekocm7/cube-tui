@@ -18,6 +18,7 @@ const HELP_TEXT: &[HelpLine] = &[
     HelpLine::Header("TIMER CONTROLS"),
     HelpLine::Body(Action::Timer, "Hold and release to start/stop timer"),
     HelpLine::Body(Action::ResetTimer, "Reset timer"),
+    HelpLine::Body(Action::ManualEntry, "Toggle manual time entry (idle)"),
     HelpLine::Body(Action::NextScramble, "Next scramble"),
     HelpLine::Body(
         Action::ToggleScramblePreview,

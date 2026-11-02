@@ -29,6 +29,7 @@ pub enum Msg {
     OpenThemeSelector,
     DeleteTime,
     EditSolve,
+    ManualEntry,
     NavLeft,
     NavRight,
     ToggleFocus,
@@ -79,6 +80,7 @@ pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
         Action::ThemeSelector => Some(Msg::OpenThemeSelector),
         Action::DeleteTime => Some(Msg::DeleteTime),
         Action::EditSolve => Some(Msg::EditSolve),
+        Action::ManualEntry => Some(Msg::ManualEntry),
         #[cfg(feature = "bluetooth")]
         Action::Bluetooth => Some(Msg::ToggleBluetooth),
         #[cfg(feature = "bluetooth")]
