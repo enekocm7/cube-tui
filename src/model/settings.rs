@@ -96,6 +96,16 @@ impl Settings {
         self.display.toasts = visible;
     }
 
+    /// Returns whether informational toast notifications are visible.
+    pub const fn info_toasts(&self) -> bool {
+        self.display.info_toasts
+    }
+
+    /// Sets whether informational toast notifications are visible.
+    pub const fn set_info_toasts(&mut self, visible: bool) {
+        self.display.info_toasts = visible;
+    }
+
     /// Returns the colors of the active theme.
     pub const fn theme(&self) -> &ThemeColors {
         &self.theme.theme
@@ -333,6 +343,7 @@ pub struct DisplaySettings {
     scramble_preview: bool,
     stats: bool,
     toasts: bool,
+    info_toasts: bool,
 }
 
 impl Default for DisplaySettings {
@@ -346,6 +357,7 @@ impl Default for DisplaySettings {
             scramble_preview: false,
             stats: true,
             toasts: true,
+            info_toasts: true,
         }
     }
 }
@@ -459,6 +471,29 @@ big_timer_outline = true",
         settings.set_scramble_preview(false);
         let restored: Settings = toml::from_str(&toml::to_string(&settings).unwrap()).unwrap();
         assert!(!restored.scramble_preview());
+    }
+
+    #[test]
+    fn info_toasts_default_on_and_survive_config_round_trip() {
+        assert!(Settings::default().info_toasts());
+        // Older configs without the key keep showing info toasts.
+        let settings: Settings = toml::from_str("[display]\ntoasts = true").unwrap();
+        assert!(settings.info_toasts());
+
+        let mut settings = Settings::default();
+        settings.set_info_toasts(false);
+        let restored: Settings = toml::from_str(&toml::to_string(&settings).unwrap()).unwrap();
+        assert!(!restored.info_toasts());
+        settings.set_info_toasts(true);
+        let restored: Settings = toml::from_str(&toml::to_string(&settings).unwrap()).unwrap();
+        assert!(restored.info_toasts());
+    }
+
+    #[test]
+    fn info_toasts_can_be_disabled_in_config() {
+        let settings: Settings = toml::from_str("[display]\ninfo_toasts = false").unwrap();
+        assert!(!settings.info_toasts());
+        assert!(settings.toasts());
     }
 
     #[test]

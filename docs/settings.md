@@ -42,6 +42,7 @@ scramble = true
 scramble_preview = false
 stats = true
 toasts = true
+info_toasts = true
 ```
 
 `history` controls the solve history panel, `stats` controls the statistics
@@ -75,6 +76,12 @@ terminal at least 27 rows tall for the 3x3 net.
 and errors. It defaults to `true`; press `o` to toggle notifications and save
 the choice, or set it to `false` to hide notifications in the configuration.
 Turning notifications off clears any visible or queued toasts.
+
+`info_toasts` filters only informational confirmations such as "New session
+created." or "Zen mode enabled.". It defaults to `true`; set it to `false` to
+hide `Info` toasts while still showing `Warning` (for example "The last session
+cannot be deleted.") and `Error` (for example failed save/import) toasts.
+`toasts = false` still hides every severity.
 
 Completing a solve that sets a session best single, mo3, ao5, ao12, ao50, or
 ao100 shows a toast. Records use the session's existing single and average statistics.

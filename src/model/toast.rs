@@ -113,6 +113,9 @@ impl Model {
         if !self.settings().toasts() {
             return;
         }
+        if kind == ToastType::Info && !self.settings().info_toasts() {
+            return;
+        }
         for toast in &self.toasts.entries {
             if toast.message == message && toast.kind == kind {
                 return;
@@ -141,6 +144,38 @@ mod tests {
         assert_eq!(model.toasts.entries[1].duration, ToastDuration::Long);
         assert_eq!(model.toasts.entries[2].kind, ToastType::Info);
         assert_eq!(model.toasts.entries[2].duration, ToastDuration::Short);
+    }
+
+    #[test]
+    fn disabling_info_toasts_keeps_warnings_and_errors() {
+        let mut model = Model::new();
+        model.toasts.entries.clear();
+        model.settings.set_info_toasts(false);
+        model.toast_info("new session created");
+        model.toast_warning("the last session cannot be deleted");
+        model.toast_error("save failed");
+        assert_eq!(model.toasts.entries.len(), 2);
+        assert_eq!(model.toasts.entries[0].kind, ToastType::Warning);
+        assert_eq!(model.toasts.entries[1].kind, ToastType::Error);
+    }
+
+    #[test]
+    fn disabling_all_toasts_hides_every_severity() {
+        let mut model = Model::new();
+        model.toasts.entries.clear();
+        model.settings.set_toasts(false);
+        model.settings.set_info_toasts(true);
+        model.toast_info("info");
+        model.toast_warning("warning");
+        model.toast_error("error");
+        assert!(model.toasts.entries.is_empty());
+
+        model.settings.set_toasts(true);
+        model.settings.set_info_toasts(false);
+        model.toast_info("info");
+        model.toast_warning("warning");
+        model.toast_error("error");
+        assert_eq!(model.toasts.entries.len(), 2);
     }
 
     #[test]
