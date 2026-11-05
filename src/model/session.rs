@@ -45,6 +45,15 @@ pub struct Session {
     pub event: WcaEvent,
 }
 
+/// What a deleted session keeps while it can still be restored.
+pub(super) struct SavedSession {
+    history: History,
+    scramble: Option<Scramble>,
+    last_time_ms: u64,
+    last_modifier: Modifier,
+    event: WcaEvent,
+}
+
 impl Session {
     /// Creates a session and starts its background scramble workers.
     ///
@@ -89,6 +98,30 @@ impl Session {
         session.spawn_scramble_generator();
         session.spawn_scramble_receiver();
         session
+    }
+
+    /// Recreates a deleted session with new background workers.
+    fn restored(saved: SavedSession) -> Self {
+        let mut session = Self::new();
+        session.event = saved.event;
+        session.respawn_scramble_generators();
+        session.history = saved.history;
+        session.scramble = saved.scramble;
+        session.last_time_ms = saved.last_time_ms;
+        session.last_modifier = saved.last_modifier;
+        session
+    }
+
+    /// Takes what a deleted session needs to come back. Its workers stop when
+    /// it drops, so a deletion waiting for Undo does not keep them running.
+    fn into_saved(mut self) -> SavedSession {
+        SavedSession {
+            history: std::mem::replace(&mut self.history, History::new()),
+            scramble: self.scramble.take(),
+            last_time_ms: self.last_time_ms,
+            last_modifier: self.last_modifier,
+            event: self.event,
+        }
     }
 
     /// Clears the timer state and the previously displayed duration.
@@ -329,16 +362,23 @@ impl Model {
 
     /// Deletes the active session, returning `false` when it is the only one.
     pub fn delete_current_session(&mut self) -> bool {
-        if self.session_state.sessions.len() <= 1 {
+        let index = self.session_state.current_session_index;
+        let Some(session) = self.remove_session(index) else {
             return false;
+        };
+        self.record_session_deletion(index, session);
+        true
+    }
+
+    /// Removes a session and selects its neighbor; the last one is kept.
+    pub(super) fn remove_session(&mut self, index: usize) -> Option<SavedSession> {
+        let sessions = &mut self.session_state.sessions;
+        if sessions.len() <= 1 || index >= sessions.len() {
+            return None;
         }
 
-        self.session_state
-            .sessions
-            .remove(self.session_state.current_session_index);
-        if self.session_state.current_session_index >= self.session_state.sessions.len() {
-            self.session_state.current_session_index = self.session_state.sessions.len() - 1;
-        }
+        let session = sessions.remove(index);
+        self.session_state.current_session_index = index.min(sessions.len() - 1);
 
         self.screen = Screen::default();
         #[cfg(feature = "bluetooth")]
@@ -346,7 +386,26 @@ impl Model {
             self.bluetooth_state = BluetoothState::default();
         }
 
-        true
+        Some(session.into_saved())
+    }
+
+    /// Makes `index` the active session, leaving any screen of the old one.
+    pub(super) fn switch_to_session(&mut self, index: usize) {
+        if index != self.session_state.current_session_index {
+            self.session_state.current_session_index = index;
+            self.screen = Screen::default();
+        }
+    }
+
+    /// Puts a deleted session back at `index` and makes it the active one.
+    pub(super) fn insert_session(&mut self, index: usize, saved: SavedSession) -> usize {
+        let index = index.min(self.session_state.sessions.len());
+        self.session_state
+            .sessions
+            .insert(index, Session::restored(saved));
+        self.session_state.current_session_index = index;
+        self.screen = Screen::default();
+        index
     }
 
     /// Selects the next session, wrapping at the end.

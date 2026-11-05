@@ -70,6 +70,14 @@ fn main() {
             subcommand: Some(Command::Export { path }),
             ..
         } => run_export(&path),
+        Cli {
+            subcommand: Some(Command::Backups),
+            ..
+        } => run_backups(),
+        Cli {
+            subcommand: Some(Command::Restore { backup }),
+            ..
+        } => run_restore(&backup),
         #[cfg(feature = "dashboard")]
         Cli {
             subcommand: Some(Command::Dashboard { port }),
@@ -94,13 +102,20 @@ fn run_import(path: &std::path::Path) -> ! {
     }
     match cstimer::import(path) {
         Ok(histories) => {
-            let mut model = Model::new();
-            model.restore_from_history(histories);
-            if let Err(error) = persistence::save(&model) {
-                eprintln!("Import could not be saved: {error:#}");
-                std::process::exit(1);
+            let histories: Vec<_> = histories.collect();
+            let saved = serde_json::to_vec_pretty(&histories)
+                .map_err(anyhow::Error::from)
+                .and_then(|json| persistence::replace_history(&json, persistence::backup_limit()));
+            match saved {
+                Ok(kept) => {
+                    println!("Imported successfully from: {}", path.display());
+                    print_kept(kept.as_deref());
+                }
+                Err(error) => {
+                    eprintln!("Import could not be saved: {error:#}");
+                    std::process::exit(1);
+                }
             }
-            println!("Imported successfully from: {}", path.display());
         }
         Err(err) => {
             eprintln!("Import failed: {err}");
@@ -127,6 +142,63 @@ fn run_export(path: &std::path::Path) {
         }
         Err(err) => {
             eprintln!("Export failed: {err}");
+            std::process::exit(1);
+        }
+    }
+}
+
+/// Tells the user where the history that was just replaced went.
+fn print_kept(kept: Option<&std::path::Path>) {
+    if let Some(kept) = kept {
+        println!("The previous history was kept in: {}", kept.display());
+    }
+}
+
+/// Prints the automatic backups, numbered the way `cube restore` takes them.
+fn run_backups() {
+    let backups = match persistence::backups() {
+        Ok(backups) => backups,
+        Err(error) => {
+            eprintln!("Could not list backups: {error:#}");
+            std::process::exit(1);
+        }
+    };
+    if backups.is_empty() {
+        println!("There are no backups yet.");
+        return;
+    }
+    for (index, backup) in backups.iter().enumerate() {
+        let time = backup.time.with_timezone(&chrono::Local);
+        let contents = backup.contents.as_ref().map_or_else(
+            |_| "cannot be restored".to_owned(),
+            |(sessions, solves)| format!("{sessions} sessions, {solves} solves"),
+        );
+        let name = backup
+            .path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy();
+        println!(
+            "{:>3}  {}  {contents:<28}  {name}",
+            index + 1,
+            time.format("%Y-%m-%d %H:%M:%S"),
+        );
+    }
+    if let Ok(folder) = persistence::backups_folder() {
+        println!("\nBackups are in {}", folder.display());
+    }
+    println!("Close the app, then run `cube restore <NUMBER>` to restore one.");
+}
+
+/// Replaces the history with the selected backup.
+fn run_restore(selector: &str) {
+    match persistence::restore(selector, persistence::backup_limit()) {
+        Ok(restored) => {
+            println!("Restored: {}", restored.backup.display());
+            print_kept(restored.kept.as_deref());
+        }
+        Err(error) => {
+            eprintln!("Restore failed: {error:#}");
             std::process::exit(1);
         }
     }

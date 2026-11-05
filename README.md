@@ -83,8 +83,32 @@ To see all the commands run
 cube --help
 ```
 
+## Your data
+
+Solves are saved in `times.json`, in the folder `cube --data` prints. The
+`CUBE_DATA_DIR` environment variable replaces that folder.
+
+Press `Ctrl+Z` to undo the last solve or session deletion, repeatedly if needed,
+and `Ctrl+Y` to redo it. Undo lasts until you quit, and both keys can be rebound.
+
+Backups of `times.json` are made automatically. To go back to one, close the app
+and run:
+
+```sh
+cube backups           # list them, newest first
+cube restore <NUMBER>  # replace the history with one of them
+```
+
+Restoring and importing first back up the current history, so both can be
+reversed the same way. A backup that does not load is refused.
+
+If `times.json` can't be read, the app says so and leaves the file alone: it
+saves nothing until you restore a backup or repair the file. If that happens
+while it is running, your solves are kept in `times.unsaved.json` beside it.
+
 ## Settings
 
+- [Backups](docs/settings.md)
 - [Custom theme](docs/settings.md)
 - [Custom layout](docs/settings.md)
 - [Custom keybinds](docs/settings.md)

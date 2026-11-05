@@ -24,6 +24,7 @@ pub mod solve_editor;
 pub mod text_input;
 pub mod theme_selector;
 pub mod toast;
+mod undo;
 
 #[cfg(feature = "bluetooth")]
 use bluetooth::BluetoothState;
@@ -34,6 +35,7 @@ use manual_entry::ManualEntry;
 use screen::Screen;
 use session::SessionState;
 pub use session::TimerState;
+use undo::UndoHistory;
 
 pub const MAX_SESSIONS: usize = 99;
 
@@ -49,6 +51,10 @@ pub struct Model {
     pub(crate) manual_entry: Option<ManualEntry>,
     pub(crate) toasts: ToastBuffer,
     pub(crate) history_load_failed: bool,
+    /// Whether the last backup failed, so a full disk is reported once and not
+    /// on every solve.
+    backup_failing: bool,
+    undo: UndoHistory,
     #[cfg(feature = "bluetooth")]
     pub(crate) bluetooth_state: BluetoothState,
     pub(crate) main_focus: MainFocus,
@@ -70,6 +76,8 @@ impl Model {
             manual_entry: None,
             toasts: ToastBuffer::default(),
             history_load_failed: false,
+            backup_failing: false,
+            undo: UndoHistory::default(),
             #[cfg(feature = "bluetooth")]
             bluetooth_state: BluetoothState::default(),
             main_focus: MainFocus::History,
@@ -104,13 +112,24 @@ impl Model {
                 "{error:#}. Using default settings; the file will not be overwritten."
             )),
         }
-        match persistence::load() {
-            Ok(Some(data)) => self.restore_from_history(data),
-            Ok(None) => self.refresh_accurate_scramble(),
+        match persistence::open(self.settings().backup_limit()) {
+            Ok(opened) => {
+                match opened.history {
+                    Some(data) => self.restore_from_history(data),
+                    None => self.refresh_accurate_scramble(),
+                }
+                self.report_backup_result(opened.backup_error);
+            }
             Err(error) => {
                 self.refresh_accurate_scramble();
                 self.history_load_failed = true;
-                self.toast_error(format!("{error:#}. Existing history will not be overwritten. New solves will stay in memory."));
+                let recovery = persistence::latest_backup().map_or_else(
+                    || "Repair the history file and restart the app.".to_owned(),
+                    |backup| {
+                        format!("Quit and run `cube restore 1` to restore the latest backup, {backup}, or `cube backups` to see them all.")
+                    },
+                );
+                self.toast_error(format!("{error:#}. Existing history will not be overwritten. New solves will stay in memory. {recovery}"));
             }
         }
         if let Err(error) = persistence::ensure_default_theme() {
@@ -134,14 +153,34 @@ impl Model {
     /// Saves solves and reports when they only remain in memory.
     pub fn save_history(&mut self) -> bool {
         if self.history_load_failed {
-            self.toast_warning("Solves were not saved because the existing history could not be loaded. Repair the history file and restart the app.");
+            self.toast_warning("Solves were not saved because the existing history could not be loaded. Quit and run `cube backups` to restore a backup, or repair the history file and restart the app.");
             return false;
         }
-        if let Err(error) = crate::persistence::save(self) {
-            self.toast_error(format!("{error:#}. Changes are only in memory."));
-            return false;
+        match crate::persistence::save(self) {
+            Ok(backup_error) => {
+                self.report_backup_result(backup_error);
+                true
+            }
+            Err(error) => {
+                self.toast_error(format!(
+                    "{error:#}. The history file was not changed. Run `cube backups` to see what can be restored."
+                ));
+                false
+            }
         }
-        true
+    }
+
+    /// Reports a failed backup, once until backups work again.
+    fn report_backup_result(&mut self, error: Option<anyhow::Error>) {
+        let failing = error.is_some();
+        if let Some(error) = error
+            && !self.backup_failing
+        {
+            self.toast_warning(format!(
+                "{error:#}. Your solves are safe, but not backed up."
+            ));
+        }
+        self.backup_failing = failing;
     }
 
     /// Saves settings and reports when changes only apply to this run.
