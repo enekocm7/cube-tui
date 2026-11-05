@@ -28,6 +28,8 @@ pub enum Msg {
     OpenDetailedStats,
     OpenThemeSelector,
     DeleteTime,
+    UndoDelete,
+    RedoDelete,
     EditSolve,
     ManualEntry,
     NavLeft,
@@ -79,6 +81,8 @@ pub fn map_key_to_msg(key: KeyEvent, keybinds: &Keybinds) -> Option<Msg> {
         Action::DetailedStats => Some(Msg::OpenDetailedStats),
         Action::ThemeSelector => Some(Msg::OpenThemeSelector),
         Action::DeleteTime => Some(Msg::DeleteTime),
+        Action::UndoDelete => Some(Msg::UndoDelete),
+        Action::RedoDelete => Some(Msg::RedoDelete),
         Action::EditSolve => Some(Msg::EditSolve),
         Action::ManualEntry => Some(Msg::ManualEntry),
         #[cfg(feature = "bluetooth")]
@@ -153,6 +157,8 @@ pub const fn allowed_msg(model: &Model, msg: Msg) -> bool {
                 | Msg::Press
                 | Msg::Release
                 | Msg::DeleteTime
+                | Msg::UndoDelete
+                | Msg::RedoDelete
                 | Msg::EditSolve
                 | Msg::Esc
                 | Msg::Tick
@@ -254,6 +260,20 @@ mod tests {
             ),
             Some(Msg::RenameSession)
         );
+    }
+
+    #[test]
+    fn undo_and_redo_default_to_ctrl_z_and_ctrl_y_and_can_be_rebound() {
+        let undo = KeyEvent::new(KeyCode::Char('z'), KeyModifiers::CONTROL);
+        let redo = KeyEvent::new(KeyCode::Char('y'), KeyModifiers::CONTROL);
+        let keybinds = Keybinds::default();
+        assert_eq!(map_key_to_msg(undo, &keybinds), Some(Msg::UndoDelete));
+        assert_eq!(map_key_to_msg(redo, &keybinds), Some(Msg::RedoDelete));
+
+        let keybinds: Keybinds = toml::from_str("undo_delete = \"u\"").unwrap();
+        assert_eq!(map_key_to_msg(undo, &keybinds), None);
+        let rebound = KeyEvent::new(KeyCode::Char('u'), KeyModifiers::NONE);
+        assert_eq!(map_key_to_msg(rebound, &keybinds), Some(Msg::UndoDelete));
     }
 
     #[test]

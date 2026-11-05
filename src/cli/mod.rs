@@ -44,6 +44,24 @@ pub enum Command {
         #[arg(value_name = "PATH", default_value = "cstimer.json")]
         path: PathBuf,
     },
+    #[command(
+        name = "backups",
+        alias = "b",
+        about = "Lists the automatic backups of the session history, newest first"
+    )]
+    Backups,
+    #[command(
+        name = "restore",
+        alias = "r",
+        about = "Replaces the session history with a backup, keeping the current one"
+    )]
+    Restore {
+        #[arg(
+            value_name = "BACKUP",
+            help = "The backup's number in `cube backups`, or its file name"
+        )]
+        backup: String,
+    },
     #[cfg(feature = "dashboard")]
     #[command(
         name = "dashboard",

@@ -156,6 +156,24 @@ the first scramble found, which is faster.
 Both modes scramble the cube to the same random state, so they are equally
 fair; the faster mode may just take a few more moves to get there.
 
+## Backups
+
+Cube TUI keeps timed copies of `times.json` in the `backups` folder of the data
+directory (`cube --data`). A copy is made when the app starts and before a save
+replaces the file, at most once every six hours, and an import or restore always
+makes one first. Only a history that loads is ever copied, so a damaged file
+cannot push good backups out. cube-app uses the same folder.
+
+Use the `[backups]` table to choose how many copies are kept. It defaults to 12;
+older copies are removed first, and `0` falls back to the default:
+
+```toml
+[backups]
+limit = 12
+```
+
+cube-app always keeps 12, so a higher limit only holds while it is not running.
+
 ## Custom Keybinds
 
 Add a `[keybinds]` table containing only the bindings you want to change:
@@ -181,7 +199,7 @@ Available actions are `quit`, `reset_timer`, `timer`, `select_up`,
 `select_down`, `navigate_left`, `navigate_right`, `toggle_focus`, `next_event`,
 `previous_event`, `next_session`, `previous_session`, `new_session`,
 `delete_session`, `next_scramble`, `toggle_scramble_preview`, `help`, `toggle_inspection`,
-`detailed_stats`, `theme_selector`, `delete_time`, `edit_solve`, `manual_entry`, `bluetooth`,
+`detailed_stats`, `theme_selector`, `delete_time`, `undo_delete`, `redo_delete`, `edit_solve`, `manual_entry`, `bluetooth`,
 `disconnect_bluetooth`, `toggle_zen`, `toggle_toasts`, `enter`, and `back`.
 
 Bindings are global and must be unique. Some actions are contextual: `timer`

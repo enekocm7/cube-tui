@@ -49,6 +49,8 @@ pub fn update(model: &mut Model, msg: Msg) -> bool {
                 | Msg::DeleteSession
                 | Msg::NextScramble
                 | Msg::DeleteTime
+                | Msg::UndoDelete
+                | Msg::RedoDelete
                 | Msg::EditSolve
                 | Msg::ManualEntry
                 | Msg::OpenDetailedStats
@@ -89,6 +91,8 @@ impl Msg {
             Self::OpenDetailedStats => handle_open_detailed_stats(model),
             Self::OpenThemeSelector => handle_open_theme_selector(model),
             Self::DeleteTime => handle_delete_time(model),
+            Self::UndoDelete => handle_undo_delete(model),
+            Self::RedoDelete => handle_redo_delete(model),
             Self::EditSolve => model.open_solve_editor(),
             Self::ManualEntry => model.toggle_manual_entry(),
             Self::NavLeft => handle_nav_left(model),
@@ -609,16 +613,16 @@ fn handle_enter(model: &mut Model) {
                             model.next_scramble();
                         }
                         if model.save_history() {
-                            model.toast_info("Session deleted.");
+                            model.toast_info(model.deleted_message("Session"));
                         }
                     } else {
                         model.toast_warning("The last session cannot be deleted.");
                     }
                 }
                 ConfirmationAction::DeleteTime => {
-                    model.history_mut().delete_selected();
+                    model.delete_selected_solve();
                     if model.save_history() {
-                        model.toast_info("Solve deleted.");
+                        model.toast_info(model.deleted_message("Solve"));
                     }
                     if model.show_details() && model.history().is_empty() {
                         model.close_current_screen();
@@ -712,6 +716,24 @@ fn handle_delete_time(model: &mut Model) {
     }
 }
 
+/// Restores the most recent deletion and saves the result.
+fn handle_undo_delete(model: &mut Model) {
+    if let Some(message) = model.undo_delete()
+        && model.save_history()
+    {
+        model.toast_info(message);
+    }
+}
+
+/// Repeats the most recently undone deletion and saves the result.
+fn handle_redo_delete(model: &mut Model) {
+    if let Some(message) = model.redo_delete()
+        && model.save_history()
+    {
+        model.toast_info(message);
+    }
+}
+
 /// Moves selection left or performs the screen-specific previous action.
 fn handle_nav_left(model: &mut Model) {
     if model.confirmation().is_some() {
@@ -797,6 +819,24 @@ mod tests {
                 .iter_mut()
                 .any(|toast| toast.message.contains("solve dates are invalid"))
         );
+    }
+
+    #[test]
+    fn undo_and_redo_wait_for_the_current_attempt() {
+        let mut model = Model::new();
+        model.history_load_failed = true;
+        model
+            .history_mut()
+            .add_ms(10, crate::scramble::WcaEvent::Cube3x3, "R U");
+        model.delete_selected_solve();
+        model.start_inspection();
+
+        assert!(update(&mut model, Msg::UndoDelete));
+
+        assert!(model.history().is_empty());
+        model.stop_timer();
+        update(&mut model, Msg::UndoDelete);
+        assert_eq!(model.history().len(), 1);
     }
 
     #[test]

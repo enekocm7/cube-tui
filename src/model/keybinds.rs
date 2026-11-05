@@ -30,6 +30,8 @@ pub enum Action {
     DetailedStats,
     ThemeSelector,
     DeleteTime,
+    UndoDelete,
+    RedoDelete,
     EditSolve,
     ManualEntry,
     Bluetooth,
@@ -313,6 +315,14 @@ impl Default for Keybinds {
             (
                 Action::DeleteTime,
                 KeyBinding::new(KeyCode::Char('d'), none),
+            ),
+            (
+                Action::UndoDelete,
+                KeyBinding::new(KeyCode::Char('z'), KeyModifiers::CONTROL),
+            ),
+            (
+                Action::RedoDelete,
+                KeyBinding::new(KeyCode::Char('y'), KeyModifiers::CONTROL),
             ),
             (Action::Bluetooth, KeyBinding::new(KeyCode::Char('b'), none)),
             (

@@ -12,6 +12,7 @@ pub struct Settings {
     theme: Theme,
     display: DisplaySettings,
     scramble: ScrambleSettings,
+    backups: BackupSettings,
     keybinds: Keybinds,
 }
 
@@ -126,6 +127,11 @@ impl Settings {
         self.scramble.accurate_3x3
     }
 
+    /// Returns how many automatic backups of the history are kept.
+    pub const fn backup_limit(&self) -> usize {
+        self.backups.limit
+    }
+
     /// Returns the configured keyboard bindings.
     pub const fn keybinds(&self) -> &Keybinds {
         &self.keybinds
@@ -136,6 +142,40 @@ impl Settings {
 #[serde(default)]
 pub struct ScrambleSettings {
     accurate_3x3: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BackupSettings {
+    #[serde(deserialize_with = "deserialize_backup_limit")]
+    limit: usize,
+}
+
+/// Returns the default backup limit, which is cube-app's too.
+const fn default_backup_limit() -> usize {
+    12
+}
+
+/// Custom deserialization for the backup limit: rotation needs room for one.
+fn deserialize_backup_limit<'de, D>(deserializer: D) -> Result<usize, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = usize::deserialize(deserializer)?;
+    Ok(if value == 0 {
+        default_backup_limit()
+    } else {
+        value
+    })
+}
+
+impl Default for BackupSettings {
+    /// Keeps as many backups as cube-app does.
+    fn default() -> Self {
+        Self {
+            limit: default_backup_limit(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -487,6 +527,18 @@ big_timer_outline = true",
         settings.set_info_toasts(true);
         let restored: Settings = toml::from_str(&toml::to_string(&settings).unwrap()).unwrap();
         assert!(restored.info_toasts());
+    }
+
+    #[test]
+    fn backup_limit_defaults_round_trips_and_repairs_zero() {
+        assert_eq!(Settings::default().backup_limit(), 12);
+        let settings: Settings = toml::from_str("[backups]\nlimit = 30").unwrap();
+        assert_eq!(settings.backup_limit(), 30);
+        let restored: Settings =
+            toml::from_str(&toml::to_string_pretty(&settings).unwrap()).unwrap();
+        assert_eq!(restored.backup_limit(), 30);
+        let settings: Settings = toml::from_str("[backups]\nlimit = 0").unwrap();
+        assert_eq!(settings.backup_limit(), 12);
     }
 
     #[test]

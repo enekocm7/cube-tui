@@ -146,18 +146,31 @@ impl History {
         }
     }
 
-    /// Deletes the selected solve and invalidates derived statistics.
-    pub fn delete_selected(&mut self) {
-        if !self.is_empty() {
-            let selected = self.selected.unwrap_or(self.times.len() - 1);
-            self.times.remove(selected);
-            self.invalidate_fastest();
-            if self.times.is_empty() {
-                self.selected = None;
-            } else {
-                self.selected = Some(selected.min(self.times.len() - 1));
-            }
+    /// Deletes the selected solve, returning it and where it was.
+    pub fn delete_selected(&mut self) -> Option<(usize, Time)> {
+        let index = self.selected.or(self.times.len().checked_sub(1))?;
+        self.remove_at(index).map(|time| (index, time))
+    }
+
+    /// Removes a solve, selects its neighbor, and invalidates derived statistics.
+    pub fn remove_at(&mut self, index: usize) -> Option<Time> {
+        if index >= self.times.len() {
+            return None;
         }
+        let time = self.times.remove(index);
+        self.invalidate_fastest();
+        self.selected = self.times.len().checked_sub(1).map(|last| index.min(last));
+        Some(time)
+    }
+
+    /// Puts a solve back at `index`, or at the end when the history got shorter,
+    /// selects it, and invalidates derived statistics. Returns where it went.
+    pub fn insert_at(&mut self, index: usize, time: Time) -> usize {
+        let index = index.min(self.times.len());
+        self.times.insert(index, time);
+        self.invalidate_fastest();
+        self.selected = Some(index);
+        index
     }
 
     /// Returns the most recent solve.

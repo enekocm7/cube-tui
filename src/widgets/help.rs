@@ -61,6 +61,11 @@ const HELP_TEXT: &[HelpLine] = &[
     ),
     HelpLine::Body(Action::DetailedStats, "Open detailed stats screen"),
     HelpLine::Body(Action::DeleteTime, "Delete selected time"),
+    HelpLine::Pair(
+        Action::UndoDelete,
+        Action::RedoDelete,
+        "Undo / redo the last solve or session deletion",
+    ),
     HelpLine::Empty,
     HelpLine::Header("MAIN STATS FOCUS"),
     HelpLine::Pair(
