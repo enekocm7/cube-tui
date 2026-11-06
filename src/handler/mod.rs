@@ -127,7 +127,7 @@ fn handle_press(model: &mut Model) {
 
     match model.timer_state() {
         TimerState::Idle => {
-            if model.inspection_enabled() {
+            if model.inspection_enabled() && model.event().uses_inspection() {
                 model.start_inspection();
             } else {
                 model.set_timer_state(TimerState::Pulsed);
@@ -849,6 +849,19 @@ mod tests {
                 .message
                 .contains("existing history could not be loaded")
         }));
+    }
+
+    #[test]
+    fn blindfolded_events_skip_inspection_but_one_handed_uses_it() {
+        let mut model = Model::new();
+        model.current_session_mut().event = crate::scramble::WcaEvent::Cube3x3Blind;
+        update(&mut model, Msg::Press);
+        assert_eq!(model.timer_state(), TimerState::Pulsed);
+
+        model.set_timer_state(TimerState::Idle);
+        model.current_session_mut().event = crate::scramble::WcaEvent::Cube3x3OneHanded;
+        update(&mut model, Msg::Press);
+        assert!(matches!(model.timer_state(), TimerState::Inspection { .. }));
     }
 
     #[test]

@@ -390,9 +390,11 @@ fn render_screen(area: Rect, buf: &mut ratatui::buffer::Buffer, model: &mut Mode
     if let Some(stats_area) = stats_area {
         let history = model.history();
         let stats_widget = if model.main_focus_is_stats() {
-            StatsWidget::new(history).with_selection(model.main_stats_row(), model.main_stats_col())
-        } else {
             StatsWidget::new(history)
+                .with_event(model.event())
+                .with_selection(model.main_stats_row(), model.main_stats_col())
+        } else {
+            StatsWidget::new(history).with_event(model.event())
         };
         stats_widget.render(stats_area, buf, &theme);
     }
@@ -740,7 +742,12 @@ big_timer = false",
             let text = buffer_text(&buf);
             assert!(text.contains("Preview [v]"), "{event:?}");
             assert!(!text.contains("Resize to see preview"), "{event:?}");
-            assert!(text.contains("ao100"), "{event:?}");
+            if event.is_blindfolded() {
+                assert!(text.contains("success"), "{event:?}");
+                assert!(!text.contains("ao100"), "{event:?}");
+            } else {
+                assert!(text.contains("ao100"), "{event:?}");
+            }
             if matches!(
                 event,
                 crate::scramble::WcaEvent::Pyraminx

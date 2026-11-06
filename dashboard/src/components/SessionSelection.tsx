@@ -22,7 +22,9 @@ function sessionLabel(history: History, index: number): string {
 		(a, b) => b[1] - a[1],
 	)[0]?.[0];
 
-	const eventName = mainEvent ? WCA_EVENT_NAMES[mainEvent] : "Session";
+	const eventName = mainEvent
+		? (WCA_EVENT_NAMES[mainEvent] ?? mainEvent)
+		: "Session";
 	const solves = history.times.length;
 
 	return `Session ${index + 1} · ${eventName} · ${solves} solve${solves === 1 ? "" : "s"}`;

@@ -11,8 +11,12 @@ pub use wca::set_accurate_3x3;
 pub enum WcaEvent {
     Cube2x2,
     Cube3x3,
+    Cube3x3OneHanded,
+    Cube3x3Blind,
     Cube4x4,
+    Cube4x4Blind,
     Cube5x5,
+    Cube5x5Blind,
     Cube6x6,
     Cube7x7,
     Megaminx,
@@ -24,11 +28,15 @@ pub enum WcaEvent {
 }
 
 impl WcaEvent {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 16] = [
         Self::Cube2x2,
         Self::Cube3x3,
+        Self::Cube3x3OneHanded,
+        Self::Cube3x3Blind,
         Self::Cube4x4,
+        Self::Cube4x4Blind,
         Self::Cube5x5,
+        Self::Cube5x5Blind,
         Self::Cube6x6,
         Self::Cube7x7,
         Self::Megaminx,
@@ -44,8 +52,12 @@ impl WcaEvent {
         match self {
             Self::Cube2x2 => "2x2x2",
             Self::Cube3x3 => "3x3x3",
+            Self::Cube3x3OneHanded => "3x3x3 OH",
+            Self::Cube3x3Blind => "3x3x3 BLD",
             Self::Cube4x4 => "4x4x4",
+            Self::Cube4x4Blind => "4x4x4 BLD",
             Self::Cube5x5 => "5x5x5",
+            Self::Cube5x5Blind => "5x5x5 BLD",
             Self::Cube6x6 => "6x6x6",
             Self::Cube7x7 => "7x7x7",
             Self::Megaminx => "Megaminx",
@@ -57,21 +69,88 @@ impl WcaEvent {
         }
     }
 
+    /// Returns the saved variant name, which is part of the shared save format.
+    pub const fn save_name(self) -> &'static str {
+        match self {
+            Self::Cube2x2 => "Cube2x2",
+            Self::Cube3x3 => "Cube3x3",
+            Self::Cube3x3OneHanded => "Cube3x3OneHanded",
+            Self::Cube3x3Blind => "Cube3x3Blind",
+            Self::Cube4x4 => "Cube4x4",
+            Self::Cube4x4Blind => "Cube4x4Blind",
+            Self::Cube5x5 => "Cube5x5",
+            Self::Cube5x5Blind => "Cube5x5Blind",
+            Self::Cube6x6 => "Cube6x6",
+            Self::Cube7x7 => "Cube7x7",
+            Self::Megaminx => "Megaminx",
+            Self::Pyraminx => "Pyraminx",
+            Self::Fto => "Fto",
+            Self::Skewb => "Skewb",
+            Self::Square1 => "Square1",
+            Self::Clock => "Clock",
+        }
+    }
+
+    /// Resolves a saved variant name.
+    ///
+    /// Unknown names return `None`, so a newer cube-app can add events without
+    /// stopping this version from loading the rest of the history.
+    pub fn from_save_name(name: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|event| event.save_name() == name)
+    }
+
+    /// Returns the puzzle's cube size, or `None` for non-cubic puzzles.
+    pub const fn cube_size(self) -> Option<usize> {
+        match self {
+            Self::Cube2x2 => Some(2),
+            Self::Cube3x3 | Self::Cube3x3OneHanded | Self::Cube3x3Blind => Some(3),
+            Self::Cube4x4 | Self::Cube4x4Blind => Some(4),
+            Self::Cube5x5 | Self::Cube5x5Blind => Some(5),
+            Self::Cube6x6 => Some(6),
+            Self::Cube7x7 => Some(7),
+            Self::Megaminx
+            | Self::Pyraminx
+            | Self::Fto
+            | Self::Skewb
+            | Self::Square1
+            | Self::Clock => None,
+        }
+    }
+
+    /// Returns whether the event uses blindfolded attempts instead of inspection.
+    pub const fn is_blindfolded(self) -> bool {
+        matches!(
+            self,
+            Self::Cube3x3Blind | Self::Cube4x4Blind | Self::Cube5x5Blind
+        )
+    }
+
+    /// Returns whether WCA inspection applies to this event.
+    pub const fn uses_inspection(self) -> bool {
+        !self.is_blindfolded()
+    }
+
     /// Maps an event to its stable position in the navigation cycle.
     const fn as_index(self) -> usize {
         match self {
             Self::Cube2x2 => 0,
             Self::Cube3x3 => 1,
-            Self::Cube4x4 => 2,
-            Self::Cube5x5 => 3,
-            Self::Cube6x6 => 4,
-            Self::Cube7x7 => 5,
-            Self::Megaminx => 6,
-            Self::Pyraminx => 7,
-            Self::Fto => 8,
-            Self::Skewb => 9,
-            Self::Square1 => 10,
-            Self::Clock => 11,
+            Self::Cube3x3OneHanded => 2,
+            Self::Cube3x3Blind => 3,
+            Self::Cube4x4 => 4,
+            Self::Cube4x4Blind => 5,
+            Self::Cube5x5 => 6,
+            Self::Cube5x5Blind => 7,
+            Self::Cube6x6 => 8,
+            Self::Cube7x7 => 9,
+            Self::Megaminx => 10,
+            Self::Pyraminx => 11,
+            Self::Fto => 12,
+            Self::Skewb => 13,
+            Self::Square1 => 14,
+            Self::Clock => 15,
         }
     }
 
@@ -79,16 +158,20 @@ impl WcaEvent {
     const fn from_index(index: usize) -> Self {
         match index {
             0 => Self::Cube2x2,
-            2 => Self::Cube4x4,
-            3 => Self::Cube5x5,
-            4 => Self::Cube6x6,
-            5 => Self::Cube7x7,
-            6 => Self::Megaminx,
-            7 => Self::Pyraminx,
-            8 => Self::Fto,
-            9 => Self::Skewb,
-            10 => Self::Square1,
-            11 => Self::Clock,
+            2 => Self::Cube3x3OneHanded,
+            3 => Self::Cube3x3Blind,
+            4 => Self::Cube4x4,
+            5 => Self::Cube4x4Blind,
+            6 => Self::Cube5x5,
+            7 => Self::Cube5x5Blind,
+            8 => Self::Cube6x6,
+            9 => Self::Cube7x7,
+            10 => Self::Megaminx,
+            11 => Self::Pyraminx,
+            12 => Self::Fto,
+            13 => Self::Skewb,
+            14 => Self::Square1,
+            15 => Self::Clock,
             _ => Self::Cube3x3,
         }
     }
@@ -96,15 +179,71 @@ impl WcaEvent {
     /// Returns the next event, wrapping after Clock.
     pub const fn next(self) -> Self {
         let index = self.as_index();
-        let next_index = (index + 1) % 12;
+        let next_index = (index + 1) % 16;
         Self::from_index(next_index)
     }
 
     /// Returns the previous event, wrapping before 2×2.
     pub const fn prev(self) -> Self {
         let index = self.as_index();
-        let prev_index = if index == 0 { 11 } else { index - 1 };
+        let prev_index = if index == 0 { 15 } else { index - 1 };
         Self::from_index(prev_index)
+    }
+}
+
+/// An event name as it appears in the shared save file.
+///
+/// A name this version does not know is kept verbatim instead of failing the
+/// whole history, so cube-app can add events without locking older cube-tui
+/// versions out of their solves.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct EventName(String);
+
+impl EventName {
+    /// Creates a name for a known event.
+    pub fn new(event: WcaEvent) -> Self {
+        Self(event.save_name().to_owned())
+    }
+
+    /// Creates a name for an event this version may not know.
+    pub fn from_save_name(name: &str) -> Self {
+        Self(name.to_owned())
+    }
+
+    /// Resolves the name to a known event, if this version supports it.
+    pub fn known(&self) -> Option<WcaEvent> {
+        WcaEvent::from_save_name(&self.0)
+    }
+
+    /// Returns whether this version knows the event.
+    pub fn is_known(&self) -> bool {
+        self.known().is_some()
+    }
+
+    /// Returns the name exactly as it is saved.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Returns the display name, falling back to the raw name for unknown events.
+    pub fn display_name(&self) -> &str {
+        match self.known() {
+            Some(event) => event.name(),
+            None => self.as_str(),
+        }
+    }
+}
+
+impl From<WcaEvent> for EventName {
+    fn from(event: WcaEvent) -> Self {
+        Self::new(event)
+    }
+}
+
+impl fmt::Display for EventName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.display_name())
     }
 }
 
@@ -248,24 +387,11 @@ fn is_clock_token(token: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{Scramble, WcaEvent, generate_scramble};
+    use super::{EventName, Scramble, WcaEvent, generate_scramble};
 
     #[test]
     fn scrambles_are_non_empty() {
-        let events = [
-            WcaEvent::Cube2x2,
-            WcaEvent::Cube3x3,
-            WcaEvent::Cube4x4,
-            WcaEvent::Cube5x5,
-            WcaEvent::Cube6x6,
-            WcaEvent::Cube7x7,
-            WcaEvent::Megaminx,
-            WcaEvent::Pyraminx,
-            WcaEvent::Fto,
-            WcaEvent::Skewb,
-            WcaEvent::Square1,
-            WcaEvent::Clock,
-        ];
+        let events = WcaEvent::ALL;
 
         for event in events {
             let scramble = generate_scramble(event);
@@ -435,26 +561,44 @@ mod tests {
     #[test]
     fn wca_event_name() {
         assert_eq!(WcaEvent::Cube3x3.name(), "3x3x3");
+        assert_eq!(WcaEvent::Cube3x3OneHanded.name(), "3x3x3 OH");
+        assert_eq!(WcaEvent::Cube3x3Blind.name(), "3x3x3 BLD");
         assert_eq!(WcaEvent::Megaminx.name(), "Megaminx");
         assert_eq!(WcaEvent::Square1.name(), "Square-1");
     }
 
     #[test]
+    fn saved_event_names_round_trip_and_unknown_ones_are_kept() {
+        for event in WcaEvent::ALL {
+            assert_eq!(WcaEvent::from_save_name(event.save_name()), Some(event));
+            let name = EventName::from(event);
+            assert_eq!(name.known(), Some(event));
+            assert_eq!(name.display_name(), event.name());
+        }
+        let unknown = EventName::from_save_name("Cube3x3MultiBlind");
+        assert_eq!(unknown.known(), None);
+        assert_eq!(unknown.as_str(), "Cube3x3MultiBlind");
+        assert_eq!(unknown.display_name(), "Cube3x3MultiBlind");
+    }
+
+    #[test]
+    fn blindfolded_events_skip_inspection_and_oh_does_not() {
+        for event in WcaEvent::ALL {
+            assert_eq!(
+                event.uses_inspection(),
+                !event.is_blindfolded(),
+                "{event:?}"
+            );
+        }
+        assert!(WcaEvent::Cube3x3Blind.is_blindfolded());
+        assert!(WcaEvent::Cube4x4Blind.is_blindfolded());
+        assert!(WcaEvent::Cube5x5Blind.is_blindfolded());
+        assert!(!WcaEvent::Cube3x3OneHanded.is_blindfolded());
+    }
+
+    #[test]
     fn wca_event_next_prev() {
-        let events = [
-            WcaEvent::Cube2x2,
-            WcaEvent::Cube3x3,
-            WcaEvent::Cube4x4,
-            WcaEvent::Cube5x5,
-            WcaEvent::Cube6x6,
-            WcaEvent::Cube7x7,
-            WcaEvent::Megaminx,
-            WcaEvent::Pyraminx,
-            WcaEvent::Fto,
-            WcaEvent::Skewb,
-            WcaEvent::Square1,
-            WcaEvent::Clock,
-        ];
+        let events = WcaEvent::ALL;
 
         for (index, event) in events.iter().copied().enumerate() {
             let next = events[(index + 1) % events.len()];
@@ -604,20 +748,7 @@ mod tests {
 
     #[test]
     fn all_event_names_unique() {
-        let events = [
-            WcaEvent::Cube2x2,
-            WcaEvent::Cube3x3,
-            WcaEvent::Cube4x4,
-            WcaEvent::Cube5x5,
-            WcaEvent::Cube6x6,
-            WcaEvent::Cube7x7,
-            WcaEvent::Megaminx,
-            WcaEvent::Pyraminx,
-            WcaEvent::Fto,
-            WcaEvent::Skewb,
-            WcaEvent::Square1,
-            WcaEvent::Clock,
-        ];
+        let events = WcaEvent::ALL;
 
         let names: Vec<&str> = events.iter().map(|e| e.name()).collect();
         let mut unique_names = names.clone();
@@ -642,7 +773,7 @@ mod tests {
             count += 1;
         }
 
-        assert_eq!(count, 12, "Should cycle through all 12 events");
+        assert_eq!(count, 16, "Should cycle through all 16 events");
     }
 
     #[test]

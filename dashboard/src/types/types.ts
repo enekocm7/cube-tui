@@ -3,12 +3,17 @@ import { Temporal } from "@js-temporal/polyfill";
 export const WcaEvent = {
 	Cube2x2: "Cube2x2",
 	Cube3x3: "Cube3x3",
+	Cube3x3OneHanded: "Cube3x3OneHanded",
+	Cube3x3Blind: "Cube3x3Blind",
 	Cube4x4: "Cube4x4",
+	Cube4x4Blind: "Cube4x4Blind",
 	Cube5x5: "Cube5x5",
+	Cube5x5Blind: "Cube5x5Blind",
 	Cube6x6: "Cube6x6",
 	Cube7x7: "Cube7x7",
 	Megaminx: "Megaminx",
 	Pyraminx: "Pyraminx",
+	Fto: "Fto",
 	Skewb: "Skewb",
 	Square1: "Square1",
 	Clock: "Clock",
@@ -16,15 +21,29 @@ export const WcaEvent = {
 
 export type WcaEvent = (typeof WcaEvent)[keyof typeof WcaEvent];
 
+/** Returns whether an event's attempts are blindfolded. */
+export function isBlindfoldedEvent(event: WcaEvent): boolean {
+	return (
+		event === WcaEvent.Cube3x3Blind ||
+		event === WcaEvent.Cube4x4Blind ||
+		event === WcaEvent.Cube5x5Blind
+	);
+}
+
 export const WCA_EVENT_NAMES: Record<WcaEvent, string> = {
 	[WcaEvent.Cube2x2]: "2x2x2",
 	[WcaEvent.Cube3x3]: "3x3x3",
+	[WcaEvent.Cube3x3OneHanded]: "3x3x3 OH",
+	[WcaEvent.Cube3x3Blind]: "3x3x3 BLD",
 	[WcaEvent.Cube4x4]: "4x4x4",
+	[WcaEvent.Cube4x4Blind]: "4x4x4 BLD",
 	[WcaEvent.Cube5x5]: "5x5x5",
+	[WcaEvent.Cube5x5Blind]: "5x5x5 BLD",
 	[WcaEvent.Cube6x6]: "6x6x6",
 	[WcaEvent.Cube7x7]: "7x7x7",
 	[WcaEvent.Megaminx]: "Megaminx",
 	[WcaEvent.Pyraminx]: "Pyraminx",
+	[WcaEvent.Fto]: "FTO",
 	[WcaEvent.Skewb]: "Skewb",
 	[WcaEvent.Square1]: "Square-1",
 	[WcaEvent.Clock]: "Clock",

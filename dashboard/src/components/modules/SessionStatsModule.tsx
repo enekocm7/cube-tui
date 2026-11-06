@@ -32,6 +32,9 @@ interface SessionStatsModuleProps {
 	ao50: number | "DNF" | null;
 	ao100: number | "DNF" | null;
 	meanMs: number | null;
+	mo3: number | "DNF" | null;
+	successRate: number | null;
+	blindfolded: boolean;
 }
 
 /** Renders aggregate performance and session metadata statistics. */
@@ -44,6 +47,9 @@ export function SessionStatsModule({
 	ao50,
 	ao100,
 	meanMs,
+	mo3,
+	successRate,
+	blindfolded,
 }: SessionStatsModuleProps) {
 	return (
 		<section className="h-full border border-border bg-surface animate-fade-in-up p-4 sm:p-5">
@@ -59,14 +65,25 @@ export function SessionStatsModule({
 				</span>
 			</div>
 
-			<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-				<StatCard label="Best" value={formatStat(bestMs)} />
-				<StatCard label="Ao5" value={formatStat(ao5)} />
-				<StatCard label="Ao12" value={formatStat(ao12)} />
-				<StatCard label="Ao50" value={formatStat(ao50)} />
-				<StatCard label="Ao100" value={formatStat(ao100)} />
-				<StatCard label="Mean" value={formatStat(meanMs)} />
-			</div>
+			{blindfolded ? (
+				<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+					<StatCard label="Best" value={formatStat(bestMs)} />
+					<StatCard label="Mo3" value={formatStat(mo3)} />
+					<StatCard
+						label="Success"
+						value={successRate === null ? "—" : `${successRate}%`}
+					/>
+				</div>
+			) : (
+				<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+					<StatCard label="Best" value={formatStat(bestMs)} />
+					<StatCard label="Ao5" value={formatStat(ao5)} />
+					<StatCard label="Ao12" value={formatStat(ao12)} />
+					<StatCard label="Ao50" value={formatStat(ao50)} />
+					<StatCard label="Ao100" value={formatStat(ao100)} />
+					<StatCard label="Mean" value={formatStat(meanMs)} />
+				</div>
+			)}
 
 			<p className="mt-3 text-[10px] text-muted">
 				Event: <span className="text-ink">{eventLabel}</span>

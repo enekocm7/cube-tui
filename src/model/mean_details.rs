@@ -36,6 +36,10 @@ impl Model {
         let row = self.main_stats_selection.row;
         let col = self.main_stats_selection.col;
 
+        if self.event().is_blindfolded() && row == 2 {
+            return false;
+        }
+
         if row == 0 {
             let solve_index = if col == 0 {
                 self.history().len().checked_sub(1)

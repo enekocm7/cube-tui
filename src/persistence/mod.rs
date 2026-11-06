@@ -687,6 +687,107 @@ mod tests {
     }
 
     #[test]
+    fn unknown_fields_on_solves_sessions_and_changes_survive_a_save() {
+        let path = temporary_history();
+        let original = r#"[{
+            "session_name": "Practice",
+            "times": [{
+                "timestamp_in_millis": 12345,
+                "event": "Cube3x3",
+                "scramble": "R U",
+                "solved_at_unix_ms": 1760000000000,
+                "modifier": "None",
+                "comment": "nice",
+                "was_single_record": false,
+                "changes": [{
+                    "changed_at_unix_ms": 1760000000001,
+                    "before": {
+                        "time_ms": 12345,
+                        "event": "Cube3x3",
+                        "scramble": "R U",
+                        "solved_at_unix_ms": 1760000000000,
+                        "modifier": "None",
+                        "comment": "",
+                        "before_tag": "keep me"
+                    },
+                    "after": {
+                        "time_ms": 12345,
+                        "event": "Cube3x3",
+                        "scramble": "R U",
+                        "solved_at_unix_ms": 1760000000000,
+                        "modifier": "PlusTwo",
+                        "comment": "nice",
+                        "after_tag": {"nested": true}
+                    },
+                    "change_tag": 7
+                }],
+                "solve_tag": {"memo_ms": 5000}
+            }],
+            "session_tag": ["future", "data"]
+        }]"#;
+        let expected: serde_json::Value = serde_json::from_str(original).unwrap();
+        fs::write(&path, original).unwrap();
+
+        let history = load_history_at(&path).unwrap().unwrap();
+        save_at(&path, &serde_json::to_vec_pretty(&history).unwrap(), 12).unwrap();
+
+        let saved: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        assert_eq!(saved, expected);
+        remove_folder_of(&path);
+    }
+
+    #[test]
+    fn an_unknown_event_survives_a_save_and_does_not_break_known_solves() {
+        let path = temporary_history();
+        let original = r#"[{
+            "session_name": "Practice",
+            "times": [
+                {
+                    "timestamp_in_millis": 1000,
+                    "event": "Cube3x3",
+                    "scramble": "R U",
+                    "solved_at_unix_ms": 1760000000000,
+                    "modifier": "None",
+                    "was_single_record": false
+                },
+                {
+                    "timestamp_in_millis": 2000,
+                    "event": "Cube3x3MultiBlind",
+                    "scramble": "R U F",
+                    "solved_at_unix_ms": 1760000000001,
+                    "modifier": "DNF",
+                    "was_single_record": false
+                }
+            ]
+        }]"#;
+        let expected: serde_json::Value = serde_json::from_str(original).unwrap();
+        fs::write(&path, original).unwrap();
+
+        let history = load_history_at(&path).unwrap().unwrap();
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].len(), 2);
+        assert_eq!(history[0].times()[1].event_name(), "Cube3x3MultiBlind");
+        assert_eq!(history[0].known_count(), 1);
+
+        save_at(&path, &serde_json::to_vec_pretty(&history).unwrap(), 12).unwrap();
+
+        let saved: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        assert_eq!(saved, expected);
+        remove_folder_of(&path);
+    }
+
+    #[test]
+    fn saving_an_older_file_adds_nothing_new() {
+        let path = temporary_history();
+        let original = json("Practice");
+        fs::write(&path, &original).unwrap();
+        let history = load_history_at(&path).unwrap().unwrap();
+        let saved = serde_json::to_vec_pretty(&history).unwrap();
+        assert_eq!(saved, original);
+        remove_folder_of(&path);
+    }
+
+    #[test]
     fn opening_backs_up_the_file_as_it_was() {
         let path = temporary_history();
         fs::write(&path, json("a")).unwrap();

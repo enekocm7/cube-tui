@@ -1,13 +1,5 @@
-import type { History, Time } from "../types/types";
-import { Modifier, WcaEvent } from "../types/types";
-
-/** Narrows an unknown value to a supported puzzle event. */
-function isWcaEvent(value: unknown): value is WcaEvent {
-	return (
-		typeof value === "string" &&
-		Object.values(WcaEvent).includes(value as WcaEvent)
-	);
-}
+import type { History, Time, WcaEvent } from "../types/types";
+import { Modifier } from "../types/types";
 
 /** Narrows an unknown value to a supported solve modifier. */
 function isModifier(value: unknown): value is Modifier {
@@ -26,13 +18,14 @@ function parseTime(raw: unknown): Time {
 
 	if (typeof t.timestamp_in_millis !== "number")
 		throw new Error("Missing timestamp_in_millis");
-	if (!isWcaEvent(t.event))
-		throw new Error(`Unknown event: ${String(t.event)}`);
+	// Keep events a newer cube-app writes, even though this version only has
+	// names for the ones it knows.
+	if (typeof t.event !== "string") throw new Error("Missing event");
 	if (typeof t.scramble !== "string") throw new Error("Missing scramble");
 
 	return {
 		timestamp_in_millis: t.timestamp_in_millis,
-		event: t.event,
+		event: t.event as WcaEvent,
 		scramble: t.scramble,
 		solved_at_unix_ms:
 			typeof t.solved_at_unix_ms === "number" ? t.solved_at_unix_ms : 0,

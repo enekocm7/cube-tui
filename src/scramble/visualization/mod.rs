@@ -95,19 +95,9 @@ impl fmt::Display for VisualizationError {
 /// Applies the complete scramble, rejecting unsupported notation rather than
 /// displaying a partially scrambled puzzle that could mislead the solver.
 pub fn visualize(event: WcaEvent, scramble: &str) -> Result<Visualization, VisualizationError> {
-    match event {
-        WcaEvent::Cube2x2 => cube::visualize_size(2, scramble),
-        WcaEvent::Cube3x3 => cube::visualize_size(3, scramble),
-        WcaEvent::Cube4x4 => cube::visualize_size(4, scramble),
-        WcaEvent::Cube5x5 => cube::visualize_size(5, scramble),
-        WcaEvent::Cube6x6 => cube::visualize_size(6, scramble),
-        WcaEvent::Cube7x7 => cube::visualize_size(7, scramble),
-        WcaEvent::Pyraminx
-        | WcaEvent::Skewb
-        | WcaEvent::Megaminx
-        | WcaEvent::Fto
-        | WcaEvent::Square1
-        | WcaEvent::Clock => Err(VisualizationError::Unavailable),
+    match event.cube_size() {
+        Some(size) => cube::visualize_size(size, scramble),
+        None => Err(VisualizationError::Unavailable),
     }
 }
 
@@ -115,11 +105,15 @@ pub fn visualize(event: WcaEvent, scramble: &str) -> Result<Visualization, Visua
 mod tests {
     use super::*;
 
-    const CUBES: [WcaEvent; 6] = [
+    const CUBES: [WcaEvent; 10] = [
         WcaEvent::Cube2x2,
         WcaEvent::Cube3x3,
+        WcaEvent::Cube3x3OneHanded,
+        WcaEvent::Cube3x3Blind,
         WcaEvent::Cube4x4,
+        WcaEvent::Cube4x4Blind,
         WcaEvent::Cube5x5,
+        WcaEvent::Cube5x5Blind,
         WcaEvent::Cube6x6,
         WcaEvent::Cube7x7,
     ];
@@ -145,6 +139,18 @@ mod tests {
         for event in CUBES {
             let scramble = crate::scramble::wca::get_wca_scramble(event);
             visualize(event, &scramble)
+                .unwrap_or_else(|error| panic!("{event:?}: {scramble}: {error}"));
+        }
+    }
+
+    #[test]
+    fn blindfolded_scrambles_support_wide_moves() {
+        for (event, scramble) in [
+            (WcaEvent::Cube3x3Blind, "Rw U2 Fw' L2 D"),
+            (WcaEvent::Cube4x4Blind, "Rw U2 Fw' L2 D 3Rw2 B'"),
+            (WcaEvent::Cube5x5Blind, "Rw U2 Fw' L2 D 3Rw2 B'"),
+        ] {
+            visualize(event, scramble)
                 .unwrap_or_else(|error| panic!("{event:?}: {scramble}: {error}"));
         }
     }

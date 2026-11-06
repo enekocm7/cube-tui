@@ -1,11 +1,12 @@
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
-use crate::scramble::WcaEvent;
 use crate::scramble::WcaEvent::Cube3x3;
+use crate::scramble::{EventName, WcaEvent};
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -19,7 +20,7 @@ pub enum Modifier {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Time {
     timestamp_in_millis: u64,
-    event: WcaEvent,
+    event: EventName,
     scramble: Cow<'static, str>,
     #[serde(default)]
     solved_at_unix_ms: u64,
@@ -32,17 +33,23 @@ pub struct Time {
     /// Persisted display marker for a single that improved the session best.
     #[serde(default)]
     pub(super) was_single_record: bool,
+    /// Fields written by a newer cube-app that this version does not know.
+    #[serde(flatten)]
+    extra: BTreeMap<String, serde_json::Value>,
 }
 
 /// Editable metadata, without recursively copying the audit trail.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SolveSnapshot {
     pub time_ms: u64,
-    pub event: WcaEvent,
+    pub event: EventName,
     pub scramble: String,
     pub solved_at_unix_ms: u64,
     pub modifier: Modifier,
     pub comment: String,
+    /// Fields this version does not know, kept so saving does not lose them.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -50,6 +57,9 @@ pub struct SolveChange {
     pub changed_at_unix_ms: u64,
     pub before: SolveSnapshot,
     pub after: SolveSnapshot,
+    /// Fields this version does not know, kept so saving does not lose them.
+    #[serde(flatten)]
+    pub extra: BTreeMap<String, serde_json::Value>,
 }
 
 impl Time {
@@ -71,18 +81,19 @@ impl Time {
     ) -> Self {
         Self {
             timestamp_in_millis,
-            event,
+            event: EventName::new(event),
             scramble: scramble.into(),
             solved_at_unix_ms: current_unix_ms(),
             modifier,
             comment: String::new(),
             changes: Vec::new(),
             was_single_record: false,
+            extra: BTreeMap::new(),
         }
     }
 
     /// Reconstructs a solve with explicit persisted metadata.
-    pub const fn new_with_meta(
+    pub fn new_with_meta(
         timestamp_in_millis: u64,
         event: WcaEvent,
         scramble: Cow<'static, str>,
@@ -91,13 +102,14 @@ impl Time {
     ) -> Self {
         Self {
             timestamp_in_millis,
-            event,
+            event: EventName::new(event),
             scramble,
             solved_at_unix_ms,
             modifier,
             comment: String::new(),
             changes: Vec::new(),
             was_single_record: false,
+            extra: BTreeMap::new(),
         }
     }
 
@@ -122,8 +134,32 @@ impl Time {
     }
 
     /// Returns the puzzle event solved by this attempt.
-    pub const fn event(&self) -> WcaEvent {
-        self.event
+    ///
+    /// A solve whose event was written by a newer cube-app falls back to
+    /// 3x3x3 here; use [`Self::known_event`] or [`Self::event_name`] to tell
+    /// the difference without losing the saved name.
+    pub fn event(&self) -> WcaEvent {
+        self.event.known().unwrap_or(Cube3x3)
+    }
+
+    /// Returns the solve's event when this version knows it.
+    pub fn known_event(&self) -> Option<WcaEvent> {
+        self.event.known()
+    }
+
+    /// Returns whether this version knows the solve's event.
+    pub fn has_known_event(&self) -> bool {
+        self.event.is_known()
+    }
+
+    /// Returns the event name exactly as it is saved.
+    pub fn event_name(&self) -> &str {
+        self.event.as_str()
+    }
+
+    /// Returns the display name of the solve's event.
+    pub fn event_display_name(&self) -> &str {
+        self.event.display_name()
     }
 
     pub const fn was_single_record(&self) -> bool {
@@ -147,11 +183,12 @@ impl Time {
     pub fn snapshot(&self) -> SolveSnapshot {
         SolveSnapshot {
             time_ms: self.timestamp_in_millis,
-            event: self.event,
+            event: self.event.clone(),
             scramble: self.scramble().to_owned(),
             solved_at_unix_ms: self.solved_at_unix_ms,
             modifier: self.modifier,
             comment: self.comment.clone(),
+            extra: self.extra.clone(),
         }
     }
 
@@ -162,15 +199,17 @@ impl Time {
             return false;
         }
         self.timestamp_in_millis = after.time_ms;
-        self.event = after.event;
+        self.event = after.event.clone();
         self.scramble = after.scramble.clone().into();
         self.solved_at_unix_ms = after.solved_at_unix_ms;
         self.modifier = after.modifier;
         self.comment.clone_from(&after.comment);
+        self.extra = after.extra.clone();
         self.changes.push(SolveChange {
             changed_at_unix_ms: current_unix_ms(),
             before,
             after,
+            extra: BTreeMap::new(),
         });
         true
     }
@@ -221,9 +260,16 @@ pub fn format_millis(ms: u64) -> String {
     format!("{minutes:02}:{seconds:02}.{millis:03}")
 }
 
-pub(super) fn mark_single_records(times: &mut [Time]) {
+pub(super) fn mark_single_records(times: &mut [Time], event_filter: Option<WcaEvent>) {
     let mut best = None;
     for time in times {
+        if !time.has_known_event() {
+            time.was_single_record = false;
+            continue;
+        }
+        if event_filter.is_some_and(|event| time.event() != event) {
+            continue;
+        }
         time.was_single_record = time
             .effective_ms()
             .is_some_and(|millis| best.is_none_or(|previous| millis < previous));

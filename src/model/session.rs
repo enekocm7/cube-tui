@@ -7,7 +7,7 @@ use crate::model::main_focus::{MainFocus, MainStatsSelection};
 use crate::model::screen::Screen;
 use crate::scramble::{Scramble, WcaEvent, generate_scramble};
 use crate::utils::runtime::runtime;
-use crate::widgets::history::{History, Modifier};
+use crate::widgets::history::{History, Modifier, Time};
 use std::sync::{
     Arc, Mutex,
     atomic::{AtomicBool, Ordering},
@@ -74,6 +74,7 @@ impl Session {
             last_modifier: Modifier::None,
             event: WcaEvent::Cube3x3,
         };
+        session.history.set_event_filter(Some(WcaEvent::Cube3x3));
         session.spawn_scramble_generator();
         session.spawn_scramble_receiver();
         session
@@ -95,6 +96,7 @@ impl Session {
             last_modifier: Modifier::None,
             event: WcaEvent::Cube3x3,
         };
+        session.history.set_event_filter(Some(WcaEvent::Cube3x3));
         session.spawn_scramble_generator();
         session.spawn_scramble_receiver();
         session
@@ -106,6 +108,7 @@ impl Session {
         session.event = saved.event;
         session.respawn_scramble_generators();
         session.history = saved.history;
+        session.history.initialize_event_filter(Some(saved.event));
         session.scramble = saved.scramble;
         session.last_time_ms = saved.last_time_ms;
         session.last_modifier = saved.last_modifier;
@@ -200,6 +203,7 @@ impl Session {
     /// Advances to the next event and prepares its first scramble.
     pub fn next_event(&mut self) {
         self.event = self.event.next();
+        self.history.set_event_filter(Some(self.event));
         self.respawn_scramble_generators();
         self.next_scramble();
     }
@@ -207,6 +211,7 @@ impl Session {
     /// Moves to the previous event and prepares its first scramble.
     pub fn prev_event(&mut self) {
         self.event = self.event.prev();
+        self.history.set_event_filter(Some(self.event));
         self.respawn_scramble_generators();
         self.next_scramble();
     }
@@ -459,8 +464,7 @@ impl Model {
                 );
             }
             let mut session = Session::new();
-            if let Some(last_time) = history.last() {
-                let event = last_time.event();
+            if let Some(event) = history.times().iter().rev().find_map(Time::known_event) {
                 session.event = event;
                 if index == 0 {
                     session.scramble = Some(generate_scramble(event));
@@ -468,6 +472,7 @@ impl Model {
                 session.respawn_scramble_generators();
             }
             session.history = history;
+            session.history.initialize_event_filter(Some(session.event));
             session.history.select_last();
             self.session_state.sessions.push(session);
         }

@@ -83,6 +83,38 @@ To see all the commands run
 cube --help
 ```
 
+## Events
+
+Press the configured `next_event` and `previous_event` keys to cycle through:
+
+| Event | Scrambler | Inspection |
+| --- | --- | --- |
+| 2x2x2 | `PuzzleRegistry::Two` | Normal |
+| 3x3x3 | `PuzzleRegistry::Three` | Normal |
+| 3x3x3 OH | `PuzzleRegistry::Three` | Normal |
+| 3x3x3 BLD | `PuzzleRegistry::ThreeNi` | None |
+| 4x4x4 | `PuzzleRegistry::Four` | Normal |
+| 4x4x4 BLD | `PuzzleRegistry::FourNi` | None |
+| 5x5x5 | `PuzzleRegistry::Five` | Normal |
+| 5x5x5 BLD | `PuzzleRegistry::FiveNi` | None |
+| 6x6x6 | `PuzzleRegistry::Six` | Normal |
+| 7x7x7 | `PuzzleRegistry::Seven` | Normal |
+| Megaminx | `PuzzleRegistry::Mega` | Normal |
+| Pyraminx | `PuzzleRegistry::Pyra` | Normal |
+| FTO | `PuzzleRegistry::Fto` | Normal |
+| Skewb | `PuzzleRegistry::Skewb` | Normal |
+| Square-1 | `PuzzleRegistry::Sq1` | Normal |
+| Clock | `PuzzleRegistry::Clock` | Normal |
+
+Blindfolded events never start inspection, whatever the `inspection` setting
+says. Their statistics show a success rate next to the best single and mean of
+three. One-handed solves are stored as their own event, so they never mix with
+two-handed 3x3x3 statistics.
+
+`times.json` is shared with cube-app. Fields and events written by a newer
+cube-app are kept when cube-tui saves, so the two can be upgraded in either
+order.
+
 ## Your data
 
 Solves are saved in `times.json`, in the folder `cube --data` prints. The

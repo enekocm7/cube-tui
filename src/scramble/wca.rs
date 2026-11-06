@@ -35,14 +35,19 @@ pub fn get_wca_scramble(event: WcaEvent) -> String {
 impl WcaEvent {
     /// Maps an event to its `tnoodle-rs` scrambler.
     fn scrambler(self) -> &'static Scrambler {
-        if self == WcaEvent::Cube3x3 && ACCURATE_3X3.load(Ordering::Relaxed) {
+        if matches!(self, WcaEvent::Cube3x3 | WcaEvent::Cube3x3OneHanded)
+            && ACCURATE_3X3.load(Ordering::Relaxed)
+        {
             return &ACCURATE_THREE;
         }
         let puzzle = match self {
             WcaEvent::Cube2x2 => PuzzleRegistry::Two,
-            WcaEvent::Cube3x3 => PuzzleRegistry::Three,
+            WcaEvent::Cube3x3 | WcaEvent::Cube3x3OneHanded => PuzzleRegistry::Three,
+            WcaEvent::Cube3x3Blind => PuzzleRegistry::ThreeNi,
             WcaEvent::Cube4x4 => PuzzleRegistry::Four,
+            WcaEvent::Cube4x4Blind => PuzzleRegistry::FourNi,
             WcaEvent::Cube5x5 => PuzzleRegistry::Five,
+            WcaEvent::Cube5x5Blind => PuzzleRegistry::FiveNi,
             WcaEvent::Cube6x6 => PuzzleRegistry::Six,
             WcaEvent::Cube7x7 => PuzzleRegistry::Seven,
             WcaEvent::Megaminx => PuzzleRegistry::Mega,
@@ -60,11 +65,15 @@ impl WcaEvent {
 mod tests {
     use super::{ACCURATE_THREE, WcaEvent, get_wca_scramble};
 
-    const EVENTS: [WcaEvent; 12] = [
+    const EVENTS: [WcaEvent; 16] = [
         WcaEvent::Cube2x2,
         WcaEvent::Cube3x3,
+        WcaEvent::Cube3x3OneHanded,
+        WcaEvent::Cube3x3Blind,
         WcaEvent::Cube4x4,
+        WcaEvent::Cube4x4Blind,
         WcaEvent::Cube5x5,
+        WcaEvent::Cube5x5Blind,
         WcaEvent::Cube6x6,
         WcaEvent::Cube7x7,
         WcaEvent::Megaminx,
@@ -84,8 +93,8 @@ mod tests {
         assert_eq!(
             keys,
             [
-                "222", "333", "444", "555", "666", "777", "minx", "pyram", "skewb", "sq1", "clock",
-                "fto"
+                "222", "333", "333", "333ni", "444", "444ni", "555", "555ni", "666", "777", "minx",
+                "pyram", "skewb", "sq1", "clock", "fto"
             ]
         );
     }

@@ -52,7 +52,7 @@ impl<'a> DetailsWidget<'a> {
                     )),
                     Line::from(""),
                     Line::from(Span::styled(
-                        format!("Event: {}", time.event().name()),
+                        format!("Event: {}", time.event_display_name()),
                         Style::default().fg(theme.text()),
                     )),
                     Line::from(""),

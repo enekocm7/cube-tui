@@ -98,15 +98,7 @@ pub fn validate_comment(text: &str) -> Result<(), String> {
 
 /// Checks event-specific notation, not whether a puzzle state is reachable.
 pub fn validate_scramble(text: &str, event: WcaEvent) -> Result<(), String> {
-    if text.trim().is_empty() || text.len() > 16_384 {
-        return Err("Scramble is required and must be at most 16384 bytes.".to_owned());
-    }
-    if text
-        .chars()
-        .any(|c| c.is_control() && !matches!(c, '\n' | '\r' | '\t'))
-    {
-        return Err("Scramble contains control characters.".to_owned());
-    }
+    validate_scramble_text(text)?;
     if event == WcaEvent::Square1 {
         return if square_one(text) {
             Ok(())
@@ -122,51 +114,57 @@ pub fn validate_scramble(text: &str, event: WcaEvent) -> Result<(), String> {
     Ok(())
 }
 
+/// Checks the parts of a scramble that apply whatever the puzzle is.
+///
+/// Used for solves whose event was written by a newer cube-app, whose notation
+/// this version cannot check without guessing the puzzle.
+pub fn validate_scramble_text(text: &str) -> Result<(), String> {
+    if text.trim().is_empty() || text.len() > 16_384 {
+        return Err("Scramble is required and must be at most 16384 bytes.".to_owned());
+    }
+    if text
+        .chars()
+        .any(|c| c.is_control() && !matches!(c, '\n' | '\r' | '\t'))
+    {
+        return Err("Scramble contains control characters.".to_owned());
+    }
+    Ok(())
+}
+
 fn valid_move(token: &str, event: WcaEvent) -> bool {
     let base = token
         .strip_suffix('\'')
         .or_else(|| token.strip_suffix('2'))
         .unwrap_or(token);
-    match event {
-        WcaEvent::Cube2x2
-        | WcaEvent::Cube3x3
-        | WcaEvent::Cube4x4
-        | WcaEvent::Cube5x5
-        | WcaEvent::Cube6x6
-        | WcaEvent::Cube7x7 => {
-            let size = match event {
-                WcaEvent::Cube2x2 => 2,
-                WcaEvent::Cube3x3 => 3,
-                WcaEvent::Cube4x4 => 4,
-                WcaEvent::Cube5x5 => 5,
-                WcaEvent::Cube6x6 => 6,
-                _ => 7,
-            };
-            if matches!(base, "R" | "L" | "U" | "D" | "F" | "B" | "x" | "y" | "z") {
-                return true;
-            }
-            if matches!(base, "M" | "E" | "S") {
-                return size >= 3;
-            }
-            if matches!(base, "r" | "l" | "u" | "d" | "f" | "b") {
-                return size >= 3;
-            }
-            let Some(wide) = base.strip_suffix('w') else {
+    if let Some(size) = event.cube_size() {
+        if matches!(base, "R" | "L" | "U" | "D" | "F" | "B" | "x" | "y" | "z") {
+            return true;
+        }
+        if matches!(base, "M" | "E" | "S") {
+            return size >= 3;
+        }
+        if matches!(base, "r" | "l" | "u" | "d" | "f" | "b") {
+            return size >= 3;
+        }
+        let Some(wide) = base.strip_suffix('w') else {
+            return false;
+        };
+        let (layers, face) = if wide.starts_with(|c: char| c.is_ascii_digit()) {
+            let split = wide
+                .find(|c: char| !c.is_ascii_digit())
+                .unwrap_or(wide.len());
+            let Ok(layers) = wide[..split].parse::<u8>() else {
                 return false;
             };
-            let (layers, face) = if wide.starts_with(|c: char| c.is_ascii_digit()) {
-                let split = wide
-                    .find(|c: char| !c.is_ascii_digit())
-                    .unwrap_or(wide.len());
-                let Ok(layers) = wide[..split].parse::<u8>() else {
-                    return false;
-                };
-                (layers, &wide[split..])
-            } else {
-                (2, wide)
-            };
-            layers >= 2 && layers < size && matches!(face, "R" | "L" | "U" | "D" | "F" | "B")
-        }
+            (layers, &wide[split..])
+        } else {
+            (2, wide)
+        };
+        return layers >= 2
+            && usize::from(layers) < size
+            && matches!(face, "R" | "L" | "U" | "D" | "F" | "B");
+    }
+    match event {
         WcaEvent::Megaminx => matches!(token, "R++" | "R--" | "D++" | "D--" | "U" | "U'"),
         WcaEvent::Pyraminx => {
             !token.ends_with('2') && matches!(base, "R" | "L" | "U" | "B" | "r" | "l" | "u" | "b")
@@ -181,6 +179,16 @@ fn valid_move(token: &str, event: WcaEvent) -> bool {
         }
         WcaEvent::Clock => clock_move(token),
         WcaEvent::Square1 => false,
+        WcaEvent::Cube2x2
+        | WcaEvent::Cube3x3
+        | WcaEvent::Cube3x3OneHanded
+        | WcaEvent::Cube3x3Blind
+        | WcaEvent::Cube4x4
+        | WcaEvent::Cube4x4Blind
+        | WcaEvent::Cube5x5
+        | WcaEvent::Cube5x5Blind
+        | WcaEvent::Cube6x6
+        | WcaEvent::Cube7x7 => unreachable!("cube events are handled above"),
     }
 }
 
