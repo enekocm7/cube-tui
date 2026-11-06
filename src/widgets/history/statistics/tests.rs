@@ -4,10 +4,54 @@ use ratatui::layout::Rect;
 use super::super::Modifier;
 use super::*;
 use crate::model::settings::ThemeColors;
-use crate::scramble::WcaEvent::Cube3x3;
+use crate::scramble::WcaEvent::{Cube3x3, Cube3x3OneHanded};
 
 fn time_with_ms(ms: u64) -> Time {
     Time::new_with_meta(ms, Cube3x3, Cow::Borrowed(""), 0, Modifier::None)
+}
+
+#[test]
+fn blindfolded_success_rate_ignores_unknown_events_and_counts_dnfs() {
+    let mut h = history(vec![
+        time_with_ms(10_000),
+        Time::new_with_meta(20_000, Cube3x3, Cow::Borrowed(""), 0, Modifier::DNF),
+        time_with_ms(30_000),
+    ]);
+    assert_eq!(h.success_count(), Some((2, 3)));
+    assert_eq!(h.success_rate(), Some(67));
+
+    let mut unknown = serde_json::to_value(time_with_ms(1_000)).unwrap();
+    unknown
+        .as_object_mut()
+        .unwrap()
+        .insert("event".to_owned(), "Cube3x3MultiBlind".into());
+    let unknown: Time = serde_json::from_value(unknown).unwrap();
+    h.add(unknown);
+    assert_eq!(h.success_count(), Some((2, 3)));
+    assert_eq!(h.success_rate(), Some(67));
+    assert_eq!(h.get_fastest_time().unwrap().raw_ms(), 10_000);
+}
+
+#[test]
+fn statistics_follow_the_active_event_without_mixing_one_handed_solves() {
+    let mut h = history(vec![
+        time_with_ms(10_000),
+        Time::new_with_meta(
+            5_000,
+            Cube3x3OneHanded,
+            Cow::Borrowed(""),
+            0,
+            Modifier::None,
+        ),
+    ]);
+
+    h.set_event_filter(Some(Cube3x3));
+    assert_eq!(h.get_fastest_time().unwrap().raw_ms(), 10_000);
+    assert_eq!(h.get_latest_mo3(), None);
+
+    h.set_event_filter(Some(Cube3x3OneHanded));
+    assert_eq!(h.get_fastest_time().unwrap().raw_ms(), 5_000);
+    assert!(h.times()[1].was_single_record());
 }
 
 #[test]

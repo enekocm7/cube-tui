@@ -7,10 +7,12 @@ use ratatui::crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 
 use crate::model::keybinds::Action;
 use crate::model::{Model, TimerState};
-use crate::scramble::WcaEvent;
+use crate::scramble::{EventName, WcaEvent};
 use crate::widgets::history::{Modifier, SolveSnapshot, format_millis};
 use crate::widgets::text_input::TextInputResult;
-use validation::{parse_date, parse_time, validate_comment, validate_scramble};
+use validation::{
+    parse_date, parse_time, validate_comment, validate_scramble, validate_scramble_text,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum EditorPage {
@@ -69,7 +71,7 @@ impl SolveEditor {
     pub fn value(&self, field: usize) -> String {
         match field {
             0 => format_millis(self.draft.time_ms),
-            1 => self.draft.event.name().to_owned(),
+            1 => self.draft.event.display_name().to_owned(),
             2 => self.draft.scramble.clone(),
             3 => penalty_text(self.draft.modifier).to_owned(),
             4 => date_text(self.draft.solved_at_unix_ms),
@@ -85,7 +87,11 @@ impl SolveEditor {
     fn validate(&self) -> Result<(), (usize, String)> {
         validation::validate_duration(self.draft.time_ms, self.draft.modifier)
             .map_err(|error| (0, error))?;
-        validate_scramble(&self.draft.scramble, self.draft.event).map_err(|e| (2, e))?;
+        if let Some(event) = self.draft.event.known() {
+            validate_scramble(&self.draft.scramble, event).map_err(|e| (2, e))?;
+        } else {
+            validate_scramble_text(&self.draft.scramble).map_err(|e| (2, e))?;
+        }
         parse_date(&date_text(self.draft.solved_at_unix_ms)).map_err(|e| (4, e))?;
         validate_comment(&self.draft.comment).map_err(|e| (5, e))?;
         Ok(())
@@ -187,7 +193,7 @@ impl Model {
                     editor.event_selection =
                         (editor.event_selection + 1).min(WcaEvent::ALL.len() - 1);
                 } else if enter {
-                    editor.draft.event = WcaEvent::ALL[editor.event_selection];
+                    editor.draft.event = EventName::from(WcaEvent::ALL[editor.event_selection]);
                     editor.page = EditorPage::Fields;
                     editor.error = None;
                 }
@@ -228,7 +234,7 @@ impl Model {
             1 => {
                 editor.event_selection = WcaEvent::ALL
                     .iter()
-                    .position(|&event| event == editor.draft.event)
+                    .position(|&event| editor.draft.event.known() == Some(event))
                     .unwrap_or(0);
                 editor.page = EditorPage::Events;
             }
@@ -247,7 +253,7 @@ impl Model {
             8 => self.solve_editor = None,
             _ => {
                 let initial = editor.value(field);
-                let event = editor.draft.event;
+                let event = editor.draft.event.known();
                 let title = match field {
                     0 => "Time: seconds / M:SS / H:MM:SS.mmm",
                     4 => "Solved at: RFC 3339 / blank = unknown",
@@ -258,7 +264,10 @@ impl Model {
                     &initial,
                     move |text| match field {
                         0 => parse_time(text).map(|_| ()),
-                        2 => validate_scramble(text, event),
+                        2 => event.map_or_else(
+                            || validate_scramble_text(text),
+                            |event| validate_scramble(text, event),
+                        ),
                         4 => parse_date(text).map(|_| ()),
                         5 => validate_comment(text),
                         _ => Ok(()),

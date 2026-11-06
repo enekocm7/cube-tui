@@ -3,6 +3,7 @@ mod statistics;
 mod time;
 
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
 use serde::{Deserialize, Serialize};
@@ -24,6 +25,12 @@ pub struct History {
     fastest_averages: [OnceLock<Option<BestAverage>>; AVERAGE_SIZES.len()],
     #[serde(skip)]
     pub selected: Option<usize>,
+    /// The event whose statistics this session shows; not part of the file.
+    #[serde(skip)]
+    event_filter: Option<WcaEvent>,
+    /// Fields written by a newer cube-app that this version does not know.
+    #[serde(flatten)]
+    extra: BTreeMap<String, serde_json::Value>,
 }
 
 impl History {
@@ -35,7 +42,35 @@ impl History {
             fastest_time: OnceLock::new(),
             fastest_averages: [const { OnceLock::new() }; AVERAGE_SIZES.len()],
             selected: None,
+            event_filter: None,
+            extra: BTreeMap::new(),
         }
+    }
+
+    /// Limits statistics to one event, as the active session does.
+    pub fn set_event_filter(&mut self, event: Option<WcaEvent>) {
+        if self.event_filter != event {
+            self.event_filter = event;
+            self.invalidate_fastest();
+        }
+    }
+
+    /// Sets the filter for a history that has just been loaded.
+    ///
+    /// Saved single-record markers and statistics caches are kept as they were.
+    pub(crate) fn initialize_event_filter(&mut self, event: Option<WcaEvent>) {
+        if self.event_filter != event {
+            self.event_filter = event;
+            self.fastest_time.take();
+            for cache in &mut self.fastest_averages {
+                cache.take();
+            }
+        }
+    }
+
+    /// Returns whether a solve belongs to the statistics this history shows.
+    pub(crate) fn counts(&self, time: &Time) -> bool {
+        time.has_known_event() && self.event_filter.is_none_or(|event| time.event() == event)
     }
 
     /// Returns the custom session name, or an empty string for an unnamed session.
@@ -61,9 +96,10 @@ impl History {
     /// Appends a solve, selects it, and incrementally updates initialized caches.
     pub fn add(&mut self, mut item: Time) {
         let previous_best = self.get_fastest_time().and_then(Time::effective_ms);
-        item.was_single_record = item
-            .effective_ms()
-            .is_some_and(|millis| previous_best.is_none_or(|best| millis < best));
+        item.was_single_record = self.counts(&item)
+            && item
+                .effective_ms()
+                .is_some_and(|millis| previous_best.is_none_or(|best| millis < best));
         self.times.push(item);
         self.selected = Some(self.times.len() - 1);
         self.update_fastest_after_append();

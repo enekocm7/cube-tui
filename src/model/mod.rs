@@ -236,7 +236,14 @@ impl Model {
 
     /// Moves the statistics selection down, stopping at the last row.
     pub fn main_stats_select_down(&mut self) {
-        self.main_stats_selection.row = (self.main_stats_selection.row + 1).min(5);
+        let last_row = if self.event().is_blindfolded() { 2 } else { 5 };
+        self.main_stats_selection.row = (self.main_stats_selection.row + 1).min(last_row);
+    }
+
+    /// Keeps the statistics selection on a row that the current event shows.
+    fn clamp_stats_row(&mut self) {
+        let last_row = if self.event().is_blindfolded() { 2 } else { 5 };
+        self.main_stats_selection.row = self.main_stats_selection.row.min(last_row);
     }
 
     /// Selects the left statistics column.
@@ -375,12 +382,14 @@ impl Model {
     /// Selects the next puzzle event and generates its scramble.
     pub fn next_event(&mut self) {
         self.current_session_mut().next_event();
+        self.clamp_stats_row();
         self.report_scramble_warnings();
     }
 
     /// Selects the previous puzzle event and generates its scramble.
     pub fn prev_event(&mut self) {
         self.current_session_mut().prev_event();
+        self.clamp_stats_row();
         self.report_scramble_warnings();
     }
 

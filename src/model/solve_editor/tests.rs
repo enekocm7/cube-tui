@@ -45,7 +45,9 @@ fn full_editor_saves_all_fields_atomically_with_a_persistent_revision() {
     replace_field(&mut model, 0, "1:02.345");
     model.solve_editor.as_mut().unwrap().selected = 1;
     key(&mut model, KeyCode::Enter);
-    key(&mut model, KeyCode::Down); // 4x4
+    key(&mut model, KeyCode::Down); // 3x3x3 OH
+    key(&mut model, KeyCode::Down); // 3x3x3 BLD
+    key(&mut model, KeyCode::Down); // 4x4x4
     key(&mut model, KeyCode::Enter);
     replace_field(&mut model, 2, "Rw U F2");
     model.solve_editor.as_mut().unwrap().selected = 3;
@@ -160,7 +162,7 @@ fn quit_letter_is_editable_text_inside_a_solve_field() {
 #[test]
 fn event_changes_revalidate_scrambles_and_zero_times_require_dnf() {
     let mut model = model_with_solve();
-    model.solve_editor.as_mut().unwrap().draft.event = WcaEvent::Clock;
+    model.solve_editor.as_mut().unwrap().draft.event = EventName::from(WcaEvent::Clock);
     model.save_solve_editor();
     assert!(
         model
@@ -205,8 +207,8 @@ fn home_and_end_jump_to_editor_and_event_picker_boundaries() {
     assert_eq!(model.solve_editor.as_ref().unwrap().event_selection, 0);
     key(&mut model, KeyCode::Enter);
     assert_eq!(
-        model.solve_editor.as_ref().unwrap().draft.event,
-        WcaEvent::Cube2x2
+        model.solve_editor.as_ref().unwrap().draft.event.known(),
+        Some(WcaEvent::Cube2x2)
     );
 }
 

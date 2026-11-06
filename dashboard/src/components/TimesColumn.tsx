@@ -1,13 +1,15 @@
 import { X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { History, Time, WcaEvent } from "../types/types";
-import { Modifier, WCA_EVENT_NAMES } from "../types/types";
+import { isBlindfoldedEvent, Modifier, WCA_EVENT_NAMES } from "../types/types";
 import {
 	computeAo,
 	computeBest,
 	computeBestAo,
 	computeMean,
+	computeMo3,
 	computePercentile,
+	computeSuccessRate,
 	effectiveMs,
 	formatMillis,
 	formatTime,
@@ -120,7 +122,10 @@ function TimeDetailsModal({
 				</div>
 
 				<div className="px-5 py-4 grid grid-cols-2 gap-2">
-					<ModalStatCard label="Event" value={WCA_EVENT_NAMES[time.event]} />
+					<ModalStatCard
+						label="Event"
+						value={WCA_EVENT_NAMES[time.event] ?? time.event}
+					/>
 					<ModalStatCard label="Penalty" value={modifierLabel(time.modifier)} />
 					<ModalStatCard label="Raw" value={formatMillis(rawMs)} />
 					<ModalStatCard label="Final" value={formatTime(time)} />
@@ -172,22 +177,14 @@ export default function TimesColumn({ history }: TimesColumnProps) {
 		bestAo50,
 		bestAo100,
 		meanMs,
+		mo3,
+		successRate,
+		blindfolded,
 		lastSolvePercentile,
 		eventLabel,
 		reversed,
 	} = useMemo(() => {
 		const reversed = [...times].reverse();
-		const bestMs = computeBest(times);
-		const ao5 = computeAo(times, 5);
-		const ao12 = computeAo(times, 12);
-		const ao50 = computeAo(times, 50);
-		const ao100 = computeAo(times, 100);
-		const bestAo5 = computeBestAo(times, 5);
-		const bestAo12 = computeBestAo(times, 12);
-		const bestAo50 = computeBestAo(times, 50);
-		const bestAo100 = computeBestAo(times, 100);
-		const meanMs = computeMean(times);
-		const lastSolvePercentile = computePercentile(times);
 
 		const eventCounts = times.reduce<Partial<Record<WcaEvent, number>>>(
 			(acc, t) => {
@@ -199,7 +196,29 @@ export default function TimesColumn({ history }: TimesColumnProps) {
 		const mainEvent = (
 			Object.entries(eventCounts) as [WcaEvent, number][]
 		).sort((a, b) => b[1] - a[1])[0]?.[0];
-		const eventLabel = mainEvent ? WCA_EVENT_NAMES[mainEvent] : "Session";
+		// Statistics follow the session's dominant event, so one-handed and
+		// two-handed solves never blend into the same averages.
+		const eventTimes = mainEvent
+			? times.filter((time) => time.event === mainEvent)
+			: times;
+		const eventLabel = mainEvent
+			? (WCA_EVENT_NAMES[mainEvent] ?? mainEvent)
+			: "Session";
+		const blindfolded = mainEvent ? isBlindfoldedEvent(mainEvent) : false;
+
+		const bestMs = computeBest(eventTimes);
+		const ao5 = computeAo(eventTimes, 5);
+		const ao12 = computeAo(eventTimes, 12);
+		const ao50 = computeAo(eventTimes, 50);
+		const ao100 = computeAo(eventTimes, 100);
+		const bestAo5 = computeBestAo(eventTimes, 5);
+		const bestAo12 = computeBestAo(eventTimes, 12);
+		const bestAo50 = computeBestAo(eventTimes, 50);
+		const bestAo100 = computeBestAo(eventTimes, 100);
+		const meanMs = computeMean(eventTimes);
+		const mo3 = computeMo3(eventTimes);
+		const successRate = computeSuccessRate(eventTimes);
+		const lastSolvePercentile = computePercentile(eventTimes);
 
 		return {
 			bestMs,
@@ -212,6 +231,9 @@ export default function TimesColumn({ history }: TimesColumnProps) {
 			bestAo50,
 			bestAo100,
 			meanMs,
+			mo3,
+			successRate,
+			blindfolded,
 			lastSolvePercentile,
 			eventLabel,
 			reversed,
@@ -295,6 +317,9 @@ export default function TimesColumn({ history }: TimesColumnProps) {
 						ao50={ao50}
 						ao100={ao100}
 						meanMs={meanMs}
+						mo3={mo3}
+						successRate={successRate}
+						blindfolded={blindfolded}
 					/>
 				</div>
 

@@ -227,7 +227,7 @@ fn render_list<'a>(
 fn snapshot_values(snapshot: &SolveSnapshot) -> [String; 6] {
     [
         format_millis(snapshot.time_ms),
-        snapshot.event.name().to_owned(),
+        snapshot.event.display_name().to_owned(),
         snapshot.scramble.clone(),
         penalty_text(snapshot.modifier).to_owned(),
         date_text(snapshot.solved_at_unix_ms),

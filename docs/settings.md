@@ -60,11 +60,12 @@ ignored.
 
 `scramble_preview` shows a colored ASCII net of the current scramble in the
 bottom-right corner. Press `v` to toggle it; the choice is saved. Previews are
-available for 2x2 through 7x7 cubes. Other events show "Preview is not available
-for this puzzle". Cubes start with white on top and green in front, and sticker
-letters identify colors. The preview refreshes when the scramble, event, or
-session changes. Puzzle states and sticker geometry are computed directly in
-Rust; the preview needs no generated move tables or external tooling.
+available for 2x2 through 7x7 cubes, including OH and blindfolded events. Other
+events show "Preview is not available for this puzzle". Cubes start with white
+on top and green in front, and sticker letters identify colors. The preview
+refreshes when the scramble, event, or session changes. Puzzle states and
+sticker geometry are computed directly in Rust; the preview needs no generated
+move tables or external tooling.
 
 The preview sits below statistics, or at the bottom right of the timer when
 statistics are hidden. If there is not enough room for the complete net, it
@@ -97,6 +98,11 @@ column while the latest average is a new session best. The **best** column
 keeps its usual style. The accent defaults to gold for older themes that omit
 it; selected record values stay bold and retain the selection background.
 
+Blindfolded events show the session success rate and the number of successful
+attempts instead of the longer averages, because a trimmed average of five means
+little when many attempts are DNF. Their best single and mean of three remain
+visible.
+
 ## Timer Settings
 
 Timer behavior is configured with the `[timer]` table:
@@ -108,7 +114,8 @@ zen = false
 ```
 
 `inspection` enables the WCA inspection period. `zen` hides the interface
-while the timer is running.
+while the timer is running. Blindfolded events never use inspection, even when
+this setting is enabled.
 
 ## Manual Time Entry
 
@@ -150,8 +157,8 @@ accurate_3x3 = false
 
 The official WCA scrambler, TNoodle, keeps searching for a shorter 3x3x3
 scramble for 200ms after finding the first one. `accurate_3x3 = true` does the
-same, so 3x3x3 scrambles match TNoodle's exactly. The default, `false`, uses
-the first scramble found, which is faster.
+same for 3x3x3 and 3x3x3 OH, so their scrambles match TNoodle's exactly. The
+default, `false`, uses the first scramble found, which is faster.
 
 Both modes scramble the cube to the same random state, so they are equally
 fair; the faster mode may just take a few more moves to get there.

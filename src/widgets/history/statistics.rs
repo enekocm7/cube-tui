@@ -28,6 +28,10 @@ impl History {
     /// statistics that the UI may never request.
     pub(super) fn update_fastest_after_append(&mut self) {
         let solve_index = self.times.len() - 1;
+        let counted = self.counts(&self.times[solve_index]);
+        if !counted {
+            return;
+        }
         if let Some(best_index) = self.fastest_time.get_mut()
             && let Some(solve_ms) = self.times[solve_index].effective_ms()
             && best_index.is_none_or(|index| {
@@ -59,7 +63,7 @@ impl History {
 
     /// Clears derived statistics after an edit that can reorder results.
     pub(super) fn invalidate_fastest(&mut self) {
-        mark_single_records(&mut self.times);
+        mark_single_records(&mut self.times, self.event_filter);
         self.fastest_time.take();
         for cache in &mut self.fastest_averages {
             cache.take();
@@ -73,11 +77,33 @@ impl History {
                 self.times
                     .iter()
                     .enumerate()
+                    .filter(|(_, time)| self.counts(time))
                     .filter_map(|(index, time)| time.effective_ms().map(|millis| (millis, index)))
                     .min_by_key(|&(millis, _)| millis)
                     .map(|(_, index)| index)
             })
             .and_then(|index| self.times.get(index))
+    }
+
+    /// Returns the percentage of known-event attempts that are not DNFs.
+    pub fn success_rate(&self) -> Option<u64> {
+        let (successes, attempts) = self.success_count()?;
+        let successes = u64::try_from(successes).ok()?;
+        let attempts = u64::try_from(attempts).ok()?;
+        Some((successes * 100 + attempts / 2) / attempts)
+    }
+
+    /// Returns the number of successful and total known-event attempts.
+    pub fn success_count(&self) -> Option<(usize, usize)> {
+        let mut attempts = 0;
+        let mut successes = 0;
+        for time in self.times.iter().filter(|time| self.counts(time)) {
+            attempts += 1;
+            if time.modifier() != super::Modifier::DNF {
+                successes += 1;
+            }
+        }
+        (attempts > 0).then_some((successes, attempts))
     }
 
     /// Returns the latest mean of three as formatted text.
@@ -140,7 +166,7 @@ impl History {
     /// Returns `None` when too few solves exist and `DNF` when every complete
     /// window is invalid.
     fn fastest_average_value(&self, n: usize) -> Option<Cow<'static, str>> {
-        if self.times.len() < n {
+        if self.counted_count() < n {
             return None;
         }
         Some(
@@ -199,13 +225,55 @@ impl History {
     ///
     /// Mean-of-three windows reject any DNF. Larger WCA averages discard the
     /// best and worst result, treating one DNF as the discarded worst result.
+    /// Solves with an event this version does not know never count.
     fn get_avg(&self, index: usize, n: usize) -> Option<AverageValue> {
         if index < n {
             return None;
         }
+        let end = self.times.get(index.checked_sub(1)?)?;
+        if !self.counts(end) {
+            return None;
+        }
 
-        let attempts = self.times.get(index.saturating_sub(n)..index)?;
-        Some(Self::average_value(attempts.iter(), n))
+        let mut attempts: Vec<&Time> = self.times[..index]
+            .iter()
+            .rev()
+            .filter(|time| self.counts(time))
+            .take(n)
+            .collect();
+        if attempts.len() < n {
+            return None;
+        }
+        attempts.reverse();
+        Some(Self::average_value(attempts.into_iter(), n))
+    }
+
+    /// Returns how many solves have an event this version can show.
+    pub fn known_count(&self) -> usize {
+        self.times
+            .iter()
+            .filter(|time| time.has_known_event())
+            .count()
+    }
+
+    /// Returns how many solves belong to the statistics this history shows.
+    fn counted_count(&self) -> usize {
+        self.times.iter().filter(|time| self.counts(time)).count()
+    }
+
+    /// Returns the ending index of the latest complete window of `n` known solves.
+    fn latest_window_index(&self, n: usize) -> Option<usize> {
+        let last = self.times.iter().rposition(|time| self.counts(time))?;
+        if self.times[..=last]
+            .iter()
+            .filter(|time| self.counts(time))
+            .count()
+            >= n
+        {
+            Some(last)
+        } else {
+            None
+        }
     }
 
     fn average_value<'a>(attempts: impl Iterator<Item = &'a Time>, n: usize) -> AverageValue {
@@ -283,48 +351,28 @@ impl History {
     }
 
     /// Returns the ending index of the latest complete mean of three.
-    pub const fn latest_mo3_index(&self) -> Option<usize> {
-        if self.times.len() >= 3 {
-            Some(self.times.len() - 1)
-        } else {
-            None
-        }
+    pub fn latest_mo3_index(&self) -> Option<usize> {
+        self.latest_window_index(3)
     }
 
     /// Returns the ending index of the latest complete average of five.
-    pub const fn latest_ao5_index(&self) -> Option<usize> {
-        if self.times.len() >= 5 {
-            Some(self.times.len() - 1)
-        } else {
-            None
-        }
+    pub fn latest_ao5_index(&self) -> Option<usize> {
+        self.latest_window_index(5)
     }
 
     /// Returns the ending index of the latest complete average of twelve.
-    pub const fn latest_ao12_index(&self) -> Option<usize> {
-        if self.times.len() >= 12 {
-            Some(self.times.len() - 1)
-        } else {
-            None
-        }
+    pub fn latest_ao12_index(&self) -> Option<usize> {
+        self.latest_window_index(12)
     }
 
     /// Returns the ending index of the latest complete average of fifty.
-    pub const fn latest_ao50_index(&self) -> Option<usize> {
-        if self.times.len() >= 50 {
-            Some(self.times.len() - 1)
-        } else {
-            None
-        }
+    pub fn latest_ao50_index(&self) -> Option<usize> {
+        self.latest_window_index(50)
     }
 
     /// Returns the ending index of the latest complete average of one hundred.
-    pub const fn latest_ao100_index(&self) -> Option<usize> {
-        if self.times.len() >= 100 {
-            Some(self.times.len() - 1)
-        } else {
-            None
-        }
+    pub fn latest_ao100_index(&self) -> Option<usize> {
+        self.latest_window_index(100)
     }
 
     /// Returns the ending solve index of the cached fastest average.

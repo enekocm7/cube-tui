@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use crate::model::settings::ThemeColors;
+use crate::scramble::WcaEvent;
 use crate::widgets::history::History;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -10,6 +11,7 @@ use ratatui::widgets::{Block, Borders, Paragraph, Widget};
 
 pub struct StatsWidget<'a> {
     history: &'a History,
+    event: Option<WcaEvent>,
     selected_row: Option<usize>,
     selected_col: Option<usize>,
 }
@@ -22,9 +24,16 @@ impl<'a> StatsWidget<'a> {
     pub const fn new(history: &'a History) -> Self {
         Self {
             history,
+            event: None,
             selected_row: None,
             selected_col: None,
         }
+    }
+
+    /// Sets the current session's event so blindfolded statistics can be shown.
+    pub const fn with_event(mut self, event: WcaEvent) -> Self {
+        self.event = Some(event);
+        self
     }
 
     /// Adds the row and column that should receive keyboard focus styling.
@@ -102,6 +111,7 @@ impl<'a> StatsWidget<'a> {
 
         let selected_row = self.selected_row;
         let selected_col = self.selected_col;
+        let blindfolded = self.event.is_some_and(WcaEvent::is_blindfolded);
 
         let row_line =
             |label: &str, current: Cow<'static, str>, best: Cow<'static, str>, row: usize| {
@@ -119,7 +129,8 @@ impl<'a> StatsWidget<'a> {
                 } else {
                     Style::default().fg(theme.text())
                 };
-                if row > 0
+                if !blindfolded
+                    && row > 0
                     && self
                         .history
                         .latest_average_is_record([3, 5, 12, 50, 100][row - 1])
@@ -148,18 +159,39 @@ impl<'a> StatsWidget<'a> {
                 Line::from(spans)
             };
 
-        let text = vec![
-            Line::from(Span::styled(
-                format!("{:8}{:>10}  {:>10}", "", "current", "best"),
-                Style::default().fg(theme.text()),
-            )),
-            row_line("time", current_time, best_time, 0),
-            row_line("mo3", current_mo3, best_mo3, 1),
-            row_line("ao5", current_ao5, best_ao5, 2),
-            row_line("ao12", current_ao12, best_ao12, 3),
-            row_line("ao50", current_ao50, best_ao50, 4),
-            row_line("ao100", current_ao100, best_ao100, 5),
-        ];
+        let header = Line::from(Span::styled(
+            format!("{:8}{:>10}  {:>10}", "", "current", "best"),
+            Style::default().fg(theme.text()),
+        ));
+
+        let text = if blindfolded {
+            let (success_rate, success_count) = self.history.success_count().map_or_else(
+                || (Cow::Borrowed("-"), Cow::Borrowed("-")),
+                |(successes, attempts)| {
+                    let rate = self.history.success_rate().unwrap_or_default();
+                    (
+                        Cow::Owned(format!("{rate}%")),
+                        Cow::Owned(format!("{successes}/{attempts}")),
+                    )
+                },
+            );
+            vec![
+                header,
+                row_line("time", current_time, best_time, 0),
+                row_line("mo3", current_mo3, best_mo3, 1),
+                row_line("success", success_rate, success_count, 2),
+            ]
+        } else {
+            vec![
+                header,
+                row_line("time", current_time, best_time, 0),
+                row_line("mo3", current_mo3, best_mo3, 1),
+                row_line("ao5", current_ao5, best_ao5, 2),
+                row_line("ao12", current_ao12, best_ao12, 3),
+                row_line("ao50", current_ao50, best_ao50, 4),
+                row_line("ao100", current_ao100, best_ao100, 5),
+            ]
+        };
 
         Paragraph::new(text).block(block).render(area, buf);
     }

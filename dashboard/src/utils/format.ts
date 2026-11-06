@@ -48,6 +48,15 @@ export function computeAo(times: Time[], n: number): number | "DNF" | null {
 	return trimmedMean(last.map(effectiveMs), n);
 }
 
+/** Mean of the last 3 times (WCA rules: any DNF makes the mean a DNF). */
+export function computeMo3(times: Time[]): number | "DNF" | null {
+	if (times.length < 3) return null;
+	const last = times.slice(-3).map(effectiveMs);
+	if (last.some((ms) => ms === null)) return "DNF";
+	const values = last.filter((ms): ms is number => ms !== null);
+	return Math.round(values.reduce((sum, ms) => sum + ms, 0) / 3);
+}
+
 /** Best rolling average of `n` times across the whole session. */
 export function computeBestAo(times: Time[], n: number): number | "DNF" | null {
 	if (times.length < n) return null;
